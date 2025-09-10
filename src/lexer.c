@@ -1,12 +1,18 @@
 #include "lexer.h"
 #include "mem.h"
 #include "kwds.h"
+#include "ds/smap.h"
 
 #include <forge/err.h>
 #include <forge/colors.h>
+#include <forge/smap.h>
+#include <forge/utils.h>
 
+#include <assert.h>
 #include <string.h>
 #include <ctype.h>
+
+static smap g_syms = {0};
 
 const char *
 token_type_to_cstr(token_type ty)
@@ -34,7 +40,6 @@ token_type_to_cstr(token_type ty)
         case TOKEN_TYPE_UPTICK:              return "TOKEN_TYPE_UPTICK";
         case TOKEN_TYPE_AMPERSAND:           return "TOKEN_TYPE_AMPERSAND";
         case TOKEN_TYPE_ASTERISK:            return "TOKEN_TYPE_ASTERISK";
-        case TOKEN_TYPE_HYPHEN:              return "TOKEN_TYPE_HYPHEN";
         case TOKEN_TYPE_PLUS:                return "TOKEN_TYPE_PLUS";
         case TOKEN_TYPE_MINUS:               return "TOKEN_TYPE_MINUS";
         case TOKEN_TYPE_EQUALS:              return "TOKEN_TYPE_EQUALS";
@@ -65,6 +70,100 @@ token_type_to_cstr(token_type ty)
         default: forge_err_wargs("token_type_to_cstr(): unknown token type `%d`", (int)ty);
         }
         return NULL; // unreachable
+}
+
+static void
+init_syms(void)
+{
+        g_syms = smap_create(NULL);
+
+        static token_type token_type_left_parenthesis    = TOKEN_TYPE_LEFT_PARENTHESIS;
+        static token_type token_type_right_parenthesis   = TOKEN_TYPE_RIGHT_PARENTHESIS;
+        static token_type token_type_left_curly          = TOKEN_TYPE_LEFT_CURLY;
+        static token_type token_type_right_curly         = TOKEN_TYPE_RIGHT_CURLY;
+        static token_type token_type_left_square         = TOKEN_TYPE_LEFT_SQUARE;
+        static token_type token_type_right_square        = TOKEN_TYPE_RIGHT_SQUARE;
+        static token_type token_type_backtick            = TOKEN_TYPE_BACKTICK;
+        static token_type token_type_tilde               = TOKEN_TYPE_TILDE;
+        static token_type token_type_bang                = TOKEN_TYPE_BANG;
+        static token_type token_type_at                  = TOKEN_TYPE_AT;
+        static token_type token_type_hash                = TOKEN_TYPE_HASH;
+        static token_type token_type_dollar              = TOKEN_TYPE_DOLLAR;
+        static token_type token_type_percent             = TOKEN_TYPE_PERCENT;
+        static token_type token_type_uptick              = TOKEN_TYPE_UPTICK;
+        static token_type token_type_ampersand           = TOKEN_TYPE_AMPERSAND;
+        static token_type token_type_asterisk            = TOKEN_TYPE_ASTERISK;
+        static token_type token_type_plus                = TOKEN_TYPE_PLUS;
+        static token_type token_type_minus               = TOKEN_TYPE_MINUS;
+        static token_type token_type_equals              = TOKEN_TYPE_EQUALS;
+        static token_type token_type_pipe                = TOKEN_TYPE_PIPE;
+        static token_type token_type_backslash           = TOKEN_TYPE_BACKSLASH;
+        static token_type token_type_forwardslash        = TOKEN_TYPE_FORWARDSLASH;
+        static token_type token_type_lessthan            = TOKEN_TYPE_LESSTHAN;
+        static token_type token_type_greaterthan         = TOKEN_TYPE_GREATERTHAN;
+        static token_type token_type_comma               = TOKEN_TYPE_COMMA;
+        static token_type token_type_period              = TOKEN_TYPE_PERIOD;
+        static token_type token_type_question            = TOKEN_TYPE_QUESTION;
+        static token_type token_type_semicolon           = TOKEN_TYPE_SEMICOLON;
+        static token_type token_type_colon               = TOKEN_TYPE_COLON;
+        static token_type token_type_plus_equals         = TOKEN_TYPE_PLUS_EQUALS;
+        static token_type token_type_minus_equals        = TOKEN_TYPE_MINUS_EQUALS;
+        static token_type token_type_asterisk_equals     = TOKEN_TYPE_ASTERISK_EQUALS;
+        static token_type token_type_forwardslash_equals = TOKEN_TYPE_FORWARDSLASH_EQUALS;
+        static token_type token_type_percent_equals      = TOKEN_TYPE_PERCENT_EQUALS;
+        static token_type token_type_ampersand_equals    = TOKEN_TYPE_AMPERSAND_EQUALS;
+        static token_type token_type_pipe_equals         = TOKEN_TYPE_PIPE_EQUALS;
+        static token_type token_type_uptick_equals       = TOKEN_TYPE_UPTICK_EQUALS;
+        static token_type token_type_double_equals       = TOKEN_TYPE_DOUBLE_EQUALS;
+        static token_type token_type_greaterthan_equals  = TOKEN_TYPE_GREATERTHAN_EQUALS;
+        static token_type token_type_lessthan_equals     = TOKEN_TYPE_LESSTHAN_EQUALS;
+        static token_type token_type_bang_equals         = TOKEN_TYPE_BANG_EQUALS;
+        static token_type token_type_double_ampersand    = TOKEN_TYPE_DOUBLE_AMPERSAND;
+        static token_type token_type_double_pipe         = TOKEN_TYPE_DOUBLE_PIPE;
+
+        smap_insert(&g_syms, "(", (void*)&token_type_left_parenthesis);
+        smap_insert(&g_syms, ")", (void*)&token_type_right_parenthesis);
+        smap_insert(&g_syms, "{", (void*)&token_type_left_curly);
+        smap_insert(&g_syms, "}", (void*)&token_type_right_curly);
+        smap_insert(&g_syms, "[", (void*)&token_type_left_square);
+        smap_insert(&g_syms, "]", (void*)&token_type_right_square);
+        smap_insert(&g_syms, "`", (void*)&token_type_backtick);
+        smap_insert(&g_syms, "~", (void*)&token_type_tilde);
+        smap_insert(&g_syms, "!", (void*)&token_type_bang);
+        smap_insert(&g_syms, "@", (void*)&token_type_at);
+        smap_insert(&g_syms, "#", (void*)&token_type_hash);
+        smap_insert(&g_syms, "$", (void*)&token_type_dollar);
+        smap_insert(&g_syms, "%", (void*)&token_type_percent);
+        smap_insert(&g_syms, "^", (void*)&token_type_uptick);
+        smap_insert(&g_syms, "&", (void*)&token_type_ampersand);
+        smap_insert(&g_syms, "*", (void*)&token_type_asterisk);
+        smap_insert(&g_syms, "+", (void*)&token_type_plus);
+        smap_insert(&g_syms, "-", (void*)&token_type_minus);
+        smap_insert(&g_syms, "=", (void*)&token_type_equals);
+        smap_insert(&g_syms, "|", (void*)&token_type_pipe);
+        smap_insert(&g_syms, "\\", (void*)&token_type_backslash);
+        smap_insert(&g_syms, "/", (void*)&token_type_forwardslash);
+        smap_insert(&g_syms, "<", (void*)&token_type_lessthan);
+        smap_insert(&g_syms, ">", (void*)&token_type_greaterthan);
+        smap_insert(&g_syms, ",", (void*)&token_type_comma);
+        smap_insert(&g_syms, ".", (void*)&token_type_period);
+        smap_insert(&g_syms, "?", (void*)&token_type_question);
+        smap_insert(&g_syms, ";", (void*)&token_type_semicolon);
+        smap_insert(&g_syms, ":", (void*)&token_type_colon);
+        smap_insert(&g_syms, "+=", (void*)&token_type_plus_equals);
+        smap_insert(&g_syms, "-=", (void*)&token_type_minus_equals);
+        smap_insert(&g_syms, "*=", (void*)&token_type_asterisk_equals);
+        smap_insert(&g_syms, "/=", (void*)&token_type_forwardslash_equals);
+        smap_insert(&g_syms, "%=", (void*)&token_type_percent_equals);
+        smap_insert(&g_syms, "&=", (void*)&token_type_ampersand_equals);
+        smap_insert(&g_syms, "|=", (void*)&token_type_pipe_equals);
+        smap_insert(&g_syms, "^=", (void*)&token_type_uptick_equals);
+        smap_insert(&g_syms, "==", (void*)&token_type_double_equals);
+        smap_insert(&g_syms, ">=", (void*)&token_type_greaterthan_equals);
+        smap_insert(&g_syms, "<=", (void*)&token_type_lessthan_equals);
+        smap_insert(&g_syms, "!=", (void*)&token_type_bang_equals);
+        smap_insert(&g_syms, "&&", (void*)&token_type_double_ampersand);
+        smap_insert(&g_syms, "||", (void*)&token_type_double_pipe);
 }
 
 static token *
@@ -107,10 +206,37 @@ consume_while(const char *st,
         while (st[i] && pred(st[i])) {
                 ++i;
         }
+
         return i;
 }
 
-static int is_ident(int c) { return isalnum(c) || c == '_'; }
+static int is_ignorable(int c)        { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
+static int is_ident(int c)            { return isalnum(c) || c == '_'; }
+static int not_double_quote(int c)    { return c != '"'; }
+static int issym(int c) {
+        return !is_ident(c)
+                && !is_ignorable(c)
+                && c != '"'
+                && c != '\'';
+}
+
+token_type *
+determine_sym(const char *s, size_t *len)
+{
+        assert(*len < 256);
+        char buf[256] = {0};
+
+        while (*len > 0) {
+                memset(buf, 0, 256);
+                strncpy(buf, s, *len);
+                if (smap_has(&g_syms, buf)) {
+                        return (token_type *)smap_get(&g_syms, buf);
+                }
+                --(*len);
+        }
+
+        return NULL;
+}
 
 void
 lexer_dump(const lexer *l)
@@ -131,6 +257,10 @@ lexer
 lexer_create(const char *src,
              const char *fp)
 {
+        if (!smap_size(&g_syms)) {
+                init_syms();
+        }
+
         lexer l = (lexer) {
                 .hd = NULL,
                 .tl = NULL,
@@ -155,9 +285,18 @@ lexer_create(const char *src,
                         c = 1;
                         ++r, ++i;
                 } else if (ch == '"') {
-                        forge_todo("strings");
+                        size_t len = consume_while(src+i+1, not_double_quote);
+                        token *t = token_alloc(src+i+1, len, TOKEN_TYPE_STRING_LITERAL, r, c, fp);
+                        lexer_append(&l, t);
+                        i += len+2; // +2 for each quote
+                        c += len+2;
                 } else if (ch == '\'') {
-                        forge_todo("chars");
+                        // TODO: account for escape sequences
+                        // TODO: make sure you have a valid character (aka not empty)
+                        token *t = token_alloc(src+i+1, 1, TOKEN_TYPE_CHARACTER_LITERAL, r, c, fp);
+                        lexer_append(&l, t);
+                        i += 3; // +3 for quotes + the character
+                        c += 3;
                 } else if (isalpha(ch) || ch == '_') {
                         size_t len = consume_while(src+i, is_ident);
 
@@ -176,7 +315,14 @@ lexer_create(const char *src,
                         i += len;
                         c += len;
                 } else {
-                        forge_todo("syms");
+                        NOOP(issym);
+                        size_t len = consume_while(src+i, issym);
+                        token_type *ty = determine_sym(src+i, &len);
+                        assert(ty);
+                        token *t = token_alloc(src+i, len, *ty, r, c, fp);
+                        lexer_append(&l, t);
+                        i += len;
+                        c += len;
                 }
         }
 

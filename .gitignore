@@ -1,3 +1,6 @@
 main
 cruc
 *.cru
+*.asm
+*.s
+*.S

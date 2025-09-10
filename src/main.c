@@ -20,6 +20,7 @@ usage(void)
 int
 main(int argc, char **argv)
 {
+
         forge_arg *arg = forge_arg_alloc(argc, argv, 1);
         forge_arg *it = arg;
         const char *filepath = NULL;
@@ -44,7 +45,6 @@ main(int argc, char **argv)
         char *src = forge_io_read_file_to_cstr(filepath);
         lexer l = lexer_create(src, filepath);
         lexer_dump(&l);
-        NOOP(l);
 
         return 0;
 }

@@ -28,7 +28,6 @@ typedef enum {
         TOKEN_TYPE_UPTICK,
         TOKEN_TYPE_AMPERSAND,
         TOKEN_TYPE_ASTERISK,
-        TOKEN_TYPE_HYPHEN,
         TOKEN_TYPE_PLUS,
         TOKEN_TYPE_MINUS,
         TOKEN_TYPE_EQUALS,
