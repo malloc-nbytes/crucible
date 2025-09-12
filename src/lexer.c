@@ -213,6 +213,7 @@ consume_while(const char *st,
 static int is_ignorable(int c)        { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
 static int is_ident(int c)            { return isalnum(c) || c == '_'; }
 static int not_double_quote(int c)    { return c != '"'; }
+static int not_eol(int c)             { return c != '\n'; }
 static int issym(int c) {
         return !is_ident(c)
                 && !is_ignorable(c)
@@ -253,6 +254,36 @@ lexer_dump(const lexer *l)
         }
 }
 
+token *
+lexer_peek(const lexer *l,
+           size_t       peek)
+{
+        if (!l->hd) return NULL;
+        token *it = l->hd;
+        for (size_t i = 0; it && i < peek; ++i);
+        return it;
+}
+
+token *
+lexer_next(lexer *l)
+{
+        if (!l->hd) {
+                forge_err("lexer_next(): no more tokens");
+        }
+        token *t = l->hd;
+        l->hd = l->hd->next;
+        return t;
+}
+
+void
+lexer_discard(lexer *l)
+{
+        if (!l->hd) {
+                forge_err("lexer_discard(): no more tokens");
+        }
+        l->hd = l->hd->next;
+}
+
 lexer
 lexer_create(const char *src,
              const char *fp)
@@ -273,8 +304,11 @@ lexer_create(const char *src,
                 char ch = src[i];
 
                 // TODO: comments
-
-                if (ch == ' ') {
+                if (ch == '-' && src[i+1] == '-') {
+                        size_t len = consume_while(src+i, not_eol);
+                        i += len+1;
+                        c += len+1;
+                } else if (ch == ' ') {
                         ++i, ++c;
                 } else if (ch == '\n') {
                         c = 1;
@@ -315,7 +349,6 @@ lexer_create(const char *src,
                         i += len;
                         c += len;
                 } else {
-                        NOOP(issym);
                         size_t len = consume_while(src+i, issym);
                         token_type *ty = determine_sym(src+i, &len);
                         assert(ty);
@@ -325,6 +358,8 @@ lexer_create(const char *src,
                         c += len;
                 }
         }
+
+        lexer_append(&l, token_alloc("EOF", 3, TOKEN_TYPE_EOF, r, c, fp));
 
         return l;
 }

@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "parser.h"
 
 #include <forge/arg.h>
 #include <forge/err.h>
@@ -44,7 +45,9 @@ main(int argc, char **argv)
 
         char *src = forge_io_read_file_to_cstr(filepath);
         lexer l = lexer_create(src, filepath);
-        lexer_dump(&l);
+        //lexer_dump(&l);
 
+        program p = parser_create_program(&l);
+        NOOP(p);
         return 0;
 }
