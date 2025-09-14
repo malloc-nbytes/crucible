@@ -1,5 +1,8 @@
 #!/usr/bin/env earl
 
+### Note: This script is built with the EARL language [https://github.com/malloc-nbytes/earl].
+###       You will need this to use this script, or just use the associated build.sh script for BASH.
+
 module Build
 
 set_flag("-xe");
