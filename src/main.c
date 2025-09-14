@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "parser.h"
+#include "sem.h"
 
 #include <forge/arg.h>
 #include <forge/err.h>
@@ -48,7 +49,10 @@ main(int argc, char **argv)
         //lexer_dump(&l);
 
         program p = parser_create_program(&l);
-        parser_dump_program(&p);
+        //parser_dump_program(&p);
+
+        symtbl tbl = sem_analysis(&p);
+        NOOP(tbl);
 
         return 0;
 }

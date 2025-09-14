@@ -1,6 +1,8 @@
 #ifndef SMAP_H_INCLUDED
 #define SMAP_H_INCLUDED
 
+#include <forge/array.h>
+
 #include <stddef.h>
 
 #define SMAP_DEFAULT_TBL_CAPACITY 256
@@ -23,6 +25,8 @@ typedef struct {
         smap_hash_sig hash;
         size_t sz;
 } smap;
+
+DYN_ARRAY_TYPE(smap, smap_array);
 
 smap smap_create(smap_hash_sig hash);
 void smap_insert(smap *map, const char *k, const void *v);

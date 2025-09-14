@@ -30,7 +30,7 @@ expr_string_literal_alloc(const token *s)
         expr_string_literal *e = (expr_string_literal *)
                 alloc(sizeof(expr_string_literal));
         e->base.kind = EXPR_KIND_STRING_LITERAL;
-        e->base.accept = NULL;
+        e->base.accept = accept_expr_string_literal;
         e->s = s;
         return e;
 }
@@ -81,7 +81,7 @@ expr_proccall_alloc(expr       *lhs,
 {
         expr_proccall *e = (expr_proccall *)alloc(sizeof(expr_proccall));
         e->base.kind     = EXPR_KIND_PROCCALL;
-        e->base.accept   = NULL;
+        e->base.accept   = accept_expr_proccall;
         e->lhs           = lhs;
         e->args          = args;
         return e;
@@ -106,7 +106,7 @@ stmt_expr_alloc(expr *e)
 {
         stmt_expr *expr   = (stmt_expr *)alloc(sizeof(stmt_expr));
         expr->base.kind   = STMT_KIND_EXPR;
-        expr->base.accept = NULL;
+        expr->base.accept = accept_stmt_expr;
         expr->e           = e;
         return expr;
 }
@@ -120,7 +120,7 @@ stmt_proc_alloc(int              export,
 {
         stmt_proc *proc   = alloc(sizeof(stmt_proc));
         proc->base.kind   = STMT_KIND_PROC;
-        proc->base.accept = NULL;
+        proc->base.accept = accept_stmt_proc;
         proc->export      = export;
         proc->id          = id;
         proc->params      = params;
@@ -134,7 +134,7 @@ stmt_block_alloc(stmt_array stmts)
 {
         stmt_block *blk  = alloc(sizeof(stmt_block));
         blk->base.kind   = STMT_KIND_BLOCK;
-        blk->base.accept = NULL;
+        blk->base.accept = accept_stmt_block;
         blk->stmts       = stmts;
         return blk;
 }
@@ -144,7 +144,7 @@ stmt_return_alloc(expr *e)
 {
         stmt_return *ret  = alloc(sizeof(stmt_return));
         ret->base.kind    = STMT_KIND_RETURN;
-        ret->base.accept  = NULL;
+        ret->base.accept  = accept_stmt_return;
         ret->e            = e;
         return ret;
 }
@@ -154,7 +154,7 @@ stmt_exit_alloc(expr *e)
 {
         stmt_exit *ex    = alloc(sizeof(stmt_exit));
         ex->base.kind    = STMT_KIND_EXIT;
-        ex->base.accept  = NULL;
+        ex->base.accept  = accept_stmt_exit;
         ex->e            = e;
         return ex;
 }
