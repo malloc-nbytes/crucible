@@ -24,3 +24,11 @@ type_u8_alloc(void)
         t->base.kind = TYPE_KIND_U8;
         return t;
 }
+
+type_noreturn *
+type_noreturn_alloc(void)
+{
+        type_noreturn *t = (type_noreturn *)alloc(sizeof(type_noreturn));
+        t->base.kind = TYPE_KIND_NORETURN;
+        return t;
+}

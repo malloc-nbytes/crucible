@@ -24,8 +24,8 @@ expect(parser_context *ctx, token_type ty)
 {
         token *t = lexer_next(ctx->l);
         if (t->ty != ty) {
-                forge_err_wargs("expected token of type `%s` but got `%s`",
-                                token_type_to_cstr(ty), token_type_to_cstr(t->ty));
+                forge_err_wargs("%sexpected token of type `%s` but got `%s`",
+                                tokerr(t), token_type_to_cstr(ty), t->lx);
         }
         return t;
 }
@@ -48,7 +48,7 @@ expectkw(parser_context *ctx, const char *kw)
 static type *
 parse_type(parser_context *ctx)
 {
-        const token *hd = expect(ctx, TOKEN_TYPE_KEYWORD);
+        const token *hd = lexer_next(ctx->l);
         const char *lx = hd->lx;
 
         if (!strcmp(lx, KWD_I8)) {
@@ -68,6 +68,11 @@ parse_type(parser_context *ctx)
         } else if (!strcmp(lx, KWD_U64)) {
                 forge_todo("u64");
         }
+
+        else if (hd->ty == TOKEN_TYPE_BANG) {
+                return (type *)type_noreturn_alloc();
+        }
+
         forge_err_wargs("could not parse type: %s", hd->lx);
 
 }
@@ -259,7 +264,7 @@ parse_parameters(parser_context *ctx)
         parameter_array ar = dyn_array_empty(parameter_array);
 
         if (!strcmp(lexer_peek(ctx->l, 0)->lx, KWD_VOID)) {
-                (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
+                lexer_discard(ctx->l); // void
                 goto done;
         }
 
@@ -308,7 +313,12 @@ parse_stmt_block(parser_context *ctx)
 static stmt_proc *
 parse_stmt_proc(parser_context *ctx)
 {
-        expectkw(ctx, KWD_PROC);
+        int export = !strcmp(lexer_peek(ctx->l, 0)->lx, KWD_EXPORT);
+        if (export) {
+                lexer_discard(ctx->l); // export
+        }
+        lexer_discard(ctx->l); // proc
+
         token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
         parameter_array params = parse_parameters(ctx);
         (void)expect(ctx, TOKEN_TYPE_COLON);
@@ -326,7 +336,7 @@ parse_stmt_proc(parser_context *ctx)
 
         ctx->in_global = 1;
 
-        return stmt_proc_alloc(id, params, ty, blk);
+        return stmt_proc_alloc(export, id, params, ty, blk);
 }
 
 static stmt *
@@ -336,7 +346,7 @@ parse_keyword_stmt(parser_context *ctx)
 
         if (!strcmp(hd->lx, KWD_LET)) {
                 return (stmt *)parse_stmt_let(ctx);
-        } else if (!strcmp(hd->lx, KWD_PROC)) {
+        } else if (!strcmp(hd->lx, KWD_PROC) || !strcmp(hd->lx, KWD_EXPORT)) {
                 return (stmt *)parse_stmt_proc(ctx);
         }
 
@@ -373,6 +383,7 @@ parser_create_program(lexer *l)
 }
 
 static void dump_expr(const expr *e);
+static void dump_stmt(const stmt *s);
 
 static void
 dump_expr_integer_literal(const expr_integer_literal *e)
@@ -439,12 +450,54 @@ dump_stmt_let(const stmt_let *s)
 }
 
 static void
+dump_stmt_proc(stmt_proc *s)
+{
+        printf("\"proc\": {\n");
+        printf("\"type\": \"TODO\",");
+        printf("\"id\": \"%s\",\n", s->id->lx);
+        printf("\"parameters\": [\n");
+
+        for (size_t i = 0; i < s->params.len; ++i) {
+                printf("{\n");
+                printf("\"id\": \"%s\",\n", s->params.data[i].id->lx);
+                printf("\"type\": \"TODO\"\n");
+                printf("}");
+                if (i != s->params.len - 1) {
+                        putchar(',');
+                }
+                printf("\n");
+        }
+
+        printf("],\n");
+        printf("\"body\": ");
+        dump_stmt(s->blk);
+        printf("}\n");
+}
+
+static void
+dump_stmt_block(stmt_block *s)
+{
+        printf("\"blk\": [\n");
+        for (size_t i = 0; i < s->stmts.len; ++i) {
+                if (i != 0) putchar(',');
+                dump_stmt(s->stmts.data[i]);
+        }
+        printf("]\n");
+}
+
+static void
 dump_stmt(const stmt *s)
 {
         printf("{\n");
         switch (s->kind) {
         case STMT_KIND_LET: {
                 dump_stmt_let((stmt_let *)s);
+        } break;
+        case STMT_KIND_PROC: {
+                dump_stmt_proc((stmt_proc *)s);
+        } break;
+        case STMT_KIND_BLOCK: {
+                dump_stmt_block((stmt_block *)s);
         } break;
         default:
                 forge_err_wargs("dump_stmt(): unknown statement `%d`", (int)s->kind);

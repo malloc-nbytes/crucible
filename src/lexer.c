@@ -7,12 +7,23 @@
 #include <forge/colors.h>
 #include <forge/smap.h>
 #include <forge/utils.h>
+#include <forge/cstr.h>
 
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
 
 static smap g_syms = {0};
+
+const char *
+tokerr(const token *t)
+{
+        // file:R:C: error: msg
+        // TODO: buffer overflow
+        static char buf[256] = {0};
+        sprintf(buf, "%s:%zu:%zu: error: ", t->fp, t->r, t->c);
+        return buf;
+}
 
 const char *
 token_type_to_cstr(token_type ty)

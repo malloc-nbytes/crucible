@@ -100,7 +100,8 @@ stmt_expr_alloc(expr *e)
 }
 
 stmt_proc *
-stmt_proc_alloc(const token     *id,
+stmt_proc_alloc(int              export,
+                const token     *id,
                 parameter_array  params,
                 type            *type,
                 stmt            *blk)
@@ -108,6 +109,7 @@ stmt_proc_alloc(const token     *id,
         stmt_proc *proc   = alloc(sizeof(stmt_proc));
         proc->base.kind   = STMT_KIND_PROC;
         proc->base.accept = NULL;
+        proc->export      = export;
         proc->id          = id;
         proc->params      = params;
         proc->type        = type;

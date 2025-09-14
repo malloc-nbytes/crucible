@@ -80,4 +80,6 @@ token *lexer_next(lexer *l);
 void lexer_discard(lexer *l);
 const char *token_type_to_cstr(token_type ty);
 
+const char *tokerr(const token *t);
+
 #endif // LEXER_H_INCLUDED

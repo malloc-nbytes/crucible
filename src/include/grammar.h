@@ -119,6 +119,7 @@ DYN_ARRAY_TYPE(parameter, parameter_array);
 
 typedef struct {
         stmt base;
+        int export;
         const token *id;
         parameter_array params;
         type *type;
@@ -134,7 +135,13 @@ expr_un *expr_un_alloc(expr *operand, const token *op);
 
 stmt_let *stmt_let_alloc(const token *id, const type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);
-stmt_proc *stmt_proc_alloc(const token *id, parameter_array params, type *type, stmt *blk);
+stmt_proc *stmt_proc_alloc(
+        int export,
+        const token *id,
+        parameter_array params,
+        type *type,
+        stmt *blk
+);
 stmt_block *stmt_block_alloc(stmt_array stmts);
 
 #endif // GRAMMAR_H_INCLUDED

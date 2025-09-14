@@ -1,24 +1,22 @@
 {
     "program": [
         {
-            "LET": {
-                "id": "x",
-                "type": "i32",
-                "expr": {
-                    "BINARY": {
-                        "LHS": {
-                            "EXPR": {
-                                "INTEGER": "1"
-                            }
-                        },
-                        "OP": "+",
-                        "RHS": {
-                            "EXPR": {
-                                "string": "x"
-                            }
-                        }
+            "proc": {
+                "type": "TODO",
+                "id": "_start",
+                "parameters": [
+                    {
+                        "id": "a",
+                        "type": "todo"
+                    },
+                    {
+                        "id": "a",
+                        "type": "todo"
                     }
-                }
+                ],
+                "blk": [
+                    
+                ]
             }
         }
     ]
