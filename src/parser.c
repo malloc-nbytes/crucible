@@ -414,6 +414,8 @@ parse_stmt(parser_context *ctx)
 {
         if (kwds_iskw(lexer_peek(ctx->l, 0)->lx)) {
                 return parse_keyword_stmt(ctx);
+        } else if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_LEFT_CURLY) {
+                return (stmt *)parse_stmt_block(ctx);
         }
         return (stmt *)parse_stmt_expr(ctx);
 }

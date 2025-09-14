@@ -7,9 +7,44 @@
 #include <forge/utils.h>
 #include <forge/err.h>
 
+#include <assert.h>
+#include <string.h>
+
+static void
+push_scope(symtbl *tbl)
+{
+        dyn_array_append(tbl->scope, smap_create(NULL));
+}
+
+static void
+pop_scope(symtbl *tbl)
+{
+        assert(tbl->scope.len > 0);
+        --tbl->scope.len;
+}
+
 static int
-id_exists_in_scope(const symtbl *tbl,
-                   const char   *id)
+proc_exists(const symtbl *tbl,
+            const char   *id)
+{
+        for (size_t i = 0; i < tbl->procs.len; ++i) {
+                if (!strcmp(id, tbl->procs.data[i]->id)) {
+                        return 1;
+                }
+        }
+        return 0;
+}
+
+static void
+add_proc_to_scope(symtbl   *tbl,
+                  sem_proc *proc)
+{
+        dyn_array_append(tbl->procs, proc);
+}
+
+static int
+var_exists_in_scope(const symtbl *tbl,
+                    const char   *id)
 {
         for (int i = tbl->scope.len-1; i >= 0; --i) {
                 if (smap_has(&tbl->scope.data[i], id)) {
@@ -20,15 +55,15 @@ id_exists_in_scope(const symtbl *tbl,
 }
 
 static void
-insert_id_into_scope(symtbl *tbl, sym *sym)
+insert_var_into_scope(symtbl *tbl, sem_var *sym)
 {
         smap_insert(&tbl->scope.data[tbl->scope.len-1], sym->id, (void *)sym);
 }
 
-static sym *
-sym_alloc(const char *id, const type *ty)
+static sem_var *
+sem_var_alloc(const char *id, const type *ty)
 {
-        sym *s = (sym *)alloc(sizeof(sym));
+        sem_var *s = (sem_var *)alloc(sizeof(sem_var));
         s->id = id;
         s->ty = ty;
         return s;
@@ -37,14 +72,19 @@ sym_alloc(const char *id, const type *ty)
 static void *
 visit_expr_bin(visitor *v, expr_bin *e)
 {
-        NOOP(v, e);
+        e->lhs->accept(e->lhs, v);
+        e->rhs->accept(e->rhs, v);
         return NULL;
 }
 
 static void *
 visit_expr_identifier(visitor *v, expr_identifier *e)
 {
-        NOOP(v, e);
+        if (!var_exists_in_scope((symtbl *)v->context, e->id->lx)
+            && !proc_exists((symtbl *)v->context, e->id->lx)) {
+                forge_err_wargs("%svariable `%s` is not defined", tokerr(e->id), e->id->lx);
+        }
+
         return NULL;
 }
 
@@ -65,17 +105,22 @@ visit_expr_string_literal(visitor *v, expr_string_literal *e)
 static void *
 visit_expr_proccall(visitor *v, expr_proccall *e)
 {
-        NOOP(v, e);
+        e->lhs->accept(e->lhs, v);
+        for (size_t i = 0; i < e->args.len; ++i) {
+                e->args.data[i]->accept(e->args.data[i], v);
+        }
         return NULL;
 }
 
 static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
-        if (id_exists_in_scope((symtbl *)v->context, s->id->lx)) {
-                forge_err_wargs("variable `%s` is already defined", s->id->lx);
+        if (var_exists_in_scope((symtbl *)v->context, s->id->lx)) {
+                forge_err_wargs("%svariable `%s` is already defined", tokerr(s->id), s->id->lx);
         }
-        insert_id_into_scope((symtbl *)v->context, sym_alloc(s->id->lx, s->type));
+        insert_var_into_scope((symtbl *)v->context, sem_var_alloc(s->id->lx, s->type));
+
+        s->e->accept(s->e, v);
 
         return NULL;
 }
@@ -83,22 +128,38 @@ visit_stmt_let(visitor *v, stmt_let *s)
 static void *
 visit_stmt_expr(visitor *v, stmt_expr *s)
 {
-        NOOP(v, s);
-        return NULL;
+        return s->e->accept(s->e, v);
 }
 
 static void *
 visit_stmt_block(visitor *v, stmt_block *s)
 {
+        push_scope((symtbl *)v->context);
         for (size_t i = 0; i < s->stmts.len; ++i) {
                 s->stmts.data[i]->accept(s->stmts.data[i], v);
         }
+        pop_scope((symtbl *)v->context);
         return NULL;
 }
 
 static void *
 visit_stmt_proc(visitor *v, stmt_proc *s)
 {
+        if (proc_exists((symtbl *)v->context, s->id->lx)) {
+                forge_err_wargs("%sprocecure `%s` is already defined", tokerr(s->id), s->id->lx);
+        }
+
+        sem_proc *proc = (sem_proc *)alloc(sizeof(sem_proc));
+        proc->id = s->id->lx;
+        proc->params = dyn_array_empty(sem_var_array);
+        for (size_t i = 0; i < s->params.len; ++i) {
+                dyn_array_append(proc->params,
+                                 sem_var_alloc(s->params.data[i].id->lx,
+                                               s->params.data[i].type));
+        }
+        proc->type = s->type;
+
+        add_proc_to_scope((symtbl *)v->context, proc);
         return s->blk->accept(s->blk, v);
 }
 
