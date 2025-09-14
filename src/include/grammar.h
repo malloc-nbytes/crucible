@@ -127,6 +127,7 @@ typedef struct {
 
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
+expr_string_literal *expr_string_literal_alloc(const token *s);
 expr_mut *expr_mut_alloc(expr *lhs, const token *op, expr *rhs);
 expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_un *expr_un_alloc(expr *operand, const token *op);

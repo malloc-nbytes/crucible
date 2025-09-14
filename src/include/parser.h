@@ -11,4 +11,6 @@ typedef struct {
 
 program parser_create_program(lexer *l);
 
+void parser_dump_program(const program *p);
+
 #endif // PARSER_H_INCLUDED

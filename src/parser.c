@@ -17,6 +17,7 @@ typedef struct {
 } parser_context;
 
 static stmt *parse_stmt(parser_context *ctx);
+static expr *parse_expr(parser_context *ctx);
 
 token *
 expect(parser_context *ctx, token_type ty)
@@ -82,14 +83,21 @@ parse_primary_expr(parser_context *ctx)
 
                 switch (hd->ty) {
                 case TOKEN_TYPE_IDENTIFIER: {
-                        forge_todo("identifers");
+                        const token *i = lexer_next(ctx->l);
+                        left = (expr *)expr_identifier_alloc(i);
                 } break;
                 case TOKEN_TYPE_INTEGER_LITERAL: {
                         const token *i = lexer_next(ctx->l);
                         left = (expr *)expr_integer_literal_alloc(i);
                 } break;
                 case TOKEN_TYPE_STRING_LITERAL: {
-                        forge_todo("strings");
+                        const token *s = lexer_next(ctx->l);
+                        left = (expr *)expr_string_literal_alloc(s);
+                } break;
+                case TOKEN_TYPE_LEFT_PARENTHESIS: {
+                        lexer_discard(ctx->l); // (
+                        left = parse_expr(ctx);
+                        (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
                 } break;
                 default: return left;
                 }
@@ -363,3 +371,95 @@ parser_create_program(lexer *l)
 
         return p;
 }
+
+static void dump_expr(const expr *e);
+
+static void
+dump_expr_integer_literal(const expr_integer_literal *e)
+{
+        printf("\"integer\": \"%s\"\n", e->i->lx);
+}
+
+static void
+dump_expr_binary(expr_bin *e)
+{
+        printf("\"binary\": {\n");
+        printf("\"lhs\": {\n");
+        dump_expr(e->lhs);
+        printf("},");
+        printf("\"op\": \"%s\",\n", e->op->lx);
+        printf("\"rhs\": {\n");
+        dump_expr(e->rhs);
+        printf("}\n");
+        printf("}\n");
+}
+
+static void
+dump_expr_identifier(expr_identifier *e)
+{
+        printf("\"id\": \"%s\"\n", e->id->lx);
+}
+
+static void
+dump_expr_string_literal(expr_string_literal *e)
+{
+        printf("\"string\": \"%s\"\n", e->s->lx);
+}
+
+static void
+dump_expr(const expr *e)
+{
+        printf("\"expr\": {\n");
+        switch (e->kind) {
+        case EXPR_KIND_INTEGER_LITERAL: {
+                dump_expr_integer_literal((expr_integer_literal *)e);
+        } break;
+        case EXPR_KIND_STRING_LITERAL: {
+                dump_expr_string_literal((expr_string_literal *)e);
+        } break;
+        case EXPR_KIND_IDENTIFIER: {
+                dump_expr_identifier((expr_identifier *)e);
+        } break;
+        case EXPR_KIND_BINARY: {
+                dump_expr_binary((expr_bin *)e);
+        } break;
+        default: forge_err_wargs("dump_expr(): unknown expression `%d`", (int)e->kind);
+        }
+        printf("}\n");
+}
+
+static void
+dump_stmt_let(const stmt_let *s)
+{
+        printf("\"let\": {");
+        printf("\"id\": \"%s\",\n", s->id->lx);
+        printf("\"type\": \"TODO\",\n");
+        dump_expr(s->e);
+        printf("}");
+}
+
+static void
+dump_stmt(const stmt *s)
+{
+        printf("{\n");
+        switch (s->kind) {
+        case STMT_KIND_LET: {
+                dump_stmt_let((stmt_let *)s);
+        } break;
+        default:
+                forge_err_wargs("dump_stmt(): unknown statement `%d`", (int)s->kind);
+        }
+        printf("}\n");
+}
+
+void
+parser_dump_program(const program *p)
+{
+        printf("{\n\"program\": [\n");
+        for (size_t i = 0; i < p->stmts.len; ++i) {
+                if (i != 0) printf(",");
+                dump_stmt(p->stmts.data[i]);
+        }
+        printf("]\n}");
+}
+

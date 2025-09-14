@@ -48,6 +48,7 @@ main(int argc, char **argv)
         //lexer_dump(&l);
 
         program p = parser_create_program(&l);
-        NOOP(p);
+        parser_dump_program(&p);
+
         return 0;
 }

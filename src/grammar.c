@@ -24,6 +24,17 @@ expr_integer_literal_alloc(const token *i)
         return e;
 }
 
+expr_string_literal *
+expr_string_literal_alloc(const token *s)
+{
+        expr_string_literal *e = (expr_string_literal *)
+                alloc(sizeof(expr_string_literal));
+        e->base.kind = EXPR_KIND_STRING_LITERAL;
+        e->base.accept = NULL;
+        e->s = s;
+        return e;
+}
+
 expr_mut *
 expr_mut_alloc(expr        *lhs,
                const token *op,
