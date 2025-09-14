@@ -47,28 +47,179 @@ expectkw(parser_context *ctx, const char *kw)
 static type *
 parse_type(parser_context *ctx)
 {
-        token *hd = expect(ctx, TOKEN_TYPE_KEYWORD);
+        const token *hd = expect(ctx, TOKEN_TYPE_KEYWORD);
         const char *lx = hd->lx;
 
-        if (!strcmp(lx, KWD_I8)
-            || !strcmp(lx, KWD_I16)
-            || !strcmp(lx, KWD_I32)
-            || !strcmp(lx, KWD_I64)
-            || !strcmp(lx, KWD_U8)
-            || !strcmp(lx, KWD_U16)
-            || !strcmp(lx, KWD_U32)
-            || !strcmp(lx, KWD_U64)) {
-                ;
+        if (!strcmp(lx, KWD_I8)) {
+                forge_todo("i8");
+        } else if (!strcmp(lx, KWD_I16)) {
+                forge_todo("i16");
+        } else if (!strcmp(lx, KWD_I32)) {
+                return (type *)type_i32_alloc();
+        } else if (!strcmp(lx, KWD_I64)) {
+                forge_todo("i64");
+        } else if (!strcmp(lx, KWD_U8)) {
+                return (type *)type_u8_alloc();
+        } else if (!strcmp(lx, KWD_U16)) {
+                forge_todo("u16");
+        } else if (!strcmp(lx, KWD_U32)) {
+                return (type *)type_u32_alloc();
+        } else if (!strcmp(lx, KWD_U64)) {
+                forge_todo("u64");
         }
-        forge_todo("types");
+        forge_err_wargs("could not parse type: %s", hd->lx);
 
+}
+
+expr *
+parse_primary_expr(parser_context *ctx)
+{
+        expr *left = NULL;
+
+        while (1) {
+                token *hd = lexer_peek(ctx->l, 0);
+                if (!hd) return left;
+
+                switch (hd->ty) {
+                case TOKEN_TYPE_IDENTIFIER: {
+                        forge_todo("identifers");
+                } break;
+                case TOKEN_TYPE_INTEGER_LITERAL: {
+                        const token *i = lexer_next(ctx->l);
+                        left = (expr *)expr_integer_literal_alloc(i);
+                } break;
+                case TOKEN_TYPE_STRING_LITERAL: {
+                        forge_todo("strings");
+                } break;
+                default: return left;
+                }
+        }
+
+        return left; // unreachable
+}
+
+expr *
+parse_member_expr(parser_context *ctx)
+{
+        return parse_primary_expr(ctx);
+}
+
+expr *
+parse_unary_expr(parser_context *ctx)
+{
+        /* token *cur = lexer_peek(ctx->l, 0); */
+        /* if (cur && (cur->ty == TOKEN_TYPE_MINUS */
+        /*             || cur->ty == TOKEN_TYPE_PLUS */
+        /*             || cur->ty == TOKEN_TYPE_BANG */
+        /*             || cur->ty == TOKEN_TYPE_ASTERISK */
+        /*             || cur->ty == TOKEN_TYPE_AMPERSAND)) { */
+        /*         token *op = lexer_next(ctx->l); */
+        /*         expr *operand = parse_unary_expr(ctx); */
+        /*         return (expr *)expr_un_alloc(operand, op); */
+        /* } */
+        return parse_member_expr(ctx);
+}
+
+static expr *
+parse_multiplicitate_expr(parser_context *ctx)
+{
+        expr *lhs = parse_unary_expr(ctx);
+        token *cur = lexer_peek(ctx->l, 0);
+        while (cur && (cur->ty == TOKEN_TYPE_ASTERISK
+                       || cur->ty == TOKEN_TYPE_FORWARDSLASH
+                       || cur->ty == TOKEN_TYPE_PERCENT)) {
+                token *op = lexer_next(ctx->l);
+                expr *rhs = parse_unary_expr(ctx);
+                expr_bin *bin = expr_bin_alloc(lhs, op, rhs);
+                lhs = (expr *)bin;
+                cur = lexer_peek(ctx->l, 0);
+        }
+        return lhs;
+}
+
+static expr *
+parse_additive_expr(parser_context *ctx)
+{
+        expr *lhs = parse_multiplicitate_expr(ctx);
+        token *cur = lexer_peek(ctx->l, 0);
+        while (cur && (cur->ty == TOKEN_TYPE_PLUS
+                       || cur->ty == TOKEN_TYPE_MINUS)) {
+                token *op = lexer_next(ctx->l);
+                expr *rhs = parse_multiplicitate_expr(ctx);
+                expr_bin *bin = expr_bin_alloc(lhs, op, rhs);
+                lhs = (expr *)bin;
+                cur = lexer_peek(ctx->l, 0);
+        }
+        return lhs;
+}
+
+static expr *
+parse_equalitative_expr(parser_context *ctx)
+{
+        expr *lhs = parse_additive_expr(ctx);
+        token *cur = lexer_peek(ctx->l, 0);
+        while (cur && (cur->ty == TOKEN_TYPE_DOUBLE_EQUALS
+                       || cur->ty == TOKEN_TYPE_GREATERTHAN_EQUALS
+                       || cur->ty == TOKEN_TYPE_GREATERTHAN
+                       || cur->ty == TOKEN_TYPE_LESSTHAN_EQUALS
+                       || cur->ty == TOKEN_TYPE_LESSTHAN
+                       || cur->ty == TOKEN_TYPE_BANG_EQUALS)) {
+                token *op = lexer_next(ctx->l);
+                expr *rhs = parse_additive_expr(ctx);
+                expr_bin *bin = expr_bin_alloc(lhs, op, rhs);
+                lhs = (expr *)bin;
+                cur = lexer_peek(ctx->l, 0);
+        }
+        return lhs;
+}
+
+static expr *
+parse_logical_expr(parser_context *ctx)
+{
+        expr *lhs = parse_equalitative_expr(ctx);
+        token *cur = lexer_peek(ctx->l, 0);
+        while (cur && (cur->ty == TOKEN_TYPE_DOUBLE_AMPERSAND
+                       || cur->ty == TOKEN_TYPE_DOUBLE_PIPE)) {
+                token *op = lexer_next(ctx->l);
+                expr *rhs = parse_equalitative_expr(ctx);
+                expr_bin *bin = expr_bin_alloc(lhs, op, rhs);
+                lhs = (expr *)bin;
+                cur = lexer_peek(ctx->l, 0);
+        }
+        return lhs;
+}
+
+static expr *
+parse_assignment_expr(parser_context *ctx)
+{
+        expr *lhs = parse_logical_expr(ctx);
+
+        token *cur = lexer_peek(ctx->l, 0);
+        if (!cur) return lhs;
+
+        switch (cur->ty) {
+        case TOKEN_TYPE_EQUALS:
+        case TOKEN_TYPE_PLUS_EQUALS:
+        case TOKEN_TYPE_MINUS_EQUALS:
+        case TOKEN_TYPE_ASTERISK_EQUALS:
+        case TOKEN_TYPE_FORWARDSLASH_EQUALS:
+        case TOKEN_TYPE_PERCENT_EQUALS:
+        case TOKEN_TYPE_AMPERSAND_EQUALS:
+        case TOKEN_TYPE_PIPE_EQUALS:
+        case TOKEN_TYPE_UPTICK_EQUALS: {
+                const token *op = lexer_next(ctx->l);
+                expr *rhs = parse_assignment_expr(ctx);
+                return (expr *)expr_mut_alloc(lhs, op, rhs);
+        }
+        default:
+                return lhs;
+        }
 }
 
 static expr *
 parse_expr(parser_context *ctx)
 {
-        NOOP(ctx);
-        forge_todo("parse_expr");
+        return parse_assignment_expr(ctx);
 }
 
 static stmt_let *
