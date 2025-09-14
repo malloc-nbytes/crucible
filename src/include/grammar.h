@@ -16,6 +16,7 @@ typedef enum {
         EXPR_KIND_CHARACTER_LITERAL,
         EXPR_KIND_MUT,
         EXPR_KIND_UNARY,
+        EXPR_KIND_PROCCALL,
 } expr_kind;
 
 typedef enum {
@@ -23,6 +24,7 @@ typedef enum {
         STMT_KIND_EXPR,
         STMT_KIND_BLOCK,
         STMT_KIND_PROC,
+        STMT_KIND_RETURN,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -34,6 +36,8 @@ typedef struct expr {
         // TODO: types
         void *(*accept)(struct expr *e, visitor *v);
 } expr;
+
+DYN_ARRAY_TYPE(expr *, expr_array);
 
 typedef struct {
         expr base;
@@ -82,6 +86,12 @@ typedef struct {
         const token *op;
 } expr_un;
 
+typedef struct {
+        expr base;
+        expr *lhs;
+        expr_array args;
+} expr_proccall;
+
 ///////////////////////////////////////////
 // STATEMENTS
 ///////////////////////////////////////////
@@ -126,12 +136,18 @@ typedef struct {
         stmt *blk;
 } stmt_proc;
 
+typedef struct {
+        stmt base;
+        expr *e;
+} stmt_return;
+
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
 expr_string_literal *expr_string_literal_alloc(const token *s);
 expr_mut *expr_mut_alloc(expr *lhs, const token *op, expr *rhs);
 expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_un *expr_un_alloc(expr *operand, const token *op);
+expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
 
 stmt_let *stmt_let_alloc(const token *id, const type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);
@@ -143,5 +159,6 @@ stmt_proc *stmt_proc_alloc(
         stmt *blk
 );
 stmt_block *stmt_block_alloc(stmt_array stmts);
+stmt_return *stmt_return_alloc(expr *e);
 
 #endif // GRAMMAR_H_INCLUDED

@@ -77,6 +77,25 @@ parse_type(parser_context *ctx)
 
 }
 
+// Note: This function expects the opening and
+//       closing parenthesis `( )` and will consume those.
+static expr_array
+parse_comma_sep_exprs(parser_context *ctx)
+{
+        (void)expect(ctx, TOKEN_TYPE_LEFT_PARENTHESIS);
+        expr_array ar = dyn_array_empty(expr_array);
+        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_PARENTHESIS) {
+                dyn_array_append(ar, parse_expr(ctx));
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                        lexer_discard(ctx->l);
+                } else {
+                        break;
+                }
+        }
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
+        return ar;
+}
+
 expr *
 parse_primary_expr(parser_context *ctx)
 {
@@ -100,9 +119,17 @@ parse_primary_expr(parser_context *ctx)
                         left = (expr *)expr_string_literal_alloc(s);
                 } break;
                 case TOKEN_TYPE_LEFT_PARENTHESIS: {
-                        lexer_discard(ctx->l); // (
-                        left = parse_expr(ctx);
-                        (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
+
+                        if (left) {
+                                // function call
+                                expr_array args = parse_comma_sep_exprs(ctx);
+                                left = (expr *)expr_proccall_alloc(left, args);
+                        } else {
+                                // Math expression
+                                lexer_discard(ctx->l); // (
+                                left = parse_expr(ctx);
+                                (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
+                        }
                 } break;
                 default: return left;
                 }
@@ -339,6 +366,15 @@ parse_stmt_proc(parser_context *ctx)
         return stmt_proc_alloc(export, id, params, ty, blk);
 }
 
+static stmt_return *
+parse_stmt_return(parser_context *ctx)
+{
+        (void)expectkw(ctx, KWD_RETURN);
+        expr *e = parse_expr(ctx);
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        return stmt_return_alloc(e);
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -348,6 +384,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_let(ctx);
         } else if (!strcmp(hd->lx, KWD_PROC) || !strcmp(hd->lx, KWD_EXPORT)) {
                 return (stmt *)parse_stmt_proc(ctx);
+        } else if (!strcmp(hd->lx, KWD_RETURN)) {
+                return (stmt *)parse_stmt_return(ctx);
         }
 
         assert(0 && "todo");
@@ -418,6 +456,24 @@ dump_expr_string_literal(expr_string_literal *e)
 }
 
 static void
+dump_expr_proccall(expr_proccall *e)
+{
+        printf("\"proccall\": {\n");
+        printf("\"lhs\": {\n");
+        dump_expr(e->lhs);
+        printf("},\n");
+        printf("\"args\": [\n");
+        for (size_t i = 0; i < e->args.len; ++i) {
+                if (i != 0) putchar(',');
+                printf("{\n");
+                dump_expr(e->args.data[i]);
+                printf("}\n");
+        }
+        printf("]\n");
+        printf("}\n");
+}
+
+static void
 dump_expr(const expr *e)
 {
         printf("\"expr\": {\n");
@@ -433,6 +489,9 @@ dump_expr(const expr *e)
         } break;
         case EXPR_KIND_BINARY: {
                 dump_expr_binary((expr_bin *)e);
+        } break;
+        case EXPR_KIND_PROCCALL: {
+                dump_expr_proccall((expr_proccall *)e);
         } break;
         default: forge_err_wargs("dump_expr(): unknown expression `%d`", (int)e->kind);
         }
@@ -453,6 +512,7 @@ static void
 dump_stmt_proc(stmt_proc *s)
 {
         printf("\"proc\": {\n");
+        printf("\"export\": \"%d\",", s->export);
         printf("\"type\": \"TODO\",");
         printf("\"id\": \"%s\",\n", s->id->lx);
         printf("\"parameters\": [\n");
@@ -486,6 +546,20 @@ dump_stmt_block(stmt_block *s)
 }
 
 static void
+dump_stmt_return(stmt_return *s)
+{
+        printf("\"return\": {\n");
+        dump_expr(s->e);
+        printf("}\n");
+}
+
+static void
+dump_stmt_expr(stmt_expr *s)
+{
+        dump_expr(s->e);
+}
+
+static void
 dump_stmt(const stmt *s)
 {
         printf("{\n");
@@ -498,6 +572,12 @@ dump_stmt(const stmt *s)
         } break;
         case STMT_KIND_BLOCK: {
                 dump_stmt_block((stmt_block *)s);
+        } break;
+        case STMT_KIND_RETURN: {
+                dump_stmt_return((stmt_return *)s);
+        } break;
+        case STMT_KIND_EXPR: {
+                dump_stmt_expr((stmt_expr *)s);
         } break;
         default:
                 forge_err_wargs("dump_stmt(): unknown statement `%d`", (int)s->kind);

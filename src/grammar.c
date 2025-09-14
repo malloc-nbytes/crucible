@@ -75,6 +75,18 @@ expr_un_alloc(expr        *operand,
         return e;
 }
 
+expr_proccall *
+expr_proccall_alloc(expr       *lhs,
+                    expr_array  args)
+{
+        expr_proccall *e = (expr_proccall *)alloc(sizeof(expr_proccall));
+        e->base.kind     = EXPR_KIND_PROCCALL;
+        e->base.accept   = NULL;
+        e->lhs           = lhs;
+        e->args          = args;
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                const type  *type,
@@ -125,4 +137,14 @@ stmt_block_alloc(stmt_array stmts)
         blk->base.accept = NULL;
         blk->stmts       = stmts;
         return blk;
+}
+
+stmt_return *
+stmt_return_alloc(expr *e)
+{
+        stmt_return *ret  = alloc(sizeof(stmt_return));
+        ret->base.kind    = STMT_KIND_RETURN;
+        ret->base.accept  = NULL;
+        ret->e            = e;
+        return ret;
 }

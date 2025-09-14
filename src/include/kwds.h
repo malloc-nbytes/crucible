@@ -11,9 +11,10 @@
 #define KWD_U64  "u64"
 #define KWD_VOID "void"
 
-#define KWD_PROC "proc"
+#define KWD_PROC   "proc"
 #define KWD_EXPORT "export"
-#define KWD_LET  "let"
+#define KWD_LET    "let"
+#define KWD_RETURN "return"
 
 #define KWD_IF    "if"
 #define KWD_WHILE "while"
@@ -37,6 +38,7 @@
                 KWD_FOR,                        \
                 KWD_ELSE,                       \
                 KWD_EXPORT,                     \
+                KWD_RETURN,                     \
 }
 
 #define KWD_TYPES {                             \
