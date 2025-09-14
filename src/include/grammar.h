@@ -25,6 +25,7 @@ typedef enum {
         STMT_KIND_BLOCK,
         STMT_KIND_PROC,
         STMT_KIND_RETURN,
+        STMT_KIND_EXIT,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -141,6 +142,11 @@ typedef struct {
         expr *e;
 } stmt_return;
 
+typedef struct {
+        stmt base;
+        expr *e; // can be NULL
+} stmt_exit;
+
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
 expr_string_literal *expr_string_literal_alloc(const token *s);
@@ -160,5 +166,6 @@ stmt_proc *stmt_proc_alloc(
 );
 stmt_block *stmt_block_alloc(stmt_array stmts);
 stmt_return *stmt_return_alloc(expr *e);
+stmt_exit *stmt_exit_alloc(expr *e);
 
 #endif // GRAMMAR_H_INCLUDED

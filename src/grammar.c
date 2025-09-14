@@ -148,3 +148,13 @@ stmt_return_alloc(expr *e)
         ret->e            = e;
         return ret;
 }
+
+stmt_exit *
+stmt_exit_alloc(expr *e)
+{
+        stmt_exit *ex    = alloc(sizeof(stmt_exit));
+        ex->base.kind    = STMT_KIND_EXIT;
+        ex->base.accept  = NULL;
+        ex->e            = e;
+        return ex;
+}

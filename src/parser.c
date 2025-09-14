@@ -50,6 +50,7 @@ parse_type(parser_context *ctx)
 {
         const token *hd = lexer_next(ctx->l);
         const char *lx = hd->lx;
+        type *ty = NULL;
 
         if (!strcmp(lx, KWD_I8)) {
                 forge_todo("i8");
@@ -60,21 +61,26 @@ parse_type(parser_context *ctx)
         } else if (!strcmp(lx, KWD_I64)) {
                 forge_todo("i64");
         } else if (!strcmp(lx, KWD_U8)) {
-                return (type *)type_u8_alloc();
+                ty = (type *)type_u8_alloc();
         } else if (!strcmp(lx, KWD_U16)) {
                 forge_todo("u16");
         } else if (!strcmp(lx, KWD_U32)) {
-                return (type *)type_u32_alloc();
+                ty = (type *)type_u32_alloc();
         } else if (!strcmp(lx, KWD_U64)) {
                 forge_todo("u64");
+        } else if (hd->ty == TOKEN_TYPE_BANG) {
+                ty = (type *)type_noreturn_alloc();
+        } else {
+                forge_err_wargs("could not parse type at `%s`", lx);
         }
 
-        else if (hd->ty == TOKEN_TYPE_BANG) {
-                return (type *)type_noreturn_alloc();
+        // Handles all pointer types (ex: u8**).
+        while (LSP(ctx->l, 0)->ty == TOKEN_TYPE_ASTERISK) {
+                lexer_discard(ctx->l);
+                ty = (type *)type_ptr_alloc(ty);
         }
 
-        forge_err_wargs("could not parse type: %s", hd->lx);
-
+        return ty;
 }
 
 // Note: This function expects the opening and
@@ -375,6 +381,15 @@ parse_stmt_return(parser_context *ctx)
         return stmt_return_alloc(e);
 }
 
+static stmt_exit *
+parse_stmt_exit(parser_context *ctx)
+{
+        (void)expectkw(ctx, KWD_EXIT);
+        expr *e = parse_expr(ctx);
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        return stmt_exit_alloc(e);
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -386,6 +401,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_proc(ctx);
         } else if (!strcmp(hd->lx, KWD_RETURN)) {
                 return (stmt *)parse_stmt_return(ctx);
+        } else if (!strcmp(hd->lx, KWD_EXIT)) {
+                return (stmt *)parse_stmt_exit(ctx);
         }
 
         assert(0 && "todo");
@@ -503,7 +520,7 @@ dump_stmt_let(const stmt_let *s)
 {
         printf("\"let\": {");
         printf("\"id\": \"%s\",\n", s->id->lx);
-        printf("\"type\": \"TODO\",\n");
+        printf("\"type\": \"%s\",\n", type_to_cstr(s->type));
         dump_expr(s->e);
         printf("}");
 }
@@ -513,14 +530,14 @@ dump_stmt_proc(stmt_proc *s)
 {
         printf("\"proc\": {\n");
         printf("\"export\": \"%d\",", s->export);
-        printf("\"type\": \"TODO\",");
+        printf("\"type\": \"%s\",", type_to_cstr(s->type));
         printf("\"id\": \"%s\",\n", s->id->lx);
         printf("\"parameters\": [\n");
 
         for (size_t i = 0; i < s->params.len; ++i) {
                 printf("{\n");
                 printf("\"id\": \"%s\",\n", s->params.data[i].id->lx);
-                printf("\"type\": \"TODO\"\n");
+                printf("\"type\": \"%s\"\n", type_to_cstr(s->params.data[i].type));
                 printf("}");
                 if (i != s->params.len - 1) {
                         putchar(',');
@@ -560,6 +577,16 @@ dump_stmt_expr(stmt_expr *s)
 }
 
 static void
+dump_stmt_exit(stmt_expr *s)
+{
+        printf("\"exit\": {\n");
+        if (s->e) {
+                dump_expr(s->e);
+        }
+        printf("}\n");
+}
+
+static void
 dump_stmt(const stmt *s)
 {
         printf("{\n");
@@ -578,6 +605,9 @@ dump_stmt(const stmt *s)
         } break;
         case STMT_KIND_EXPR: {
                 dump_stmt_expr((stmt_expr *)s);
+        } break;
+        case STMT_KIND_EXIT: {
+                dump_stmt_exit((stmt_expr *)s);
         } break;
         default:
                 forge_err_wargs("dump_stmt(): unknown statement `%d`", (int)s->kind);

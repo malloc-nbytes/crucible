@@ -41,5 +41,8 @@ type_i32 *type_i32_alloc(void);
 type_u32 *type_u32_alloc(void);
 type_u8 *type_u8_alloc(void);
 type_noreturn *type_noreturn_alloc(void);
+type_ptr *type_ptr_alloc(type *to);
+
+char *type_to_cstr(const type *t);
 
 #endif // TYPES_H_INCLUDED
