@@ -14,6 +14,11 @@ typedef struct {
 
 typedef struct {
         smap_array scope;
+
+        struct {
+                type *type;
+                int inproc;
+        } proc;
 } symtbl;
 
 symtbl sem_analysis(program *p);

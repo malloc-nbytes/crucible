@@ -19,6 +19,7 @@ push_scope(symtbl *tbl)
 static void
 pop_scope(symtbl *tbl)
 {
+        // TODO: free() all symbols in popped scope.
         assert(tbl->scope.len > 0);
         --tbl->scope.len;
 }
@@ -206,16 +207,49 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                 forge_err_wargs("%sprocecure `%s` is already defined", loc_err(s->id->loc), s->id->lx);
         }
 
+        // Add procedure to the scope.
         type_proc *proc_ty = type_proc_alloc(s->type, &s->params);
         insert_sym_into_scope(tbl, sym_alloc(s->id->lx, (type *)proc_ty));
 
-        return s->blk->accept(s->blk, v);
+        push_scope(tbl);
+
+        for (size_t i = 0; i < s->params.len; ++i) {
+                if (sym_exists_in_scope(tbl, s->params.data[i].id->lx)) {
+                        forge_err_wargs("%svariable `%s` is already defined",
+                                        loc_err(s->params.data[i].id->loc), s->params.data[i].id->lx);
+                }
+                insert_sym_into_scope(tbl,
+                                      sym_alloc(s->params.data[i].id->lx,
+                                                s->params.data[i].type));
+        }
+
+        tbl->proc.inproc = 1;
+        tbl->proc.type = s->type;
+
+        s->blk->accept(s->blk, v);
+
+        tbl->proc.type = NULL;
+        tbl->proc.inproc = 0;
+
+        pop_scope(tbl);
+
+        return NULL;
 }
 
 static void *
 visit_stmt_return(visitor *v, stmt_return *s)
 {
-        NOOP(v, s);
+        symtbl *tbl = (symtbl *)v->context;
+        s->e->accept(s->e, v);
+        if (tbl->proc.inproc) {
+                if (!type_is_compat(s->e->type, tbl->proc.type)) {
+                        forge_err_wargs("%scannot return type %s in a procedure returning %s",
+                                        loc_err(s->e->loc),
+                                        type_to_cstr(s->e->type),
+                                        type_to_cstr(tbl->proc.type));
+
+                }
+        }
         return NULL;
 }
 
@@ -250,6 +284,10 @@ sem_analysis(program *p)
 {
         symtbl tbl = (symtbl) {
                 .scope = dyn_array_empty(smap_array),
+                .proc = {
+                        .type = NULL,
+                        .inproc = 0,
+                },
         };
         dyn_array_append(tbl.scope, smap_create(NULL));
 
