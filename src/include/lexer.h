@@ -1,6 +1,8 @@
 #ifndef LEXER_H_INCLUDED
 #define LEXER_H_INCLUDED
 
+#include "loc.h"
+
 #include <stddef.h>
 
 typedef enum {
@@ -62,9 +64,7 @@ typedef enum {
 typedef struct token {
         char *lx;
         token_type ty;
-        size_t r;
-        size_t c;
-        const char *fp;
+        loc loc;
         struct token *next;
 } token;
 
@@ -79,7 +79,5 @@ token *lexer_peek(const lexer *l, size_t peek);
 token *lexer_next(lexer *l);
 void lexer_discard(lexer *l);
 const char *token_type_to_cstr(token_type ty);
-
-const char *tokerr(const token *t);
 
 #endif // LEXER_H_INCLUDED

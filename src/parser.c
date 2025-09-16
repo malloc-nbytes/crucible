@@ -25,7 +25,7 @@ expect(parser_context *ctx, token_type ty)
         token *t = lexer_next(ctx->l);
         if (t->ty != ty) {
                 forge_err_wargs("%sexpected token of type `%s` but got `%s`",
-                                tokerr(t), token_type_to_cstr(ty), t->lx);
+                                loc_err(t->loc), token_type_to_cstr(ty), t->lx);
         }
         return t;
 }
@@ -115,17 +115,19 @@ parse_primary_expr(parser_context *ctx)
                 case TOKEN_TYPE_IDENTIFIER: {
                         const token *i = lexer_next(ctx->l);
                         left = (expr *)expr_identifier_alloc(i);
+                        left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_INTEGER_LITERAL: {
                         const token *i = lexer_next(ctx->l);
                         left = (expr *)expr_integer_literal_alloc(i);
+                        left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_STRING_LITERAL: {
                         const token *s = lexer_next(ctx->l);
                         left = (expr *)expr_string_literal_alloc(s);
+                        left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_LEFT_PARENTHESIS: {
-
                         if (left) {
                                 // function call
                                 expr_array args = parse_comma_sep_exprs(ctx);
@@ -136,6 +138,7 @@ parse_primary_expr(parser_context *ctx)
                                 left = parse_expr(ctx);
                                 (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
                         }
+                        left->loc = hd->loc;
                 } break;
                 default: return left;
                 }

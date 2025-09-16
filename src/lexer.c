@@ -1,6 +1,7 @@
 #include "lexer.h"
 #include "mem.h"
 #include "kwds.h"
+#include "loc.h"
 #include "ds/smap.h"
 
 #include <forge/err.h>
@@ -14,16 +15,6 @@
 #include <ctype.h>
 
 static smap g_syms = {0};
-
-const char *
-tokerr(const token *t)
-{
-        // file:R:C: error: msg
-        // TODO: buffer overflow
-        static char buf[256] = {0};
-        sprintf(buf, "%s:%zu:%zu: error: ", t->fp, t->r, t->c);
-        return buf;
-}
 
 const char *
 token_type_to_cstr(token_type ty)
@@ -186,12 +177,10 @@ token_alloc(const char *st,
             const char *fp)
 {
         token *t = alloc(sizeof(token));
-        t->lx = strndup(st, st_n);
-        t->ty = ty;
-        t->r = r;
-        t->c = c;
-        t->fp = fp;
-        t->next = NULL;
+        t->lx    = strndup(st, st_n);
+        t->ty    = ty;
+        t->loc   = loc_create(fp, r, c);
+        t->next  = NULL;
         return t;
 }
 
@@ -258,9 +247,9 @@ lexer_dump(const lexer *l)
                 printf("{ lx: %s%s%s, ty: %s%s%s, fp: %s%s%s, r: %s%zu%s, c: %s%zu%s }\n",
                        YELLOW, it->lx, RESET,
                        GREEN, token_type_to_cstr(it->ty), RESET,
-                       PINK, it->fp, RESET,
-                       PINK, it->r, RESET,
-                       PINK, it->c, RESET);
+                       PINK, it->loc.fp, RESET,
+                       PINK, it->loc.r, RESET,
+                       PINK, it->loc.c, RESET);
                 it = it->next;
         }
 }

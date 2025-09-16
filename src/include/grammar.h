@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "lexer.h"
+#include "loc.h"
 
 #include <forge/array.h>
 
@@ -35,6 +36,7 @@ typedef enum {
 typedef struct expr {
         expr_kind kind;
         type *type;
+        loc loc;
         void *(*accept)(struct expr *e, visitor *v);
 } expr;
 
