@@ -19,6 +19,8 @@ typedef struct {
                 type *type;
                 int inproc;
         } proc;
+
+        str_array errs;
 } symtbl;
 
 symtbl sem_analysis(program *p);

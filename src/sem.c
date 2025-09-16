@@ -9,6 +9,24 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdarg.h>
+
+void
+pusherr(symtbl *tbl, loc loc, const char *fmt, ...)
+{
+        static char buf[512] = {0};
+        const char *prefix = loc_err(loc);
+        va_list args;
+
+        snprintf(buf, sizeof(buf), "%s", prefix);
+
+        size_t prefix_n = strlen(buf);
+        va_start(args, fmt);
+        vsnprintf(buf + prefix_n, sizeof(buf) - prefix_n, fmt, args);
+        va_end(args);
+
+        dyn_array_append(tbl->errs, strdup(buf));
+}
 
 static void
 push_scope(symtbl *tbl)
@@ -61,13 +79,14 @@ static sym *
 sym_alloc(const char *id, type *ty)
 {
         sym *s = (sym *)alloc(sizeof(sym));
-        s->id = id;
-        s->ty = ty;
+        s->id  = id;
+        s->ty  = ty;
         return s;
 }
 
 static type *
-binop(const expr  *lhs,
+binop(symtbl      *tbl,
+      const expr  *lhs,
       const token *op,
       const expr  *rhs)
 {
@@ -80,8 +99,10 @@ binop(const expr  *lhs,
         }
 
         if (!type_is_compat(lhs->type, rhs->type)) {
-                forge_err_wargs("%scannot perform binary operator `%s` on %s and %s",
-                                loc_err(lhs->loc), op->lx, type_to_cstr(lhs->type), type_to_cstr(rhs->type));
+                pusherr(tbl, lhs->loc,
+                        "cannot perform binary operator `%s` on %s and %s",
+                        op->lx,
+                        type_to_cstr(lhs->type), type_to_cstr(rhs->type));
         }
 
         return lhs->type;
@@ -90,10 +111,12 @@ binop(const expr  *lhs,
 static void *
 visit_expr_bin(visitor *v, expr_bin *e)
 {
+        symtbl *tbl = (symtbl *)v->context;
+
         e->lhs->accept(e->lhs, v);
         e->rhs->accept(e->rhs, v);
 
-        ((expr *)e)->type = binop(e->lhs, e->op, e->rhs);
+        ((expr *)e)->type = binop(tbl, e->lhs, e->op, e->rhs);
 
         return NULL;
 }
@@ -104,11 +127,14 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
         symtbl *tbl = (symtbl *)v->context;
 
         if (!sym_exists_in_scope(tbl, e->id->lx)) {
-                forge_err_wargs("%svariable `%s` is not defined", loc_err(((expr *)e)->loc), e->id->lx);
+                pusherr(tbl, ((expr *)e)->loc, "variable `%s` is not defined", e->id->lx);
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                return NULL;
+        } else {
+                sym *sym = get_sym_from_scope(tbl, e->id->lx);
+                ((expr *)e)->type = sym->ty;
         }
 
-        sym *sym = get_sym_from_scope(tbl, e->id->lx);
-        ((expr *)e)->type = sym->ty;
 
         return NULL;
 }
@@ -132,6 +158,8 @@ visit_expr_string_literal(visitor *v, expr_string_literal *e)
 static void *
 visit_expr_proccall(visitor *v, expr_proccall *e)
 {
+        symtbl *tbl = (symtbl *)v->context;
+
         // A procedure call has a left-hand-side expression
         // and parameters.
         // i.e.,
@@ -144,12 +172,19 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         // Let's assume that the left-hand-side it will always be a
         // a type of 'proc'.
         type *proc_rettype = ((expr *)e->lhs)->type;
-        assert(proc_rettype->kind == TYPE_KIND_PROC);
+        //assert(proc_rettype->kind == TYPE_KIND_PROC);
+        if (proc_rettype->kind != TYPE_KIND_PROC) {
+                pusherr(tbl, e->lhs->loc, "cannot perform a procedure call on type %s", type_to_cstr(proc_rettype));
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                return NULL;
+        }
 
         // Check number of arguments
         if (e->args.len != ((type_proc *)proc_rettype)->params->len) {
-                forge_err_wargs("%sprocedure requires %zu arguments but %zu were given",
-                                loc_err(((expr *)e)->loc), ((type_proc *)proc_rettype)->params->len, e->args.len);
+                pusherr(tbl, ((expr *)e)->loc,
+                        "procedure requires %zu arguments but %zu were given",
+                        ((type_proc *)proc_rettype)->params->len, e->args.len);
+                return NULL;
         }
 
         // This expression's return type is the return type
@@ -163,9 +198,14 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 // Type check argument list
                 const type *expected = ((type_proc *)proc_rettype)->params->data[i].type;
                 const type *got = e->args.data[i]->type;
+
+                assert(expected);
+                assert(got);
+
                 if (!type_is_compat(got, expected)) {
-                        forge_err_wargs("%stype mismatch, expected `%s` but the expression evaluates to `%s`",
-                                        loc_err(e->args.data[i]->loc), type_to_cstr(expected), type_to_cstr(got));
+                        pusherr(tbl, e->args.data[i]->loc,
+                                "type mismatch, expected `%s` but the expression evaluates to `%s`",
+                                type_to_cstr(expected), type_to_cstr(got));
                 }
         }
 
@@ -179,7 +219,8 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         // Check if the variable already exists
         if (sym_exists_in_scope(tbl, s->id->lx)) {
-                forge_err_wargs("%svariable `%s` is already defined", loc_err(s->id->loc), s->id->lx);
+                pusherr(tbl, s->id->loc, "variable `%s` is already defined", s->id->lx);
+                return NULL;
         }
 
         insert_sym_into_scope(tbl, sym_alloc(s->id->lx, s->type));
@@ -192,8 +233,10 @@ visit_stmt_let(visitor *v, stmt_let *s)
         //   let x: i32 = 1;
         //          ^^^   ^
         if (!type_is_compat(s->type, s->e->type)) {
-                forge_err_wargs("%stype mismatch, expected `%s` but the expression evaluates to `%s`",
-                                loc_err(s->id->loc), type_to_cstr(s->type), type_to_cstr(s->e->type));
+                pusherr(tbl, s->id->loc,
+                        "type mismatch, expected `%s` but the expression evaluates to `%s`",
+                        type_to_cstr(s->type), type_to_cstr(s->e->type));
+                return NULL;
         }
 
         return NULL;
@@ -227,11 +270,12 @@ visit_stmt_block(visitor *v, stmt_block *s)
 static void *
 visit_stmt_proc(visitor *v, stmt_proc *s)
 {
-
+        symtbl *tbl = (symtbl *)v->context;
 
         // Check if this procedure already exists.
         if (sym_exists_in_scope(tbl, s->id->lx)) {
-                forge_err_wargs("%sprocecure `%s` is already defined", loc_err(s->id->loc), s->id->lx);
+                pusherr(tbl, s->id->loc, "procecure `%s` is already defined", s->id->lx);
+                return NULL;
         }
 
         // Add procedure to the scope.
@@ -244,12 +288,13 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 
         for (size_t i = 0; i < s->params.len; ++i) {
                 if (sym_exists_in_scope(tbl, s->params.data[i].id->lx)) {
-                        forge_err_wargs("%svariable `%s` is already defined",
-                                        loc_err(s->params.data[i].id->loc), s->params.data[i].id->lx);
+                        pusherr(tbl, s->params.data[i].id->loc,
+                                "variable `%s` is already defined",
+                                s->params.data[i].id->lx);
+                        return NULL;
                 }
-                insert_sym_into_scope(tbl,
-                                      sym_alloc(s->params.data[i].id->lx,
-                                                s->params.data[i].type));
+                insert_sym_into_scope(tbl, sym_alloc(s->params.data[i].id->lx,
+                                                     s->params.data[i].type));
         }
 
         // We are currently inside of a procedure, keep track
@@ -280,11 +325,11 @@ visit_stmt_return(visitor *v, stmt_return *s)
 
         if (tbl->proc.inproc) {
                 if (!type_is_compat(s->e->type, tbl->proc.type)) {
-                        forge_err_wargs("%scannot return type %s in a procedure returning %s",
-                                        loc_err(s->e->loc),
-                                        type_to_cstr(s->e->type),
-                                        type_to_cstr(tbl->proc.type));
-
+                        pusherr(tbl, s->e->loc,
+                                "cannot return type `%s` in a procedure returning `%s`",
+                                type_to_cstr(s->e->type),
+                                type_to_cstr(tbl->proc.type));
+                        return NULL;
                 }
         }
 
@@ -326,6 +371,7 @@ sem_analysis(program *p)
                         .type = NULL,
                         .inproc = 0,
                 },
+                .errs = dyn_array_empty(str_array),
         };
 
         // Need to immediately add a scope for global scope.

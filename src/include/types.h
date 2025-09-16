@@ -22,6 +22,8 @@ typedef enum {
 
         TYPE_KIND_PTR,
         TYPE_KIND_PROC,
+
+        TYPE_KIND_UNKNOWN,
 } type_kind;
 
 typedef struct { type_kind kind; } type;
@@ -50,11 +52,15 @@ typedef struct {
         const parameter_array *params;
 } type_proc;
 
+typedef struct { type base; } type_unknown;
+
 type_i32 *type_i32_alloc(void);
 type_u32 *type_u32_alloc(void);
 type_u8 *type_u8_alloc(void);
 type_noreturn *type_noreturn_alloc(void);
 type_ptr *type_ptr_alloc(type *to);
+type_void *type_void_alloc(void);
+type_unknown *type_unknown_alloc(void);
 
 char *type_to_cstr(const type *t);
 type_proc *type_proc_alloc(type *rettype,

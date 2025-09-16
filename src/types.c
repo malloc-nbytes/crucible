@@ -47,6 +47,14 @@ type_ptr_alloc(type *to)
         return t;
 }
 
+type_void *
+type_void_alloc(void)
+{
+        type_void *t = (type_void *)alloc(sizeof(type_void));
+        t->base.kind = TYPE_KIND_VOID;
+        return t;
+}
+
 type_proc *
 type_proc_alloc(type                  *rettype,
                 const parameter_array *params)
@@ -58,9 +66,18 @@ type_proc_alloc(type                  *rettype,
         return t;
 }
 
+type_unknown *
+type_unknown_alloc(void)
+{
+        type_unknown *t = (type_unknown *)alloc(sizeof(type_unknown));
+        t->base.kind = TYPE_KIND_UNKNOWN;
+        return t;
+}
+
 char *
 type_to_cstr(const type *t)
 {
+        if (!t) return "null"; // Handle NULL type pointer
         switch (t->kind) {
         case TYPE_KIND_I8: return "i8";
         case TYPE_KIND_I16: return "i16";
@@ -72,10 +89,13 @@ type_to_cstr(const type *t)
         case TYPE_KIND_U64: return "u64";
         case TYPE_KIND_PTR: {
                 return forge_cstr_builder("ptr<", type_to_cstr(((type_ptr *)t)->to), ">", NULL);
-        } break;
+        }
         case TYPE_KIND_VOID: return "void";
         case TYPE_KIND_NORETURN: return "!";
-        default: forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
+        case TYPE_KIND_UNKNOWN: return "<unknown>";
+        default: {
+                forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
+        } break;
         }
 
         return NULL; // unreachable

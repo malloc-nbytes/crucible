@@ -52,7 +52,12 @@ main(int argc, char **argv)
         //parser_dump_program(&p);
 
         symtbl tbl = sem_analysis(&p);
-        NOOP(tbl);
+        if (tbl.errs.len > 0) {
+                for (size_t i = 0; i < tbl.errs.len; ++i) {
+                        fprintf(stderr, "%s\n", tbl.errs.data[i]);
+                }
+                exit(1);
+        }
 
         return 0;
 }
