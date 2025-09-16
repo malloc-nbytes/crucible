@@ -7,7 +7,7 @@
 
 static __smap_node *
 smap_node_alloc(const char *k,
-                const void *v)
+                void       *v)
 {
         __smap_node *n = (__smap_node *)alloc(sizeof(__smap_node));
         n->k = strdup(k);
@@ -56,7 +56,7 @@ smap_create(smap_hash_sig hash)
 void
 smap_insert(smap       *map,
             const char *k,
-            const void *v)
+            void       *v)
 {
         assert(map && k && v);
 
@@ -85,7 +85,7 @@ smap_insert(smap       *map,
         ++map->sz;
 }
 
-const void *
+void *
 smap_get(const smap *map,
          const char *k)
 {

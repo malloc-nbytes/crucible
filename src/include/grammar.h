@@ -34,7 +34,7 @@ typedef enum {
 
 typedef struct expr {
         expr_kind kind;
-        // TODO: types
+        type *type;
         void *(*accept)(struct expr *e, visitor *v);
 } expr;
 
@@ -107,7 +107,7 @@ DYN_ARRAY_TYPE(stmt *, stmt_array);
 typedef struct {
         stmt base;
         const token *id;
-        const type *type;
+        type *type;
         expr *e;
 } stmt_let;
 
@@ -155,7 +155,7 @@ expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_un *expr_un_alloc(expr *operand, const token *op);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
 
-stmt_let *stmt_let_alloc(const token *id, const type *type, expr *e);
+stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);
 stmt_proc *stmt_proc_alloc(
         int export,

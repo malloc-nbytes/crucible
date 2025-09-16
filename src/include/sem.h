@@ -9,22 +9,11 @@
 
 typedef struct {
         const char *id;
-        const type *ty;
-} sem_var;
-
-DYN_ARRAY_TYPE(sem_var *, sem_var_array);
-
-typedef struct {
-        const char *id;
-        sem_var_array params;
-        const type *type;
-} sem_proc;
-
-DYN_ARRAY_TYPE(sem_proc *, sem_proc_array);
+        type *ty;
+} sym;
 
 typedef struct {
         smap_array scope;
-        sem_proc_array procs;
 } symtbl;
 
 symtbl sem_analysis(program *p);

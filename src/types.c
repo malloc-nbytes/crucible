@@ -4,6 +4,8 @@
 #include <forge/cstr.h>
 #include <forge/err.h>
 
+#include <assert.h>
+
 type_i32 *
 type_i32_alloc(void)
 {
@@ -45,6 +47,17 @@ type_ptr_alloc(type *to)
         return t;
 }
 
+type_proc *
+type_proc_alloc(type                  *rettype,
+                const parameter_array *params)
+{
+        type_proc *t = (type_proc *)alloc(sizeof(type_proc));
+        t->base.kind = TYPE_KIND_PROC;
+        t->rettype = rettype;
+        t->params = params;
+        return t;
+}
+
 char *
 type_to_cstr(const type *t)
 {
@@ -66,4 +79,23 @@ type_to_cstr(const type *t)
         }
 
         return NULL; // unreachable
+}
+
+int
+type_is_compat(const type *t1,
+               const type *t2)
+{
+        assert(t1);
+        assert(t2);
+
+        assert(t1->kind != TYPE_KIND_PROC
+               && t2->kind != TYPE_KIND_PROC
+               && "proc type checking unimplemented");
+
+        if (t1->kind == TYPE_KIND_PTR
+            && t2->kind == TYPE_KIND_PTR) {
+                return type_is_compat(((type_ptr *)t1)->to, ((type_ptr *)t2)->to);
+        }
+
+        return t1->kind == t2->kind;
 }

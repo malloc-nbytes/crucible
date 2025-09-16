@@ -24,26 +24,7 @@ pop_scope(symtbl *tbl)
 }
 
 static int
-proc_exists(const symtbl *tbl,
-            const char   *id)
-{
-        for (size_t i = 0; i < tbl->procs.len; ++i) {
-                if (!strcmp(id, tbl->procs.data[i]->id)) {
-                        return 1;
-                }
-        }
-        return 0;
-}
-
-static void
-add_proc_to_scope(symtbl   *tbl,
-                  sem_proc *proc)
-{
-        dyn_array_append(tbl->procs, proc);
-}
-
-static int
-var_exists_in_scope(const symtbl *tbl,
+sym_exists_in_scope(const symtbl *tbl,
                     const char   *id)
 {
         for (int i = tbl->scope.len-1; i >= 0; --i) {
@@ -55,15 +36,29 @@ var_exists_in_scope(const symtbl *tbl,
 }
 
 static void
-insert_var_into_scope(symtbl *tbl, sem_var *sym)
+insert_sym_into_scope(symtbl *tbl, sym *sym)
 {
         smap_insert(&tbl->scope.data[tbl->scope.len-1], sym->id, (void *)sym);
 }
 
-static sem_var *
-sem_var_alloc(const char *id, const type *ty)
+static sym *
+get_sym_from_scope(symtbl *tbl, const char *id)
 {
-        sem_var *s = (sem_var *)alloc(sizeof(sem_var));
+        for (int i = tbl->scope.len-1; i >= 0; --i) {
+                sym *sym = NULL;
+                if ((sym = smap_get(&tbl->scope.data[i], id)) != NULL) {
+                        return sym;
+                }
+        }
+
+        forge_err_wargs("get_sym_from_scope(): could not find variable %s", id);
+        return NULL; // unreachable
+}
+
+static sym *
+sym_alloc(const char *id, type *ty)
+{
+        sym *s = (sym *)alloc(sizeof(sym));
         s->id = id;
         s->ty = ty;
         return s;
@@ -80,10 +75,13 @@ visit_expr_bin(visitor *v, expr_bin *e)
 static void *
 visit_expr_identifier(visitor *v, expr_identifier *e)
 {
-        if (!var_exists_in_scope((symtbl *)v->context, e->id->lx)
-            && !proc_exists((symtbl *)v->context, e->id->lx)) {
+        symtbl *tbl = (symtbl *)v->context;
+        if (!sym_exists_in_scope(tbl, e->id->lx)) {
                 forge_err_wargs("%svariable `%s` is not defined", tokerr(e->id), e->id->lx);
         }
+
+        sym *sym = get_sym_from_scope(tbl, e->id->lx);
+        ((expr *)e)->type = sym->ty;
 
         return NULL;
 }
@@ -91,14 +89,16 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
 static void *
 visit_expr_integer_literal(visitor *v, expr_integer_literal *e)
 {
-        NOOP(v, e);
+        NOOP(v);
+        ((expr *)e)->type = (type *)type_i32_alloc();
         return NULL;
 }
 
 static void *
 visit_expr_string_literal(visitor *v, expr_string_literal *e)
 {
-        NOOP(v, e);
+        NOOP(v);
+        ((expr *)e)->type = (type *)type_ptr_alloc((type *)type_u8_alloc());
         return NULL;
 }
 
@@ -106,21 +106,44 @@ static void *
 visit_expr_proccall(visitor *v, expr_proccall *e)
 {
         e->lhs->accept(e->lhs, v);
+
+        type *proc_rettype = ((expr *)e->lhs)->type;
+        assert(proc_rettype->kind == TYPE_KIND_PROC);
+
+        if (e->args.len != ((type_proc *)proc_rettype)->params->len) {
+                forge_err_wargs("error: procedure requires %zu arguments but %zu were given",
+                                ((type_proc *)proc_rettype)->params->len, e->args.len);
+        }
+
+        ((expr *)e)->type = ((type_proc *)proc_rettype)->rettype;
         for (size_t i = 0; i < e->args.len; ++i) {
                 e->args.data[i]->accept(e->args.data[i], v);
+
+                const type *expected = ((type_proc *)proc_rettype)->params->data[i].type;
+                const type *got = e->args.data[i]->type;
+                if (!type_is_compat(got, expected)) {
+                        forge_err_wargs("error: type mismatch, expected `%s` but the expression evaluates to `%s`",
+                                        type_to_cstr(expected), type_to_cstr(got));
+                }
         }
+
         return NULL;
 }
 
 static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
-        if (var_exists_in_scope((symtbl *)v->context, s->id->lx)) {
+        if (sym_exists_in_scope((symtbl *)v->context, s->id->lx)) {
                 forge_err_wargs("%svariable `%s` is already defined", tokerr(s->id), s->id->lx);
         }
-        insert_var_into_scope((symtbl *)v->context, sem_var_alloc(s->id->lx, s->type));
+        insert_sym_into_scope((symtbl *)v->context, sym_alloc(s->id->lx, s->type));
 
         s->e->accept(s->e, v);
+
+        if (!type_is_compat(s->type, s->e->type)) {
+                forge_err_wargs("%stype mismatch, expected `%s` but the expression evaluates to `%s`",
+                                tokerr(s->id), type_to_cstr(s->type), type_to_cstr(s->e->type));
+        }
 
         return NULL;
 }
@@ -145,21 +168,15 @@ visit_stmt_block(visitor *v, stmt_block *s)
 static void *
 visit_stmt_proc(visitor *v, stmt_proc *s)
 {
-        if (proc_exists((symtbl *)v->context, s->id->lx)) {
+        symtbl *tbl = (symtbl *)v->context;
+
+        if (sym_exists_in_scope(tbl, s->id->lx)) {
                 forge_err_wargs("%sprocecure `%s` is already defined", tokerr(s->id), s->id->lx);
         }
 
-        sem_proc *proc = (sem_proc *)alloc(sizeof(sem_proc));
-        proc->id = s->id->lx;
-        proc->params = dyn_array_empty(sem_var_array);
-        for (size_t i = 0; i < s->params.len; ++i) {
-                dyn_array_append(proc->params,
-                                 sem_var_alloc(s->params.data[i].id->lx,
-                                               s->params.data[i].type));
-        }
-        proc->type = s->type;
+        type_proc *proc_ty = type_proc_alloc(s->type, &s->params);
+        insert_sym_into_scope(tbl, sym_alloc(s->id->lx, (type *)proc_ty));
 
-        add_proc_to_scope((symtbl *)v->context, proc);
         return s->blk->accept(s->blk, v);
 }
 

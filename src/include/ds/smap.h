@@ -11,7 +11,7 @@ typedef unsigned (*smap_hash_sig)(const char *);
 
 typedef struct __smap_node {
         char *k;       // copies the string given
-        const void *v; // does not copy
+        void *v;       // does not copy
         struct __smap_node *n;
 } __smap_node;
 
@@ -29,8 +29,8 @@ typedef struct {
 DYN_ARRAY_TYPE(smap, smap_array);
 
 smap smap_create(smap_hash_sig hash);
-void smap_insert(smap *map, const char *k, const void *v);
-const void *smap_get(const smap *map, const char *k);
+void smap_insert(smap *map, const char *k, void *v);
+void *smap_get(const smap *map, const char *k);
 int smap_has(const smap *map, const char *k);
 size_t smap_size(const smap *map);
 void smap_free(smap *map);
