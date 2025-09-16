@@ -33,6 +33,7 @@ sym_exists_in_scope(const symtbl *tbl,
                         return 1;
                 }
         }
+
         return 0;
 }
 
@@ -101,6 +102,7 @@ static void *
 visit_expr_identifier(visitor *v, expr_identifier *e)
 {
         symtbl *tbl = (symtbl *)v->context;
+
         if (!sym_exists_in_scope(tbl, e->id->lx)) {
                 forge_err_wargs("%svariable `%s` is not defined", loc_err(((expr *)e)->loc), e->id->lx);
         }
@@ -130,6 +132,13 @@ visit_expr_string_literal(visitor *v, expr_string_literal *e)
 static void *
 visit_expr_proccall(visitor *v, expr_proccall *e)
 {
+        // A procedure call has a left-hand-side expression
+        // and parameters.
+        // i.e.,
+        //   sum(1, 2);
+        //   ^^^ ^  ^
+        // Doing a `proccall` operation `()` requires that the
+        // left-hand-side expression must be of type `proc`.
         e->lhs->accept(e->lhs, v);
 
         // Let's assume that the left-hand-side it will always be a
@@ -166,13 +175,22 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
-        if (sym_exists_in_scope((symtbl *)v->context, s->id->lx)) {
+        symtbl *tbl = (symtbl *)v->context;
+
+        // Check if the variable already exists
+        if (sym_exists_in_scope(tbl, s->id->lx)) {
                 forge_err_wargs("%svariable `%s` is already defined", loc_err(s->id->loc), s->id->lx);
         }
-        insert_sym_into_scope((symtbl *)v->context, sym_alloc(s->id->lx, s->type));
+
+        insert_sym_into_scope(tbl, sym_alloc(s->id->lx, s->type));
 
         s->e->accept(s->e, v);
 
+        // Typecheck the 'let' statement's given type
+        // with the expression's type.
+        // i.e.:
+        //   let x: i32 = 1;
+        //          ^^^   ^
         if (!type_is_compat(s->type, s->e->type)) {
                 forge_err_wargs("%stype mismatch, expected `%s` but the expression evaluates to `%s`",
                                 loc_err(s->id->loc), type_to_cstr(s->type), type_to_cstr(s->e->type));
@@ -184,25 +202,34 @@ visit_stmt_let(visitor *v, stmt_let *s)
 static void *
 visit_stmt_expr(visitor *v, stmt_expr *s)
 {
-        return s->e->accept(s->e, v);
+        s->e->accept(s->e, v);
+        return NULL;
 }
 
 static void *
 visit_stmt_block(visitor *v, stmt_block *s)
 {
-        push_scope((symtbl *)v->context);
+        symtbl *tbl = (symtbl *)v->context;
+
+        push_scope(tbl);
+
+        // Iterate over all statements in the block.
         for (size_t i = 0; i < s->stmts.len; ++i) {
-                s->stmts.data[i]->accept(s->stmts.data[i], v);
+                stmt *stmt = s->stmts.data[i];
+                stmt->accept(stmt, v);
         }
-        pop_scope((symtbl *)v->context);
+
+        pop_scope(tbl);
+
         return NULL;
 }
 
 static void *
 visit_stmt_proc(visitor *v, stmt_proc *s)
 {
-        symtbl *tbl = (symtbl *)v->context;
 
+
+        // Check if this procedure already exists.
         if (sym_exists_in_scope(tbl, s->id->lx)) {
                 forge_err_wargs("%sprocecure `%s` is already defined", loc_err(s->id->loc), s->id->lx);
         }
@@ -211,6 +238,8 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         type_proc *proc_ty = type_proc_alloc(s->type, &s->params);
         insert_sym_into_scope(tbl, sym_alloc(s->id->lx, (type *)proc_ty));
 
+        // We are pushing scope here so that when this current
+        // procedure is finished, the parameters are popped.
         push_scope(tbl);
 
         for (size_t i = 0; i < s->params.len; ++i) {
@@ -223,14 +252,20 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                                                 s->params.data[i].type));
         }
 
+        // We are currently inside of a procedure, keep track
+        // of the return type so that the result of any 'return'
+        // statements can be typechecked with the type of the procedure.
         tbl->proc.inproc = 1;
         tbl->proc.type = s->type;
 
+        // Procedure body.
         s->blk->accept(s->blk, v);
 
+        // No longer in a procedure.
         tbl->proc.type = NULL;
         tbl->proc.inproc = 0;
 
+        // Remove parameters.
         pop_scope(tbl);
 
         return NULL;
@@ -240,7 +275,9 @@ static void *
 visit_stmt_return(visitor *v, stmt_return *s)
 {
         symtbl *tbl = (symtbl *)v->context;
+
         s->e->accept(s->e, v);
+
         if (tbl->proc.inproc) {
                 if (!type_is_compat(s->e->type, tbl->proc.type)) {
                         forge_err_wargs("%scannot return type %s in a procedure returning %s",
@@ -250,6 +287,7 @@ visit_stmt_return(visitor *v, stmt_return *s)
 
                 }
         }
+
         return NULL;
 }
 
@@ -289,6 +327,8 @@ sem_analysis(program *p)
                         .inproc = 0,
                 },
         };
+
+        // Need to immediately add a scope for global scope.
         dyn_array_append(tbl.scope, smap_create(NULL));
 
         visitor *v = sem_visitor_alloc(&tbl);
