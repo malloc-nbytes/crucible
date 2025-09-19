@@ -109,8 +109,11 @@ visit_stmt_expr(visitor *v, stmt_expr *s)
 static void *
 visit_stmt_block(visitor *v, stmt_block *s)
 {
-        NOOP(v, s);
-        forge_todo("");
+        for (size_t i = 0; i < s->stmts.len; ++i) {
+                stmt *stmt = s->stmts.data[i];
+                stmt->accept(stmt, v);
+        }
+        return NULL;
 }
 
 static void *
@@ -120,6 +123,10 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 
         take_txt(ctx, forge_cstr_builder(s->id->lx, ":", NULL), 1);
         prologue(ctx, s->rsp);
+
+        // TODO: procedure parameters
+        s->blk->accept(s->blk, v);
+
         epilogue(ctx);
         return NULL;
 }
