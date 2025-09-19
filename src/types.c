@@ -77,7 +77,6 @@ type_unknown_alloc(void)
 char *
 type_to_cstr(const type *t)
 {
-        if (!t) return "null"; // Handle NULL type pointer
         switch (t->kind) {
         case TYPE_KIND_I8: return "i8";
         case TYPE_KIND_I16: return "i16";
@@ -118,4 +117,31 @@ type_is_compat(const type *t1,
         }
 
         return t1->kind == t2->kind;
+}
+
+int
+type_to_int(const type *t)
+{
+        assert(t);
+
+        switch (t->kind) {
+        case TYPE_KIND_I8:       return 1;
+        case TYPE_KIND_I16:      return 2;
+        case TYPE_KIND_I32:      return 4;
+        case TYPE_KIND_I64:      return 8;
+        case TYPE_KIND_U8:       return 1;
+        case TYPE_KIND_U16:      return 2;
+        case TYPE_KIND_U32:      return 4;
+        case TYPE_KIND_U64:      return 8;
+        case TYPE_KIND_PTR:      return 8;
+        case TYPE_KIND_VOID:     return 0;
+        case TYPE_KIND_NORETURN: return 0;
+        case TYPE_KIND_UNKNOWN:  return 0;
+        case TYPE_KIND_PROC:     return 8;
+        default: {
+                forge_err_wargs("type_to_int(): unknown type `%d`", (int)t->kind);
+        } break;
+        }
+
+        return 0; // unreachable
 }

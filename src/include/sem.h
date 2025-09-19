@@ -7,9 +7,10 @@
 
 #include <forge/array.h>
 
-typedef struct {
+typedef struct sym {
         const char *id;
         type *ty;
+        int stack_offset;
 } sym;
 
 typedef struct {
@@ -18,9 +19,11 @@ typedef struct {
         struct {
                 type *type;
                 int inproc;
+                int rsp;
         } proc;
 
         str_array errs;
+        int stack_offset;
 } symtbl;
 
 symtbl sem_analysis(program *p);

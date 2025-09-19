@@ -130,6 +130,7 @@ stmt_proc_alloc(int              export,
         proc->params      = params;
         proc->type        = type;
         proc->blk         = blk;
+        proc->rsp         = 0;
         return proc;
 }
 

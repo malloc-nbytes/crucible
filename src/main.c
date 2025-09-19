@@ -1,6 +1,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "sem.h"
+#include "asm.h"
 
 #include <forge/arg.h>
 #include <forge/err.h>
@@ -58,6 +59,8 @@ main(int argc, char **argv)
                 }
                 exit(1);
         }
+
+        asm_gen(&p, &tbl);
 
         return 0;
 }

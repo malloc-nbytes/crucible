@@ -18,7 +18,7 @@ typedef enum {
 
         TYPE_KIND_STR,
         TYPE_KIND_VOID,
-        TYPE_KIND_NORETURN,
+        TYPE_KIND_NORETURN /*10*/,
 
         TYPE_KIND_PTR,
         TYPE_KIND_PROC,
@@ -67,5 +67,6 @@ type_proc *type_proc_alloc(type *rettype,
                            const parameter_array *params);
 
 int type_is_compat(const type *t1, const type *t2);
+int type_to_int(const type *t);
 
 #endif // TYPES_H_INCLUDED

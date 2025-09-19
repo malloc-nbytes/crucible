@@ -7,6 +7,8 @@
 
 #include <forge/array.h>
 
+typedef struct sym sym;
+
 typedef struct visitor visitor;
 
 typedef enum {
@@ -111,6 +113,8 @@ typedef struct {
         const token *id;
         type *type;
         expr *e;
+
+        sym *resolved;
 } stmt_let;
 
 typedef struct {
@@ -137,6 +141,8 @@ typedef struct {
         parameter_array params;
         type *type;
         stmt *blk;
+
+        int rsp;
 } stmt_proc;
 
 typedef struct {

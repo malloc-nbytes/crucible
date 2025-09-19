@@ -76,11 +76,15 @@ get_sym_from_scope(symtbl *tbl, const char *id)
 }
 
 static sym *
-sym_alloc(const char *id, type *ty)
+sym_alloc(symtbl     *tbl,
+          const char *id,
+          type       *ty)
 {
-        sym *s = (sym *)alloc(sizeof(sym));
-        s->id  = id;
-        s->ty  = ty;
+        sym *s          = (sym *)alloc(sizeof(sym));
+        s->id           = id;
+        s->ty           = ty;
+        s->stack_offset = tbl->stack_offset + type_to_int(ty);
+
         return s;
 }
 
@@ -223,7 +227,13 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 return NULL;
         }
 
-        insert_sym_into_scope(tbl, sym_alloc(s->id->lx, s->type));
+        sym *sym = sym_alloc(tbl, s->id->lx, s->type);
+        insert_sym_into_scope(tbl, sym);
+        tbl->stack_offset += sym->stack_offset;
+
+        if (tbl->proc.inproc) {
+                tbl->proc.rsp += type_to_int(sym->ty);
+        }
 
         s->e->accept(s->e, v);
 
@@ -238,6 +248,8 @@ visit_stmt_let(visitor *v, stmt_let *s)
                         type_to_cstr(s->type), type_to_cstr(s->e->type));
                 return NULL;
         }
+
+        s->resolved = sym;
 
         return NULL;
 }
@@ -280,7 +292,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 
         // Add procedure to the scope.
         type_proc *proc_ty = type_proc_alloc(s->type, &s->params);
-        insert_sym_into_scope(tbl, sym_alloc(s->id->lx, (type *)proc_ty));
+        insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty));
 
         // We are pushing scope here so that when this current
         // procedure is finished, the parameters are popped.
@@ -293,8 +305,10 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                                 s->params.data[i].id->lx);
                         return NULL;
                 }
-                insert_sym_into_scope(tbl, sym_alloc(s->params.data[i].id->lx,
+                insert_sym_into_scope(tbl, sym_alloc(tbl,
+                                                     s->params.data[i].id->lx,
                                                      s->params.data[i].type));
+                // TODO: get type sizes for procedure parameters.
         }
 
         // We are currently inside of a procedure, keep track
@@ -306,9 +320,17 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         // Procedure body.
         s->blk->accept(s->blk, v);
 
+        // The number of bytes to subtract from RSP
+        // for the procedure's local variables.
+        s->rsp = tbl->proc.rsp;
+        tbl->proc.rsp = 0;
+
         // No longer in a procedure.
         tbl->proc.type = NULL;
         tbl->proc.inproc = 0;
+
+        // Reset stack offset for other procedures.
+        tbl->stack_offset = 0;
 
         // Remove parameters.
         pop_scope(tbl);
@@ -372,6 +394,7 @@ sem_analysis(program *p)
                         .inproc = 0,
                 },
                 .errs = dyn_array_empty(str_array),
+                .stack_offset = 0,
         };
 
         // Need to immediately add a scope for global scope.
