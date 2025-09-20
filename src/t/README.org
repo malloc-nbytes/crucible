@@ -1,0 +1,11 @@
+* README
+
+This is the test suite for crucible. To run the tests, the [[https://github.com/malloc-nbytes/earl][EARL language]] must be installed.
+
+Begin the tests by doing:
+
+#+begin_src
+  earl runner.rl
+#+end_src
+
+See =earl runner.rl -- help= for more options.

@@ -25,7 +25,9 @@ fn usage() {
 
 fn parse_args(@ref config) {
     foreach arg in argv()[1:] {
-        if arg == "asm" {
+        if arg == "help" {
+            usage();
+        } else if arg == "asm" {
             config.flags `|= FlagType.Asm;
         } else if arg == "clean" {
             config.flags `|= FlagType.Clean;
