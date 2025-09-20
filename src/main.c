@@ -39,10 +39,17 @@ assemble(void)
         // $"ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc -o out out.o";
 
         char *fp = g_config.outname ? g_config.outname : "a.out";
-        char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", fp, ".s -o ", fp, ".o", NULL);
+        char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf CRU-out.asm -o ", fp, ".o", NULL);
         char *ld = forge_cstr_builder("ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc -o ", fp, " ", fp, ".o", NULL);
+        char *rm = forge_cstr_builder("rm ", fp, ".o", " CRU-out.asm", NULL);
+
         cmd_s(nasm);
         cmd_s(ld);
+        cmd_s(rm);
+
+        free(nasm);
+        free(ld);
+        free(rm);
 }
 
 int
@@ -107,7 +114,7 @@ main(int argc, char **argv)
 
         asm_gen(&p, &tbl);
 
-        /* assemble(); */
+        assemble();
 
         return 0;
 }

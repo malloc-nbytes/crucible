@@ -319,7 +319,7 @@ asm_visitor_alloc(asm_context *ctx)
 static void
 init(asm_context *ctx)
 {
-        ctx->out = fopen("out.asm", "w");
+        ctx->out = fopen("CRU-out.asm", "w");
 
         if (!ctx->out) {
                 perror("fopen");
