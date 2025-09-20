@@ -364,6 +364,7 @@ asm_gen(program *p, symtbl *tbl)
         }
 
         add_globals((asm_context *)v->context);
+        write_txt((asm_context *)v->context, "section .note.GNU-stack", 1);
 
         cleanup((asm_context *)v->context);
 }

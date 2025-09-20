@@ -6,3 +6,4 @@ src/program
 *.s
 *.S
 *.bin
+*.out
