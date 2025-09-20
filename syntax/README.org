@@ -1,0 +1,10 @@
+* Syntax
+
+These files provide support for syntax highlighting for the following editors:
+
+- Emacs
+- Vim
+- NeoVim
+- Visual Studio Code (unimplemented)
+
+Look for the INSTALLATION instructions in each file.

@@ -1,4 +1,4 @@
-* README
+* Test Suite
 
 This is the test suite for crucible. To run the tests, the [[https://github.com/malloc-nbytes/earl][EARL language]] must be installed.
 
