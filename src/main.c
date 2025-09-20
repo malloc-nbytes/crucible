@@ -1,3 +1,4 @@
+#include "flags.h"
 #include "lexer.h"
 #include "parser.h"
 #include "sem.h"
@@ -7,17 +8,41 @@
 #include <forge/err.h>
 #include <forge/io.h>
 #include <forge/utils.h>
+#include <forge/cmd.h>
+#include <forge/cstr.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
+struct {
+        char *outname;
+} g_config = {
+        .outname = NULL,
+};
+
 void
 usage(void)
 {
         printf("Usage: crucible [options..] <filepath>\n");
+        printf("Options:\n");
+        printf("    --%s, -%c    view this help information\n", FLAG_2HY_HELP, FLAG_1HY_HELP);
+        printf("    --%s, -%c    set the output filename\n", FLAG_2HY_OUTPUT, FLAG_1HY_OUTPUT);
         exit(0);
+}
+
+static void
+assemble(void)
+{
+        // $"nasm -f elf64 -g -F dwarf out.s -o out.o";
+        // $"ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc -o out out.o";
+
+        char *fp = g_config.outname ? g_config.outname : "a.out";
+        char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", fp, ".s -o ", fp, ".o", NULL);
+        char *ld = forge_cstr_builder("ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc -o ", fp, " ", fp, ".o", NULL);
+        cmd_s(nasm);
+        cmd_s(ld);
 }
 
 int
@@ -29,15 +54,35 @@ main(int argc, char **argv)
         const char *filepath = NULL;
 
         while (it) {
-                if (!arg->h) {
+                if (!it->h) {
                         if (filepath) {
                                 forge_err("only 1 file is supported right now");
                         }
-                        filepath = strdup(arg->s);
-                } else if (arg->h == 1) {
-                        forge_err_wargs("unknown option `%s`", arg->s);
+                        filepath = strdup(it->s);
+                } else if (it->h == 1) {
+                        if (it->s[0] == FLAG_1HY_HELP) {
+                                usage();
+                        } else if (it->s[0] == FLAG_1HY_OUTPUT) {
+                                if (!it->n) {
+                                        forge_err_wargs("option -%c requires an argument", FLAG_1HY_OUTPUT);
+                                }
+                                it = it->n;
+                                g_config.outname = strdup(it->s);
+                        } else {
+                                forge_err_wargs("unknown option `%s`", it->s);
+                        }
                 } else {
-                        forge_err_wargs("unknown option `%s`", arg->s);
+                        if (!strcmp(it->s, FLAG_2HY_HELP)) {
+                                usage();
+                        } else if (!strcmp(it->s, FLAG_2HY_OUTPUT)) {
+                                if (!it->n) {
+                                        forge_err_wargs("option --%s requires an argument", FLAG_2HY_OUTPUT);
+                                }
+                                it = it->n;
+                                g_config.outname = strdup(it->s);
+                        } else {
+                                forge_err_wargs("unknown option `%s`", it->s);
+                        }
                 }
                 it = it->n;
         }
@@ -61,6 +106,8 @@ main(int argc, char **argv)
         }
 
         asm_gen(&p, &tbl);
+
+        /* assemble(); */
 
         return 0;
 }

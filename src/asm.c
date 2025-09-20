@@ -4,6 +4,7 @@
 #include <forge/err.h>
 #include <forge/utils.h>
 #include <forge/cstr.h>
+#include <forge/array.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -63,6 +64,7 @@ static int g_inuse_regs[g_regs_r * g_regs_c] = {
 
 typedef struct {
         FILE *out;
+        str_array globals;
 } asm_context;
 
 static int
@@ -81,23 +83,25 @@ alloc_reg(int sz)
                 case 8:
                         REGAT(i, 0, g_inuse_regs) = 1;
                         return i * g_regs_c + 0;
-                        //return REGAT(i, 0, g_regs);
                 case 4:
                         REGAT(i, 1, g_inuse_regs) = 1;
                         return i * g_regs_c + 1;
-                        //return REGAT(i, 1, g_regs);
                 case 2:
                         REGAT(i, 2, g_inuse_regs) = 1;
                         return i * g_regs_c + 2;
-                        //return REGAT(i, 2, g_regs);
                 case 1:
                         REGAT(i, 3, g_inuse_regs) = 1;
                         return i * g_regs_c + 3;
-                        //return REGAT(i, 3, g_regs);
                 default: forge_err_wargs("alloc_reg(): cannot alloc register with size %d", sz);
                 }
         }
         forge_err("alloc_reg(): no more registers");
+}
+
+static void
+free_reg(int reg)
+{
+        g_inuse_regs[reg] = 0;
 }
 
 static void
@@ -161,8 +165,8 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
 static void *
 visit_expr_integer_literal(visitor *v, expr_integer_literal *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        NOOP(v);
+        return e->i->lx;
 }
 
 static void *
@@ -179,11 +183,51 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         forge_todo("");
 }
 
+char *
+int_to_cstr(int i)
+{
+        /* int digits = 0; */
+        /* for (digits = 0; i > 0; i /= 10, ++digits) { */
+        /*         printf("%d\n", i); */
+        /* } */
+        /* char *s = (char *)malloc(digits + 1); */
+        /* sprintf(s, "%d", i); */
+        /* s[digits-1] = 0; */
+        /* return s; */
+
+        //if (n < 0) n = (n == INT_MIN) ? INT_MAX : -n;
+        int digits = 0;
+        if (i < 10) digits = 1;
+        if (i < 100) digits = 2;
+        if (i < 1000) digits = 3;
+        if (i < 10000) digits = 4;
+        if (i < 100000) digits = 5;
+        if (i < 1000000) digits = 6;
+        if (i < 10000000) digits = 7;
+        if (i < 100000000) digits = 8;
+        if (i < 1000000000) digits = 9;
+        else digits = 10;
+
+        char *s = (char *)malloc(digits + 1);
+        sprintf(s, "%d", i);
+        s[digits-1] = 0;
+        return s;
+}
+
 static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
-        NOOP(v, s);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+
+        char *res = (char *)s->e->accept(s->e, v);
+
+        int offset = s->resolved->stack_offset;
+        char *offset_s = int_to_cstr(offset);
+        //printf("%s\n", offset_s);
+        take_txt(ctx, forge_cstr_builder("mov DWORD [rsp-", offset_s, "], ", res, NULL), 1);
+        free(offset_s);
+
+        return NULL;
 }
 
 static void *
@@ -208,6 +252,10 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 {
         asm_context *ctx = (asm_context *)v->context;
 
+        if (s->export) {
+                dyn_array_append(ctx->globals, s->id->lx);
+        }
+
         take_txt(ctx, forge_cstr_builder(s->id->lx, ":", NULL), 1);
         prologue(ctx, s->rsp);
 
@@ -228,8 +276,25 @@ visit_stmt_return(visitor *v, stmt_return *s)
 static void *
 visit_stmt_exit(visitor *v, stmt_exit *s)
 {
-        NOOP(v, s);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+
+        char *value = NULL;
+
+        if (s->e) {
+                value = s->e->accept(s->e, v);
+        }
+
+        write_txt(ctx, "mov rax, 60", 1);
+
+        if (value) {
+                take_txt(ctx, forge_cstr_builder("mov rdi, ", value, NULL), 1);
+        } else {
+                write_txt(ctx, "mov rdi, 0", 1);
+        }
+
+        write_txt(ctx, "syscall", 1);
+
+        return NULL;
 }
 
 static visitor *
@@ -255,10 +320,13 @@ static void
 init(asm_context *ctx)
 {
         ctx->out = fopen("out.asm", "w");
+
         if (!ctx->out) {
                 perror("fopen");
                 exit(1);
         }
+
+        ctx->globals = dyn_array_empty(str_array);
 
         write_txt(ctx, "section .text", 1);
 }
@@ -269,10 +337,19 @@ cleanup(asm_context *ctx)
         fclose(ctx->out);
 }
 
+static void
+add_globals(asm_context *ctx)
+{
+        for (size_t i = 0; i < ctx->globals.len; ++i) {
+                write_txt(ctx, "global ", 0);
+                write_txt(ctx, ctx->globals.data[i], 1);
+        }
+}
+
 void
 asm_gen(program *p, symtbl *tbl)
 {
-        NOOP(tbl);
+        NOOP(tbl, free_reg, alloc_reg);
 
         asm_context ctx = {0};
         visitor *v = asm_visitor_alloc(&ctx);
@@ -282,6 +359,8 @@ asm_gen(program *p, symtbl *tbl)
                 stmt *s = p->stmts.data[i];
                 s->accept(s, v);
         }
+
+        add_globals((asm_context *)v->context);
 
         cleanup((asm_context *)v->context);
 }
