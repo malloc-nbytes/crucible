@@ -1,5 +1,6 @@
 main
 cruc
+src/program
 *.cru
 *.asm
 *.s

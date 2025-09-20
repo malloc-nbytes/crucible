@@ -1,5 +1,6 @@
 #include "asm.h"
 #include "visitor.h"
+#include "global.h"
 
 #include <forge/err.h>
 #include <forge/utils.h>
@@ -319,7 +320,9 @@ asm_visitor_alloc(asm_context *ctx)
 static void
 init(asm_context *ctx)
 {
-        ctx->out = fopen("CRU-out.asm", "w");
+        char *asm_fp = forge_cstr_builder(g_config.filepath, ".asm", NULL);
+        ctx->out = fopen(asm_fp, "w");
+        free(asm_fp);
 
         if (!ctx->out) {
                 perror("fopen");

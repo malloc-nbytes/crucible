@@ -2,9 +2,8 @@
 #define GLOBAL_H_INCLUDED
 
 extern struct {
+        char *filepath;
         char *outname;
-} g_config = {
-        .outname = NULL,
-};
+} g_config;
 
 #endif // GLOBAL_H_INCLUDED
