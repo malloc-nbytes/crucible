@@ -30,7 +30,7 @@ struct {
 void
 usage(void)
 {
-        printf("Usage: crucible [options..] <filepath>\n");
+        printf("Usage: cruc [options..] <filepath>\n");
         printf("Options:\n");
         printf("    --%s, -%c    view this help information\n", FLAG_2HY_HELP, FLAG_1HY_HELP);
         printf("    --%s, -%c    set the output filename\n", FLAG_2HY_OUTPUT, FLAG_1HY_OUTPUT);
