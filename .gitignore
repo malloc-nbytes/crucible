@@ -5,3 +5,4 @@ src/program
 *.asm
 *.s
 *.S
+*.bin

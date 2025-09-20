@@ -11,15 +11,18 @@
 #include <forge/cmd.h>
 #include <forge/cstr.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+#include <stdint.h>
 
 struct {
+        uint32_t flags;
         char *filepath;
         char *outname;
 } g_config = {
+        .flags = 0x0000,
         .filepath = NULL,
         .outname = NULL,
 };
@@ -42,17 +45,22 @@ assemble(void)
         char *ld = forge_cstr_builder("ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc -o ",
                                       g_config.outname, " ",
                                       g_config.outname, ".o", NULL);
-        char *rm = forge_cstr_builder("rm ",
-                                      g_config.outname, ".o ",
-                                      g_config.filepath, ".asm", NULL);
+
+        char *rm_o = forge_cstr_builder("rm ", g_config.outname, ".o ", NULL);
+        char *rm_asm = forge_cstr_builder("rm ", g_config.filepath, ".asm", NULL);
 
         cmd_s(nasm);
         cmd_s(ld);
-        cmd_s(rm);
+        cmd_s(rm_o);
+
+        if ((g_config.flags & FLAG_TYPE_ASM) == 0) {
+                cmd_s(rm_asm);
+        }
 
         free(nasm);
         free(ld);
-        free(rm);
+        free(rm_o);
+        free(rm_asm);
 }
 
 static void
@@ -82,6 +90,8 @@ handle_args(int argc, char **argv)
                                 if (!it->n) { forge_err_wargs("option --%s requires an argument", FLAG_2HY_OUTPUT); }
                                 it = it->n;
                                 g_config.outname = strdup(it->s);
+                        } else if (!strcmp(it->s, FLAG_2HY_ASM)) {
+                                g_config.flags |= FLAG_TYPE_ASM;
                         } else {
                                 forge_err_wargs("unknown option `%s`", it->s);
                         }
