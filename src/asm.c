@@ -36,8 +36,7 @@ calling order: rdi, rsi, rdx, rcx, r8, r9.
 
 #define REGAT(i, j, mat) mat[(i) * g_regs_c + (j)]
 
-static const char *g_regs[] = {
-        "rax", "eax",  "ax",   "al",
+static char *g_regs[] = {
         "rcx", "ecx",  "cx",   "cl",
         "rdx", "edx",  "dx",   "dl",
         "rsi", "esi",  "si",   "sil",
@@ -49,11 +48,10 @@ static const char *g_regs[] = {
 };
 
 const size_t g_regs_n = sizeof(g_regs)/sizeof(*g_regs);
-#define g_regs_r 9
+#define g_regs_r 8
 #define g_regs_c 4
 
 static int g_inuse_regs[g_regs_r * g_regs_c] = {
-        0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
@@ -98,6 +96,20 @@ int_to_cstr(int i)
         sprintf(s, "%d", i);
         s[digits-1] = 0;
         return s;
+}
+
+static void
+free_reg_literal(const char *reg)
+{
+        for (size_t i = 0; i < g_regs_n; ++i) {
+                if (!strcmp(reg, g_regs[i])) {
+                        assert(g_inuse_regs[i]);
+                        g_inuse_regs[i] = 0;
+                        return;
+                }
+        }
+
+        //forge_err_wargs("could not free register %s, was not alloc'd", reg);
 }
 
 static int
@@ -198,7 +210,7 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
         char *offset_s = int_to_cstr(e->resolved->stack_offset);
 
         int regi = alloc_reg(type_to_int(e->resolved->ty));
-        const char *reg = g_regs[regi];
+        char *reg = g_regs[regi];
         take_txt(ctx, forge_cstr_builder("mov DWORD ", reg, ", [rsp-", offset_s, "]", NULL), 1);
 
         return reg;
@@ -230,12 +242,14 @@ visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
 
-        char *res = (char *)s->e->accept(s->e, v);
+        char *value = (char *)s->e->accept(s->e, v);
 
         int offset = s->resolved->stack_offset;
         char *offset_s = int_to_cstr(offset);
-        take_txt(ctx, forge_cstr_builder("mov DWORD [rsp-", offset_s, "], ", res, NULL), 1);
+        take_txt(ctx, forge_cstr_builder("mov DWORD [rsp-", offset_s, "], ", value, NULL), 1);
         free(offset_s);
+
+        free_reg_literal(value);
 
         return NULL;
 }
@@ -288,16 +302,18 @@ visit_stmt_exit(visitor *v, stmt_exit *s)
 {
         asm_context *ctx = (asm_context *)v->context;
 
-        char *value = NULL;
+        char *reg = NULL;
 
         if (s->e) {
-                value = s->e->accept(s->e, v);
+                reg = s->e->accept(s->e, v);
         }
 
         write_txt(ctx, "mov rax, 60", 1);
 
-        if (value) {
-                take_txt(ctx, forge_cstr_builder("mov rdi, ", value, NULL), 1);
+        if (reg) {
+                // NOTE: changed RDI to EDI for testing
+                take_txt(ctx, forge_cstr_builder("mov edi, ", reg, NULL), 1);
+                free_reg_literal(reg);
         } else {
                 write_txt(ctx, "mov rdi, 0", 1);
         }

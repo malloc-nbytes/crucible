@@ -15,7 +15,7 @@ let cc, name, files, flags, libs = (
     "cruc",
     "*.c",
     "-Iinclude/ -Wextra -Wall",
-    "$(forge lib)",
+    "-lforge",
 );
 
 if debug {

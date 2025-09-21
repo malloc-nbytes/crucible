@@ -1,4 +1,3 @@
-export proc _start(void): ! {
-    let x: i32 = 1;
-    let y: i32 = x;
+export proc _start(void): i32 {
+    return;
 }

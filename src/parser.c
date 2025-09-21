@@ -415,12 +415,22 @@ parse_keyword_stmt(parser_context *ctx)
 static stmt *
 parse_stmt(parser_context *ctx)
 {
+        loc loc = lexer_peek(ctx->l, 0)->loc;
+        stmt *s = NULL;
+
         if (kwds_iskw(lexer_peek(ctx->l, 0)->lx)) {
-                return parse_keyword_stmt(ctx);
+                s = parse_keyword_stmt(ctx);
+                s->loc = loc;
+                return s;
         } else if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_LEFT_CURLY) {
-                return (stmt *)parse_stmt_block(ctx);
+                s = (stmt *)parse_stmt_block(ctx);
+                s->loc = loc;
+                return s;
         }
-        return (stmt *)parse_stmt_expr(ctx);
+
+        s = (stmt *)parse_stmt_expr(ctx);
+        s->loc = loc;
+        return s;
 }
 
 program

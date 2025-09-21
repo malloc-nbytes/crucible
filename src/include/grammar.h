@@ -105,6 +105,7 @@ typedef struct {
 
 typedef struct stmt {
         stmt_kind kind;
+        loc loc;
         void *(*accept)(struct stmt *s, visitor *v);
 } stmt;
 
@@ -149,7 +150,7 @@ typedef struct {
 
 typedef struct {
         stmt base;
-        expr *e;
+        expr *e; // can be NULL
 } stmt_return;
 
 typedef struct {

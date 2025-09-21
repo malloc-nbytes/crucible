@@ -228,6 +228,8 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 return NULL;
         }
 
+        s->e->accept(s->e, v);
+
         sym *sym = sym_alloc(tbl, s->id->lx, s->type);
         insert_sym_into_scope(tbl, sym);
         tbl->stack_offset += type_to_int(sym->ty);
@@ -235,8 +237,6 @@ visit_stmt_let(visitor *v, stmt_let *s)
         if (tbl->proc.inproc) {
                 tbl->proc.rsp += type_to_int(sym->ty);
         }
-
-        s->e->accept(s->e, v);
 
         // Typecheck the 'let' statement's given type
         // with the expression's type.
@@ -316,7 +316,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         // of the return type so that the result of any 'return'
         // statements can be typechecked with the type of the procedure.
         tbl->proc.inproc = 1;
-        tbl->proc.type = s->type;
+        tbl->proc.type = proc_ty->rettype;
 
         // Procedure body.
         s->blk->accept(s->blk, v);
@@ -344,15 +344,23 @@ visit_stmt_return(visitor *v, stmt_return *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
-        s->e->accept(s->e, v);
-
         if (tbl->proc.inproc) {
-                if (!type_is_compat(s->e->type, tbl->proc.type)) {
-                        pusherr(tbl, s->e->loc,
-                                "cannot return type `%s` in a procedure returning `%s`",
-                                type_to_cstr(s->e->type),
-                                type_to_cstr(tbl->proc.type));
-                        return NULL;
+                if (tbl->proc.type->kind == TYPE_KIND_NORETURN) {
+                        pusherr(tbl, ((stmt *)s)->loc, "cannot return in procedure returning `!`");
+                }
+        }
+
+        if (s->e) {
+                s->e->accept(s->e, v);
+
+                if (tbl->proc.inproc) {
+                        if (!type_is_compat(s->e->type, tbl->proc.type)) {
+                                pusherr(tbl, s->e->loc,
+                                        "cannot return type `%s` in a procedure returning `%s`",
+                                        type_to_cstr(s->e->type),
+                                        type_to_cstr(tbl->proc.type));
+                                return NULL;
+                        }
                 }
         }
 
