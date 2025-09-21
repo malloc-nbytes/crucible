@@ -20,6 +20,7 @@ expr_identifier_alloc(const token *id)
                 alloc(sizeof(expr_identifier));
         e->base = init_expr_kind(EXPR_KIND_IDENTIFIER, accept_expr_identifier);
         e->id = id;
+        e->resolved = NULL;
         return e;
 }
 

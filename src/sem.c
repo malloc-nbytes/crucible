@@ -137,6 +137,7 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
         } else {
                 sym *sym = get_sym_from_scope(tbl, e->id->lx);
                 ((expr *)e)->type = sym->ty;
+                e->resolved = sym;
         }
 
 
@@ -229,7 +230,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         sym *sym = sym_alloc(tbl, s->id->lx, s->type);
         insert_sym_into_scope(tbl, sym);
-        tbl->stack_offset += sym->stack_offset;
+        tbl->stack_offset += type_to_int(sym->ty);
 
         if (tbl->proc.inproc) {
                 tbl->proc.rsp += type_to_int(sym->ty);
@@ -361,7 +362,10 @@ visit_stmt_return(visitor *v, stmt_return *s)
 static void *
 visit_stmt_exit(visitor *v, stmt_exit *s)
 {
-        NOOP(v, s);
+        if (s->e) {
+                s->e->accept(s->e, v);
+        }
+
         return NULL;
 }
 

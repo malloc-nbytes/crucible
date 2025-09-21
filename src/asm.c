@@ -1,6 +1,7 @@
 #include "asm.h"
 #include "visitor.h"
 #include "global.h"
+#include "types.h"
 
 #include <forge/err.h>
 #include <forge/utils.h>
@@ -67,6 +68,37 @@ typedef struct {
         FILE *out;
         str_array globals;
 } asm_context;
+
+char *
+int_to_cstr(int i)
+{
+        /* int digits = 0; */
+        /* for (digits = 0; i > 0; i /= 10, ++digits) { */
+        /*         printf("%d\n", i); */
+        /* } */
+        /* char *s = (char *)malloc(digits + 1); */
+        /* sprintf(s, "%d", i); */
+        /* s[digits-1] = 0; */
+        /* return s; */
+
+        //if (n < 0) n = (n == INT_MIN) ? INT_MAX : -n;
+        int digits = 0;
+        if (i < 10) digits = 1;
+        if (i < 100) digits = 2;
+        if (i < 1000) digits = 3;
+        if (i < 10000) digits = 4;
+        if (i < 100000) digits = 5;
+        if (i < 1000000) digits = 6;
+        if (i < 10000000) digits = 7;
+        if (i < 100000000) digits = 8;
+        if (i < 1000000000) digits = 9;
+        else digits = 10;
+
+        char *s = (char *)malloc(digits + 1);
+        sprintf(s, "%d", i);
+        s[digits-1] = 0;
+        return s;
+}
 
 static int
 alloc_reg(int sz)
@@ -159,8 +191,17 @@ visit_expr_bin(visitor *v, expr_bin *e)
 static void *
 visit_expr_identifier(visitor *v, expr_identifier *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+
+        assert(e->resolved);
+
+        char *offset_s = int_to_cstr(e->resolved->stack_offset);
+
+        int regi = alloc_reg(type_to_int(e->resolved->ty));
+        const char *reg = g_regs[regi];
+        take_txt(ctx, forge_cstr_builder("mov DWORD ", reg, ", [rsp-", offset_s, "]", NULL), 1);
+
+        return reg;
 }
 
 static void *
@@ -184,37 +225,6 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         forge_todo("");
 }
 
-char *
-int_to_cstr(int i)
-{
-        /* int digits = 0; */
-        /* for (digits = 0; i > 0; i /= 10, ++digits) { */
-        /*         printf("%d\n", i); */
-        /* } */
-        /* char *s = (char *)malloc(digits + 1); */
-        /* sprintf(s, "%d", i); */
-        /* s[digits-1] = 0; */
-        /* return s; */
-
-        //if (n < 0) n = (n == INT_MIN) ? INT_MAX : -n;
-        int digits = 0;
-        if (i < 10) digits = 1;
-        if (i < 100) digits = 2;
-        if (i < 1000) digits = 3;
-        if (i < 10000) digits = 4;
-        if (i < 100000) digits = 5;
-        if (i < 1000000) digits = 6;
-        if (i < 10000000) digits = 7;
-        if (i < 100000000) digits = 8;
-        if (i < 1000000000) digits = 9;
-        else digits = 10;
-
-        char *s = (char *)malloc(digits + 1);
-        sprintf(s, "%d", i);
-        s[digits-1] = 0;
-        return s;
-}
-
 static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
@@ -224,7 +234,6 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         int offset = s->resolved->stack_offset;
         char *offset_s = int_to_cstr(offset);
-        //printf("%s\n", offset_s);
         take_txt(ctx, forge_cstr_builder("mov DWORD [rsp-", offset_s, "], ", res, NULL), 1);
         free(offset_s);
 

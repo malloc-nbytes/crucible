@@ -54,6 +54,8 @@ typedef struct {
 typedef struct {
         expr base;
         const token *id;
+
+        sym *resolved;
 } expr_identifier;
 
 typedef struct {
