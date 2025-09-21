@@ -42,7 +42,7 @@
 
 (eval-and-compile
   (defconst crucible-keywords
-    '("if" "else" "while" "let" "void" "i8" "i16" "i32" "u8" "u16" "u32" "u64"
+    '("if" "else" "while" "let" "void" "i8" "i16" "i32" "i64" "u8" "u16" "u32" "u64"
       "str" "for" "proc" "return" "mut" "break" "macro" "exit" "extern"
       "usize" "struct" "import" "ref" "end" "export"
       "def" "in" "null" "type" "module" "where")))

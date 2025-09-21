@@ -2,6 +2,7 @@
 #include "visitor.h"
 #include "global.h"
 #include "types.h"
+#include "lexer.h"
 
 #include <forge/err.h>
 #include <forge/utils.h>
@@ -70,16 +71,6 @@ typedef struct {
 char *
 int_to_cstr(int i)
 {
-        /* int digits = 0; */
-        /* for (digits = 0; i > 0; i /= 10, ++digits) { */
-        /*         printf("%d\n", i); */
-        /* } */
-        /* char *s = (char *)malloc(digits + 1); */
-        /* sprintf(s, "%d", i); */
-        /* s[digits-1] = 0; */
-        /* return s; */
-
-        //if (n < 0) n = (n == INT_MIN) ? INT_MAX : -n;
         int digits = 0;
         if (i < 10) digits = 1;
         if (i < 100) digits = 2;
@@ -196,8 +187,30 @@ epilogue(asm_context *ctx)
 static void *
 visit_expr_bin(visitor *v, expr_bin *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+
+        char *v1 = e->lhs->accept(e->lhs, v);
+        char *v2 = e->rhs->accept(e->rhs, v);
+
+        int regi = alloc_reg(type_to_int(e->lhs->type));
+        char *reg = g_regs[regi];
+
+        take_txt(ctx, forge_cstr_builder("mov DWORD ", reg, ", ", v1, NULL), 1);
+
+        switch (e->op->ty) {
+        case TOKEN_TYPE_PLUS:
+                take_txt(ctx, forge_cstr_builder("add DWORD ", reg, ", ", v2, NULL), 1);
+                break;
+        case TOKEN_TYPE_MINUS:
+                take_txt(ctx, forge_cstr_builder("sub DWORD ", reg, ", ", v2, NULL), 1);
+                break;
+        default: forge_err_wargs("unimplemented binop `%s`", e->op->lx);
+        }
+
+        free_reg_literal(v1);
+        free_reg_literal(v2);
+
+        return reg;
 }
 
 static void *

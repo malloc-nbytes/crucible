@@ -14,6 +14,14 @@ type_i32_alloc(void)
         return t;
 }
 
+type_i64 *
+type_i64_alloc(void)
+{
+        type_i64 *t = (type_i64 *)alloc(sizeof(type_i64));
+        t->base.kind = TYPE_KIND_I64;
+        return t;
+}
+
 type_u32 *
 type_u32_alloc(void)
 {
@@ -74,24 +82,33 @@ type_unknown_alloc(void)
         return t;
 }
 
+type_number *
+type_number_alloc(void)
+{
+        type_number *t = (type_number *)alloc(sizeof(type_number));
+        t->base.kind = TYPE_KIND_NUMBER;
+        return t;
+}
+
 char *
 type_to_cstr(const type *t)
 {
         switch (t->kind) {
-        case TYPE_KIND_I8: return "i8";
-        case TYPE_KIND_I16: return "i16";
-        case TYPE_KIND_I32: return "i32";
-        case TYPE_KIND_I64: return "i64";
-        case TYPE_KIND_U8: return "u8";
-        case TYPE_KIND_U16: return "u16";
-        case TYPE_KIND_U32: return "u32";
-        case TYPE_KIND_U64: return "u64";
+        case TYPE_KIND_I8:     return "i8";
+        case TYPE_KIND_I16:    return "i16";
+        case TYPE_KIND_I32:    return "i32";
+        case TYPE_KIND_I64:    return "i64";
+        case TYPE_KIND_U8:     return "u8";
+        case TYPE_KIND_U16:    return "u16";
+        case TYPE_KIND_U32:    return "u32";
+        case TYPE_KIND_U64:    return "u64";
+        case TYPE_KIND_NUMBER: return "number";
         case TYPE_KIND_PTR: {
                 return forge_cstr_builder("ptr<", type_to_cstr(((type_ptr *)t)->to), ">", NULL);
         }
-        case TYPE_KIND_VOID: return "void";
+        case TYPE_KIND_VOID:     return "void";
         case TYPE_KIND_NORETURN: return "!";
-        case TYPE_KIND_UNKNOWN: return "<unknown>";
+        case TYPE_KIND_UNKNOWN:  return "<unknown>";
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
         } break;
@@ -101,22 +118,29 @@ type_to_cstr(const type *t)
 }
 
 int
-type_is_compat(const type *t1,
-               const type *t2)
+type_is_compat(type **t1, type **t2)
 {
         assert(t1);
         assert(t2);
 
-        assert(t1->kind != TYPE_KIND_PROC
-               && t2->kind != TYPE_KIND_PROC
+        assert((*t1)->kind != TYPE_KIND_PROC
+               && (*t2)->kind != TYPE_KIND_PROC
                && "proc type checking unimplemented");
 
-        if (t1->kind == TYPE_KIND_PTR
-            && t2->kind == TYPE_KIND_PTR) {
-                return type_is_compat(((type_ptr *)t1)->to, ((type_ptr *)t2)->to);
+        if ((*t1)->kind == TYPE_KIND_PTR
+            && (*t2)->kind == TYPE_KIND_PTR) {
+                return type_is_compat(&((type_ptr *)(*t1))->to, &((type_ptr *)(*t2))->to);
         }
 
-        return t1->kind == t2->kind;
+        if ((*t1)->kind == TYPE_KIND_NUMBER
+            && (*t2)->kind < TYPE_KIND_NUMBER) {
+                (*t1) = (*t2);
+        } else if ((*t1)->kind < TYPE_KIND_NUMBER
+                   && (*t2)->kind == TYPE_KIND_NUMBER) {
+                (*t2) = (*t1);
+        }
+
+        return (*t1)->kind == (*t2)->kind;
 }
 
 int
@@ -133,6 +157,7 @@ type_to_int(const type *t)
         case TYPE_KIND_U16:      return 2;
         case TYPE_KIND_U32:      return 4;
         case TYPE_KIND_U64:      return 8;
+        case TYPE_KIND_NUMBER:   return 4;
         case TYPE_KIND_PTR:      return 8;
         case TYPE_KIND_VOID:     return 0;
         case TYPE_KIND_NORETURN: return 0;

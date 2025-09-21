@@ -59,7 +59,7 @@ parse_type(parser_context *ctx)
         } else if (!strcmp(lx, KWD_I32)) {
                 return (type *)type_i32_alloc();
         } else if (!strcmp(lx, KWD_I64)) {
-                forge_todo("i64");
+                return (type *)type_i64_alloc();
         } else if (!strcmp(lx, KWD_U8)) {
                 ty = (type *)type_u8_alloc();
         } else if (!strcmp(lx, KWD_U16)) {

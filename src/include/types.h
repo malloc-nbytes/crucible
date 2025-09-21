@@ -16,6 +16,8 @@ typedef enum {
         TYPE_KIND_U32,
         TYPE_KIND_U64,
 
+        TYPE_KIND_NUMBER,
+
         TYPE_KIND_STR,
         TYPE_KIND_VOID,
         TYPE_KIND_NORETURN /*10*/,
@@ -38,6 +40,8 @@ typedef struct { type base; } type_u16;
 typedef struct { type base; } type_u32;
 typedef struct { type base; } type_u64;
 
+typedef struct { type base; } type_number;
+
 typedef struct {
         type base;
         type *to;
@@ -55,8 +59,10 @@ typedef struct {
 typedef struct { type base; } type_unknown;
 
 type_i32 *type_i32_alloc(void);
+type_i64 *type_i64_alloc(void);
 type_u32 *type_u32_alloc(void);
 type_u8 *type_u8_alloc(void);
+type_number *type_number_alloc(void);
 type_noreturn *type_noreturn_alloc(void);
 type_ptr *type_ptr_alloc(type *to);
 type_void *type_void_alloc(void);
@@ -66,7 +72,7 @@ char *type_to_cstr(const type *t);
 type_proc *type_proc_alloc(type *rettype,
                            const parameter_array *params);
 
-int type_is_compat(const type *t1, const type *t2);
+int type_is_compat(type **t1, type **t2);
 int type_to_int(const type *t);
 
 #endif // TYPES_H_INCLUDED

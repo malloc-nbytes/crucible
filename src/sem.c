@@ -90,9 +90,9 @@ sym_alloc(symtbl     *tbl,
 
 static type *
 binop(symtbl      *tbl,
-      const expr  *lhs,
+      expr  *lhs,
       const token *op,
-      const expr  *rhs)
+      expr  *rhs)
 {
         if (op->ty != TOKEN_TYPE_PLUS
             && op->ty != TOKEN_TYPE_MINUS
@@ -102,7 +102,7 @@ binop(symtbl      *tbl,
                                 loc_err(op->loc), op->lx);
         }
 
-        if (!type_is_compat(lhs->type, rhs->type)) {
+        if (!type_is_compat(&lhs->type, &rhs->type)) {
                 pusherr(tbl, lhs->loc,
                         "cannot perform binary operator `%s` on %s and %s",
                         op->lx,
@@ -148,7 +148,7 @@ static void *
 visit_expr_integer_literal(visitor *v, expr_integer_literal *e)
 {
         NOOP(v);
-        ((expr *)e)->type = (type *)type_i32_alloc();
+        ((expr *)e)->type = (type *)type_number_alloc();
         return NULL;
 }
 
@@ -201,13 +201,13 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 e->args.data[i]->accept(e->args.data[i], v);
 
                 // Type check argument list
-                const type *expected = ((type_proc *)proc_rettype)->params->data[i].type;
-                const type *got = e->args.data[i]->type;
+                type *expected = ((type_proc *)proc_rettype)->params->data[i].type;
+                type *got = e->args.data[i]->type;
 
                 assert(expected);
                 assert(got);
 
-                if (!type_is_compat(got, expected)) {
+                if (!type_is_compat(&got, &expected)) {
                         pusherr(tbl, e->args.data[i]->loc,
                                 "type mismatch, expected `%s` but the expression evaluates to `%s`",
                                 type_to_cstr(expected), type_to_cstr(got));
@@ -243,7 +243,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
         // i.e.:
         //   let x: i32 = 1;
         //          ^^^   ^
-        if (!type_is_compat(s->type, s->e->type)) {
+        if (!type_is_compat(&s->type, &s->e->type)) {
                 pusherr(tbl, s->id->loc,
                         "type mismatch, expected `%s` but the expression evaluates to `%s`",
                         type_to_cstr(s->type), type_to_cstr(s->e->type));
@@ -354,7 +354,7 @@ visit_stmt_return(visitor *v, stmt_return *s)
                 s->e->accept(s->e, v);
 
                 if (tbl->proc.inproc) {
-                        if (!type_is_compat(s->e->type, tbl->proc.type)) {
+                        if (!type_is_compat(&s->e->type, &tbl->proc.type)) {
                                 pusherr(tbl, s->e->loc,
                                         "cannot return type `%s` in a procedure returning `%s`",
                                         type_to_cstr(s->e->type),
