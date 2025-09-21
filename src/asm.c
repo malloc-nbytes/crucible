@@ -48,9 +48,22 @@ static char *g_regs[] = {
         "r11", "r11d", "r11w", "r11b"
 };
 
+static char *g_param_regs[] = {
+        "rdi", "edi",  "di",   "dil",
+        "rsi", "esi",  "si",   "sil",
+        "rdx", "edx",  "dx",   "dl",
+        "rcx", "ecx",  "cx",   "cl",
+        "r8",  "r8d",  "r8w",  "r8b",
+        "r9",  "r9d",  "r9w",  "r9b",
+};
+
 const size_t g_regs_n = sizeof(g_regs)/sizeof(*g_regs);
 #define g_regs_r 8
 #define g_regs_c 4
+
+const size_t g_param_regs_n = sizeof(g_param_regs)/sizeof(*g_param_regs);
+#define g_param_regs_r 8
+#define g_param_regs_c 4
 
 static int g_inuse_regs[g_regs_r * g_regs_c] = {
         0, 0, 0, 0,
@@ -66,7 +79,19 @@ static int g_inuse_regs[g_regs_r * g_regs_c] = {
 typedef struct {
         FILE *out;
         str_array globals;
+        str_array data_section;
+        str_array externs;
 } asm_context;
+
+static char *
+genlbl(void)
+{
+        static int i = 0;
+        char buf[256] = {0};
+        sprintf(buf, "t%d", i);
+        ++i;
+        return strdup(buf);
+}
 
 char *
 int_to_cstr(int i)
@@ -132,6 +157,13 @@ alloc_reg(int sz)
                 }
         }
         forge_err("alloc_reg(): no more registers");
+}
+
+static int
+alloc_param_reg(int sz)
+{
+        NOOP(sz);
+        return 0;
 }
 
 static void
@@ -239,8 +271,13 @@ visit_expr_integer_literal(visitor *v, expr_integer_literal *e)
 static void *
 visit_expr_string_literal(visitor *v, expr_string_literal *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        // TODO: handle escape sequences
+        asm_context *ctx = (asm_context *)v->context;
+
+        char *lbl = genlbl();
+        char *str = forge_cstr_builder(lbl, ": db \"", e->s->lx, "\", 0", NULL);
+        dyn_array_append(ctx->data_section, str);
+        return lbl;
 }
 
 static void *
@@ -336,6 +373,14 @@ visit_stmt_exit(visitor *v, stmt_exit *s)
         return NULL;
 }
 
+static void *
+visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
+{
+        asm_context *ctx = (asm_context *)v->context;
+        dyn_array_append(ctx->externs, forge_cstr_builder("extern ", s->id->lx, NULL));
+        return NULL;
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -351,7 +396,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_block,
                 visit_stmt_proc,
                 visit_stmt_return,
-                visit_stmt_exit
+                visit_stmt_exit,
+                visit_stmt_extern_proc
         );
 }
 
@@ -368,6 +414,8 @@ init(asm_context *ctx)
         }
 
         ctx->globals = dyn_array_empty(str_array);
+        ctx->data_section = dyn_array_empty(str_array);
+        ctx->externs = dyn_array_empty(str_array);
 
         write_txt(ctx, "section .text", 1);
 }
@@ -376,14 +424,33 @@ static void
 cleanup(asm_context *ctx)
 {
         fclose(ctx->out);
+        dyn_array_free(ctx->globals);
+        dyn_array_free(ctx->data_section);
 }
 
 static void
-add_globals(asm_context *ctx)
+write_globals(asm_context *ctx)
 {
         for (size_t i = 0; i < ctx->globals.len; ++i) {
                 write_txt(ctx, "global ", 0);
                 write_txt(ctx, ctx->globals.data[i], 1);
+        }
+}
+
+static void
+write_data_section(asm_context *ctx)
+{
+        write_txt(ctx, "section .data", 1);
+        for (size_t i = 0; i < ctx->data_section.len; ++i) {
+                take_txt(ctx, ctx->data_section.data[i], 1);
+        }
+}
+
+static void
+write_externs(asm_context *ctx)
+{
+        for (size_t i = 0; i < ctx->data_section.len; ++i) {
+                take_txt(ctx, ctx->externs.data[i], 1);
         }
 }
 
@@ -401,7 +468,9 @@ asm_gen(program *p, symtbl *tbl)
                 s->accept(s, v);
         }
 
-        add_globals((asm_context *)v->context);
+        write_globals((asm_context *)v->context);
+        write_externs((asm_context *)v->context);
+        write_data_section((asm_context *)v->context);
         write_txt((asm_context *)v->context, "section .note.GNU-stack", 1);
 
         cleanup((asm_context *)v->context);

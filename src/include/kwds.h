@@ -16,6 +16,7 @@
 #define KWD_LET    "let"
 #define KWD_RETURN "return"
 #define KWD_EXIT   "exit"
+#define KWD_EXTERN "extern"
 
 #define KWD_IF    "if"
 #define KWD_WHILE "while"
@@ -41,6 +42,7 @@
                 KWD_EXPORT,                     \
                 KWD_RETURN,                     \
                 KWD_EXIT,                       \
+                KWD_EXTERN,                     \
 }
 
 #define KWD_TYPES {                             \

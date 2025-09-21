@@ -29,6 +29,7 @@ typedef enum {
         STMT_KIND_PROC,
         STMT_KIND_RETURN,
         STMT_KIND_EXIT,
+        STMT_KIND_EXTERN_PROC,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -142,10 +143,11 @@ typedef struct {
         int export;
         const token *id;
         parameter_array params;
+        int variadic;
         type *type;
         stmt *blk;
 
-        int rsp;
+        int rsp; // resolved in semantic analysis
 } stmt_proc;
 
 typedef struct {
@@ -157,6 +159,14 @@ typedef struct {
         stmt base;
         expr *e; // can be NULL
 } stmt_exit;
+
+typedef struct {
+        stmt base;
+        const token *id;
+        parameter_array params;
+        int variadic;
+        type *type;
+} stmt_extern_proc;
 
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
@@ -172,8 +182,15 @@ stmt_proc *stmt_proc_alloc(
         int export,
         const token *id,
         parameter_array params,
+        int variadic,
         type *type,
         stmt *blk
+);
+stmt_extern_proc *stmt_extern_proc_alloc(
+        const token *id,
+        parameter_array params,
+        int variadic,
+        type *type
 );
 stmt_block *stmt_block_alloc(stmt_array stmts);
 stmt_return *stmt_return_alloc(expr *e);

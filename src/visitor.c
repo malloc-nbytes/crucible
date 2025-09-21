@@ -4,18 +4,19 @@
 #include <forge/utils.h>
 
 visitor *
-visitor_alloc(void                     *ctx,
-        visit_expr_bin_sig              visit_expr_bin,
-        visit_expr_identifier_sig       visit_expr_identifier,
-        visit_expr_integer_literal_sig  visit_expr_integer_literal,
-        visit_expr_string_literal_sig   visit_expr_string_literal,
-        visit_expr_proccall_sig         visit_expr_proccall,
-        visit_stmt_let_sig              visit_stmt_let,
-        visit_stmt_expr_sig             visit_stmt_expr,
-        visit_stmt_block_sig            visit_stmt_block,
-        visit_stmt_proc_sig             visit_stmt_proc,
-        visit_stmt_return_sig           visit_stmt_return,
-        visit_stmt_exit_sig             visit_stmt_exit) {
+visitor_alloc(void                           *ctx,
+              visit_expr_bin_sig              visit_expr_bin,
+              visit_expr_identifier_sig       visit_expr_identifier,
+              visit_expr_integer_literal_sig  visit_expr_integer_literal,
+              visit_expr_string_literal_sig   visit_expr_string_literal,
+              visit_expr_proccall_sig         visit_expr_proccall,
+              visit_stmt_let_sig              visit_stmt_let,
+              visit_stmt_expr_sig             visit_stmt_expr,
+              visit_stmt_block_sig            visit_stmt_block,
+              visit_stmt_proc_sig             visit_stmt_proc,
+              visit_stmt_return_sig           visit_stmt_return,
+              visit_stmt_exit_sig             visit_stmt_exit,
+              visit_stmt_extern_proc_sig      visit_stmt_extern_proc) {
 
         visitor *v = (visitor *)alloc(sizeof(visitor));
 
@@ -33,6 +34,7 @@ visitor_alloc(void                     *ctx,
         v->visit_stmt_proc            = visit_stmt_proc;
         v->visit_stmt_return          = visit_stmt_return;
         v->visit_stmt_exit            = visit_stmt_exit;
+        v->visit_stmt_extern_proc     = visit_stmt_extern_proc;
 
         return v;
 }
@@ -140,84 +142,11 @@ accept_stmt_exit(stmt *s, visitor *v)
         return NULL;
 }
 
-// EXPRESSION VISITORS
-
-/* void * */
-/* visitor_expr_bin(visitor *v, expr_bin *e) */
-/* { */
-/*         e->lhs->accept(e->lhs, v); */
-/*         e->rhs->accept(e->rhs, v); */
-/*         return NULL; */
-/* } */
-
-/* void * */
-/* visitor_expr_integer_literal(visitor *v, expr_integer_literal *e) */
-/* { */
-/*         NOOP(v, e); */
-/*         return NULL; */
-/* } */
-
-/* void * */
-/* visitor_expr_identifier(visitor *v, expr_identifier *e) */
-/* { */
-/*         NOOP(v, e); */
-/*         return NULL; */
-/* } */
-
-/* void * */
-/* visitor_expr_string_literal(visitor *v, expr_string_literal *e) */
-/* { */
-/*         NOOP(v, e); */
-/*         return NULL; */
-/* } */
-
-/* void * */
-/* visitor_expr_proccall(visitor *v, expr_proccall *e) */
-/* { */
-/*         e->lhs->accept(e->lhs, v); */
-/*         for (size_t i = 0; i < e->args.len; ++i) { */
-/*                 e->args.data[i]->accept(e->args.data[i], v); */
-/*         } */
-/*         return NULL; */
-/* } */
-
-/* // STATEMENT VISITORS */
-
-/* void * */
-/* visit_stmt_let(visitor *v, stmt_let *s) */
-/* { */
-/*         return s->e->accept(s->e, v); */
-/* } */
-
-/* void * */
-/* visit_stmt_expr(visitor *v, stmt_expr *s) */
-/* { */
-/*         return s->e->accept(s->e, v); */
-/* } */
-
-/* void * */
-/* visit_stmt_block(visitor *v, stmt_block *s) */
-/* { */
-/*         for (size_t i = 0; i < s->stmts.len; ++i) { */
-/*                 s->stmts.data[i]->accept(s->stmts.data[i], v); */
-/*         } */
-/*         return NULL; */
-/* } */
-
-/* void * */
-/* visit_stmt_proc(visitor *v, stmt_proc *s) */
-/* { */
-/*         return s->blk->accept(s->blk, v); */
-/* } */
-
-/* void * */
-/* visit_stmt_return(visitor *v, stmt_return *s) */
-/* { */
-/*         return s->e->accept(s->e, v); */
-/* } */
-
-/* void * */
-/* visit_stmt_exit(visitor *v, stmt_exit *s) */
-/* { */
-/*         return s->e->accept(s->e, v); */
-/* } */
+void *
+accept_stmt_extern_proc(stmt *s, visitor *v)
+{
+        if (v->visit_stmt_extern_proc) {
+                return v->visit_stmt_extern_proc(v, (stmt_extern_proc *)s);
+        }
+        return NULL;
+}

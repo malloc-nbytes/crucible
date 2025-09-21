@@ -58,7 +58,9 @@ typedef enum {
         TOKEN_TYPE_LESSTHAN_EQUALS,
         TOKEN_TYPE_BANG_EQUALS,
         TOKEN_TYPE_DOUBLE_AMPERSAND,
-        TOKEN_TYPE_DOUBLE_PIPE
+        TOKEN_TYPE_DOUBLE_PIPE,
+
+        TOKEN_TYPE_ELLIPSIS,
 } token_type;
 
 typedef struct token {

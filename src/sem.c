@@ -377,6 +377,22 @@ visit_stmt_exit(visitor *v, stmt_exit *s)
         return NULL;
 }
 
+static void *
+visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        if (sym_exists_in_scope(tbl, s->id->lx)) {
+                pusherr(tbl, s->id->loc, "procecure `%s` is already defined", s->id->lx);
+                return NULL;
+        }
+
+        type_proc *proc_ty = type_proc_alloc(s->type, &s->params);
+        insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty));
+
+        return NULL;
+}
+
 static visitor *
 sem_visitor_alloc(symtbl *tbl)
 {
@@ -392,7 +408,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_block,
                 visit_stmt_proc,
                 visit_stmt_return,
-                visit_stmt_exit
+                visit_stmt_exit,
+                visit_stmt_extern_proc
         );
 }
 

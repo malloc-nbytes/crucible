@@ -293,8 +293,10 @@ parse_stmt_expr(parser_context *ctx)
 }
 
 parameter_array
-parse_parameters(parser_context *ctx)
+parse_parameters(parser_context *ctx, int *variadic)
 {
+        *variadic = 0;
+
         (void)expect(ctx, TOKEN_TYPE_LEFT_PARENTHESIS);
 
         parameter_array ar = dyn_array_empty(parameter_array);
@@ -305,7 +307,21 @@ parse_parameters(parser_context *ctx)
         }
 
         while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_PARENTHESIS) {
-                token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+                token *id = lexer_peek(ctx->l, 0);
+                if (id->ty != TOKEN_TYPE_IDENTIFIER) {
+                        if (id->ty == TOKEN_TYPE_ELLIPSIS) {
+                                lexer_discard(ctx->l); // ...
+                                if (lexer_peek(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_PARENTHESIS) {
+                                        forge_err("variadic parameter must come at the end of the parameter list");
+                                }
+                                *variadic = 1;
+                                break;
+                        } else {
+                                forge_err("expected either `)` or `...`");
+                        }
+                }
+
+                id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
                 (void)expect(ctx, TOKEN_TYPE_COLON);
                 type *type = parse_type(ctx);
 
@@ -356,7 +372,8 @@ parse_stmt_proc(parser_context *ctx)
         lexer_discard(ctx->l); // proc
 
         token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
-        parameter_array params = parse_parameters(ctx);
+        int variadic = 0;
+        parameter_array params = parse_parameters(ctx, &variadic);
         (void)expect(ctx, TOKEN_TYPE_COLON);
         type *ty = parse_type(ctx);
         stmt *blk = NULL;
@@ -372,7 +389,21 @@ parse_stmt_proc(parser_context *ctx)
 
         ctx->in_global = 1;
 
-        return stmt_proc_alloc(export, id, params, ty, blk);
+        return stmt_proc_alloc(export, id, params, variadic, ty, blk);
+}
+
+static stmt_extern_proc *
+parse_stmt_extern(parser_context *ctx)
+{
+        (void)expectkw(ctx, KWD_EXTERN);
+        (void)expectkw(ctx, KWD_PROC);
+        token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+        int variadic = 0;
+        parameter_array params = parse_parameters(ctx, &variadic);
+        (void)expect(ctx, TOKEN_TYPE_COLON);
+        type *ty = parse_type(ctx);
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        return stmt_extern_proc_alloc(id, params, variadic, ty);
 }
 
 static stmt_return *
@@ -406,6 +437,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_return(ctx);
         } else if (!strcmp(hd->lx, KWD_EXIT)) {
                 return (stmt *)parse_stmt_exit(ctx);
+        } else if (!strcmp(hd->lx, KWD_EXTERN)) {
+                return (stmt *)parse_stmt_extern(ctx);
         }
 
         assert(0 && "todo");

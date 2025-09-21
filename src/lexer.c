@@ -69,6 +69,7 @@ token_type_to_cstr(token_type ty)
         case TOKEN_TYPE_BANG_EQUALS:         return "TOKEN_TYPE_BANG_EQUALS";
         case TOKEN_TYPE_DOUBLE_AMPERSAND:    return "TOKEN_TYPE_DOUBLE_AMPERSAND";
         case TOKEN_TYPE_DOUBLE_PIPE:         return "TOKEN_TYPE_DOUBLE_PIPE";
+        case TOKEN_TYPE_ELLIPSIS:            return "TOKEN_TYPE_ELLIPSIS";
         default: forge_err_wargs("token_type_to_cstr(): unknown token type `%d`", (int)ty);
         }
         return NULL; // unreachable
@@ -122,6 +123,7 @@ init_syms(void)
         static token_type token_type_bang_equals         = TOKEN_TYPE_BANG_EQUALS;
         static token_type token_type_double_ampersand    = TOKEN_TYPE_DOUBLE_AMPERSAND;
         static token_type token_type_double_pipe         = TOKEN_TYPE_DOUBLE_PIPE;
+        static token_type token_type_ellipsis            = TOKEN_TYPE_ELLIPSIS;
 
         smap_insert(&g_syms, "(", (void*)&token_type_left_parenthesis);
         smap_insert(&g_syms, ")", (void*)&token_type_right_parenthesis);
@@ -166,6 +168,7 @@ init_syms(void)
         smap_insert(&g_syms, "!=", (void*)&token_type_bang_equals);
         smap_insert(&g_syms, "&&", (void*)&token_type_double_ampersand);
         smap_insert(&g_syms, "||", (void*)&token_type_double_pipe);
+        smap_insert(&g_syms, "...", (void*)&token_type_ellipsis);
 }
 
 static token *
