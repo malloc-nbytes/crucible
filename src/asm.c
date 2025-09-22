@@ -45,25 +45,12 @@ static char *g_regs[] = {
         "r8",  "r8d",  "r8w",  "r8b",
         "r9",  "r9d",  "r9w",  "r9b",
         "r10", "r10d", "r10w", "r10b",
-        "r11", "r11d", "r11w", "r11b"
-};
-
-static char *g_param_regs[] = {
-        "rdi", "edi",  "di",   "dil",
-        "rsi", "esi",  "si",   "sil",
-        "rdx", "edx",  "dx",   "dl",
-        "rcx", "ecx",  "cx",   "cl",
-        "r8",  "r8d",  "r8w",  "r8b",
-        "r9",  "r9d",  "r9w",  "r9b",
+        "r11", "r11d", "r11w", "r11b",
 };
 
 const size_t g_regs_n = sizeof(g_regs)/sizeof(*g_regs);
 #define g_regs_r 8
 #define g_regs_c 4
-
-const size_t g_param_regs_n = sizeof(g_param_regs)/sizeof(*g_param_regs);
-#define g_param_regs_r 8
-#define g_param_regs_c 4
 
 static int g_inuse_regs[g_regs_r * g_regs_c] = {
         0, 0, 0, 0,
@@ -81,7 +68,33 @@ typedef struct {
         str_array globals;
         str_array data_section;
         str_array externs;
+        str_array pushed_regs;
 } asm_context;
+
+static void
+write_txt(asm_context *ctx,
+          const char  *txt,
+          int          newline)
+{
+        assert(ctx->out);
+
+        fwrite(txt, 1, strlen(txt), ctx->out);
+        if (newline) fwrite("\n", 1, 1, ctx->out);
+}
+
+static void
+take_txt(asm_context *ctx,
+         char        *txt,
+         int          newline)
+{
+        assert(ctx->out);
+
+        fwrite(txt, 1, strlen(txt), ctx->out);
+
+        if (newline) fwrite("\n", 1, 1, ctx->out);
+
+        free(txt);
+}
 
 static char *
 genlbl(void)
@@ -160,10 +173,48 @@ alloc_reg(int sz)
 }
 
 static int
-alloc_param_reg(int sz)
+alloc_param_regs(int sz)
 {
-        NOOP(sz);
-        return 0;
+        /* static const char *param_regs[] = { */
+        /*         "rdi", "edi", "di", "dil",  // Index 12-15 */
+        /*         "rsi", "esi", "si", "sil",  // Index 8-11 */
+        /*         "rdx", "edx", "dx", "dl",   // Index 4-7 */
+        /*         "rcx", "ecx", "cx", "cl",   // Index 0-3 */
+        /*         "r8",  "r8d", "r8w", "r8b", // Index 16-19 */
+        /*         "r9",  "r9d", "r9w", "r9b"  // Index 20-23 */
+        /* }; */
+
+        static const size_t param_reg_indices[] = {12, 8, 4, 0, 16, 20};
+        static const size_t param_reg_count = sizeof(param_reg_indices)/sizeof(*param_reg_indices);
+        int col;
+
+        switch (sz) {
+        case 8: col = 0; break;
+        case 4: col = 1; break;
+        case 2: col = 2; break;
+        case 1: col = 3; break;
+        default: forge_err_wargs("alloc_param_regs(): cannot allocate register with size %d", sz);
+        }
+
+        for (size_t i = 0; i < param_reg_count; ++i) {
+                size_t base_idx = param_reg_indices[i];
+                int row = base_idx / g_regs_c;
+                if (!REGAT(row, col, g_inuse_regs)) {
+                        int reg_free = 1;
+                        for (size_t j = 0; j < g_regs_c; ++j) {
+                                if (REGAT(row, j, g_inuse_regs)) {
+                                        reg_free = 0;
+                                        break;
+                                }
+                        }
+                        if (reg_free) {
+                                REGAT(row, col, g_inuse_regs) = 1;
+                                return base_idx + col;
+                        }
+                }
+        }
+
+        forge_err("alloc_param_regs(): no available parameter registers");
 }
 
 static void
@@ -173,28 +224,26 @@ free_reg(int reg)
 }
 
 static void
-write_txt(asm_context *ctx,
-          const char  *txt,
-          int          newline)
+push_inuse_regs(asm_context *ctx)
 {
-        assert(ctx->out);
-
-        fwrite(txt, 1, strlen(txt), ctx->out);
-        if (newline) fwrite("\n", 1, 1, ctx->out);
+        for (size_t i = 0; i < g_regs_r; ++i) {
+                for (size_t j = 0; j < g_regs_c; ++j) {
+                        if (REGAT(i, j, g_inuse_regs)) {
+                                char *reg = REGAT(i, j, g_regs);
+                                take_txt(ctx, forge_cstr_builder("push ", reg, NULL), 1);
+                                dyn_array_append(ctx->pushed_regs, reg);
+                        }
+                }
+        }
 }
 
 static void
-take_txt(asm_context *ctx,
-         char        *txt,
-         int          newline)
+pop_regs(asm_context *ctx)
 {
-        assert(ctx->out);
-
-        fwrite(txt, 1, strlen(txt), ctx->out);
-
-        if (newline) fwrite("\n", 1, 1, ctx->out);
-
-        free(txt);
+        for (size_t i = 0; i < ctx->pushed_regs.len; ++i) {
+                take_txt(ctx, forge_cstr_builder("pop ", ctx->pushed_regs.data[i], NULL), 1);
+        }
+        dyn_array_clear(ctx->pushed_regs);
 }
 
 static void
@@ -283,8 +332,36 @@ visit_expr_string_literal(visitor *v, expr_string_literal *e)
 static void *
 visit_expr_proccall(visitor *v, expr_proccall *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+
+        assert(e->args.len <= 6 && "only 6 procedure arguments are supported right now");
+
+        push_inuse_regs(ctx);
+
+        int_array pregs = dyn_array_empty(int_array);
+
+        for (size_t i = 0; i < e->args.len; ++i) {
+                expr *arg = e->args.data[i];
+                char *value = arg->accept(arg, v);
+
+                int pregi = alloc_param_regs(type_to_int(arg->type));
+                char *preg = g_regs[pregi];
+                dyn_array_append(pregs, pregi);
+
+                take_txt(ctx, forge_cstr_builder("mov QWORD ", preg, ", ", value, NULL), 1);
+
+                free_reg_literal(value);
+        }
+
+        char *callee = e->lhs->accept(e->lhs, v);
+
+        take_txt(ctx, forge_cstr_builder("call ", callee, NULL), 1);
+
+        free_reg_literal(callee);
+
+        pop_regs(ctx);
+
+        return "rax";
 }
 
 static void *
@@ -307,8 +384,10 @@ visit_stmt_let(visitor *v, stmt_let *s)
 static void *
 visit_stmt_expr(visitor *v, stmt_expr *s)
 {
-        NOOP(v, s);
-        forge_todo("");
+        char *value = s->e->accept(s->e, v);
+        free_reg_literal(value);
+
+        return NULL;
 }
 
 static void *
@@ -416,6 +495,7 @@ init(asm_context *ctx)
         ctx->globals = dyn_array_empty(str_array);
         ctx->data_section = dyn_array_empty(str_array);
         ctx->externs = dyn_array_empty(str_array);
+        ctx->pushed_regs = dyn_array_empty(str_array);
 
         write_txt(ctx, "section .text", 1);
 }
@@ -449,7 +529,7 @@ write_data_section(asm_context *ctx)
 static void
 write_externs(asm_context *ctx)
 {
-        for (size_t i = 0; i < ctx->data_section.len; ++i) {
+        for (size_t i = 0; i < ctx->externs.len; ++i) {
                 take_txt(ctx, ctx->externs.data[i], 1);
         }
 }
@@ -457,7 +537,7 @@ write_externs(asm_context *ctx)
 void
 asm_gen(program *p, symtbl *tbl)
 {
-        NOOP(tbl, free_reg, alloc_reg);
+        NOOP(tbl, free_reg, alloc_param_regs);
 
         asm_context ctx = {0};
         visitor *v = asm_visitor_alloc(&ctx);
