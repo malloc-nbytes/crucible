@@ -68,6 +68,8 @@ parse_type(parser_context *ctx)
                 ty = (type *)type_u32_alloc();
         } else if (!strcmp(lx, KWD_U64)) {
                 forge_todo("u64");
+        } else if (!strcmp(lx, KWD_VOID)) {
+                ty = (type *)type_void_alloc();
         } else if (hd->ty == TOKEN_TYPE_BANG) {
                 ty = (type *)type_noreturn_alloc();
         } else {
@@ -425,6 +427,32 @@ parse_stmt_exit(parser_context *ctx)
 }
 
 static stmt *
+parse_stmt_if(parser_context *ctx)
+{
+        lexer_discard(ctx->l); // if
+
+        expr *e     = parse_expr(ctx);
+        stmt *then  = parse_stmt(ctx);
+        stmt *else_ = NULL;
+
+        token *t1 = lexer_peek(ctx->l, 0);
+        token *t2 = lexer_peek(ctx->l, 1);
+
+        int t1_else = t1 && t1->ty == TOKEN_TYPE_KEYWORD && !strcmp(t1->lx, KWD_ELSE);
+        int t2_if   = t2 && t2->ty == TOKEN_TYPE_KEYWORD && !strcmp(t2->lx, KWD_IF);
+
+        if (t1_else && t2_if) {
+                lexer_discard(ctx->l); // else
+                else_ = parse_stmt_if(ctx);
+        } else if (t1_else) {
+                lexer_discard(ctx->l); // else
+                else_ = parse_stmt(ctx);
+        }
+
+        return (stmt *)stmt_if_alloc(e, then, else_);
+}
+
+static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
         token *hd = lexer_peek(ctx->l, 0);
@@ -439,6 +467,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_exit(ctx);
         } else if (!strcmp(hd->lx, KWD_EXTERN)) {
                 return (stmt *)parse_stmt_extern(ctx);
+        } else if (!strcmp(hd->lx, KWD_IF)) {
+                return (stmt *)parse_stmt_if(ctx);
         }
 
         assert(0 && "todo");

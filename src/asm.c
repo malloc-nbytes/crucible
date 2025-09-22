@@ -319,6 +319,10 @@ visit_expr_bin(visitor *v, expr_bin *e)
         case TOKEN_TYPE_MINUS:
                 take_txt(ctx, forge_cstr_builder("sub  ", spec, " ", reg, ", ", v2, NULL), 1);
                 break;
+        case TOKEN_TYPE_LESSTHAN:
+        case TOKEN_TYPE_GREATERTHAN:
+                take_txt(ctx, forge_cstr_builder("cmp ", reg, ", ", v2, NULL), 1);
+                break;
         default: forge_err_wargs("unimplemented binop `%s`", e->op->lx);
         }
 
@@ -513,6 +517,25 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
         return NULL;
 }
 
+static void *
+visit_stmt_if(visitor *v, stmt_if *s)
+{
+        /* char *expr = s->e->accept(s->e, v); */
+
+        /* write_txt(ctx, "then:", 1); */
+
+        /* if (s->else_) { */
+        /*         write_txt(ctx, "else:", 1); */
+        /* } */
+
+        /* wirte_txt(ctx, "done", 1); */
+
+        NOOP(v, s);
+        forge_todo("");
+
+        return NULL;
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -529,7 +552,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_proc,
                 visit_stmt_return,
                 visit_stmt_exit,
-                visit_stmt_extern_proc
+                visit_stmt_extern_proc,
+                visit_stmt_if
         );
 }
 

@@ -182,3 +182,15 @@ stmt_exit_alloc(expr *e)
         ex->e            = e;
         return ex;
 }
+
+stmt_if *
+stmt_if_alloc(expr *e, stmt *then, stmt *else_)
+{
+        stmt_if *s      = alloc(sizeof(stmt_if));
+        s->base.kind    = STMT_KIND_IF;
+        s->base.accept  = accept_stmt_if;
+        s->e            = e;
+        s->then         = then;
+        s->else_        = else_;
+        return s;
+}

@@ -92,14 +92,11 @@ sym_alloc(symtbl     *tbl,
 
 static type *
 binop(symtbl      *tbl,
-      expr  *lhs,
+      expr        *lhs,
       const token *op,
-      expr  *rhs)
+      expr        *rhs)
 {
-        if (op->ty != TOKEN_TYPE_PLUS
-            && op->ty != TOKEN_TYPE_MINUS
-            && op->ty != TOKEN_TYPE_ASTERISK
-            && op->ty != TOKEN_TYPE_FORWARDSLASH) {
+        if (op->ty >= TOKEN_TYPE_BINOP_LEN || op->ty <= TOKEN_TYPE_OTHER_LEN) {
                 forge_err_wargs("%sunsupported binary operator `%s`",
                                 loc_err(op->loc), op->lx);
         }
@@ -406,6 +403,19 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
         return NULL;
 }
 
+static void *
+visit_stmt_if(visitor *v, stmt_if *s)
+{
+        s->e->accept(s->e, v);
+        s->then->accept(s->then, v);
+
+        if (s->else_) {
+                s->else_->accept(s->else_, v);
+        }
+
+        return NULL;
+}
+
 static visitor *
 sem_visitor_alloc(symtbl *tbl)
 {
@@ -422,7 +432,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_proc,
                 visit_stmt_return,
                 visit_stmt_exit,
-                visit_stmt_extern_proc
+                visit_stmt_extern_proc,
+                visit_stmt_if
         );
 }
 
