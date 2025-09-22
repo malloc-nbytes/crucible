@@ -10,6 +10,7 @@
 #include <forge/utils.h>
 #include <forge/cmd.h>
 #include <forge/cstr.h>
+#include <forge/chooser.h>
 
 #include <assert.h>
 #include <stdio.h>

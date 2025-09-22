@@ -96,6 +96,25 @@ take_txt(asm_context *ctx,
         free(txt);
 }
 
+static const char *
+get_reg_from_size(const char *reg64, int sz)
+{
+        for (size_t i = 0; i < g_regs_r; ++i) {
+                if (!strcmp(REGAT(i, 0, g_regs), reg64)) {
+                        switch (sz) {
+                        case 8: return REGAT(i, 0, g_regs);
+                        case 4: return REGAT(i, 1, g_regs);
+                        case 2: return REGAT(i, 2, g_regs);
+                        case 1: return REGAT(i, 3, g_regs);
+                        default: goto bad;
+                        }
+                }
+        }
+ bad:
+        forge_err_wargs("get_reg_from_size(): could not get register of size %d", sz);
+        return NULL; // unreachable
+}
+
 static char *
 genlbl(void)
 {
@@ -246,6 +265,19 @@ pop_regs(asm_context *ctx)
         dyn_array_clear(ctx->pushed_regs);
 }
 
+static const char *
+szspec(int sz)
+{
+        switch (sz) {
+        case 8: return "QWORD";
+        case 4: return "DWORD";
+        case 2: return "WORD";
+        case 1: return "BYTE";
+        default: forge_err_wargs("get_size_specifier(): cannot get size specfifier for size %d", sz);
+        }
+        return NULL; // unreachable
+}
+
 static void
 prologue(asm_context *ctx, int rsp_n)
 {
@@ -273,17 +305,19 @@ visit_expr_bin(visitor *v, expr_bin *e)
         char *v1 = e->lhs->accept(e->lhs, v);
         char *v2 = e->rhs->accept(e->rhs, v);
 
+        const char *spec = szspec(type_to_int(e->lhs->type));
+
         int regi = alloc_reg(type_to_int(e->lhs->type));
         char *reg = g_regs[regi];
 
-        take_txt(ctx, forge_cstr_builder("mov DWORD ", reg, ", ", v1, NULL), 1);
+        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v1, NULL), 1);
 
         switch (e->op->ty) {
         case TOKEN_TYPE_PLUS:
-                take_txt(ctx, forge_cstr_builder("add DWORD ", reg, ", ", v2, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("add ", spec, " ", reg, ", ", v2, NULL), 1);
                 break;
         case TOKEN_TYPE_MINUS:
-                take_txt(ctx, forge_cstr_builder("sub DWORD ", reg, ", ", v2, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("sub  ", spec, " ", reg, ", ", v2, NULL), 1);
                 break;
         default: forge_err_wargs("unimplemented binop `%s`", e->op->lx);
         }
@@ -308,7 +342,8 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
                 take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->id->lx, NULL), 1);
         } else {
                 char *offset_s = int_to_cstr(e->resolved->stack_offset);
-                take_txt(ctx, forge_cstr_builder("mov DWORD ", reg, ", [rsp-", offset_s, "]", NULL), 1);
+                const char *spec = szspec(type_to_int(e->resolved->ty));
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", [rsp-", offset_s, "]", NULL), 1);
         }
 
         return reg;
@@ -336,9 +371,9 @@ visit_expr_string_literal(visitor *v, expr_string_literal *e)
 static void *
 visit_expr_proccall(visitor *v, expr_proccall *e)
 {
-        asm_context *ctx = (asm_context *)v->context;
-
         assert(e->args.len <= 6 && "only 6 procedure arguments are supported right now");
+
+        asm_context *ctx = (asm_context *)v->context;
 
         push_inuse_regs(ctx);
 
@@ -350,9 +385,11 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 
                 int pregi = alloc_param_regs(type_to_int(arg->type));
                 char *preg = g_regs[pregi];
+                const char *spec = szspec(type_to_int(arg->type));
+
                 dyn_array_append(pregs, pregi);
 
-                take_txt(ctx, forge_cstr_builder("mov QWORD ", preg, ", ", value, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", preg, ", ", value, NULL), 1);
 
                 free_reg_literal(value);
         }
@@ -365,10 +402,12 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 
         char *callee = e->lhs->accept(e->lhs, v);
 
+        for (size_t i = 0; i < pregs.len; ++i) {
+                free_reg(pregs.data[i]);
+        } dyn_array_free(pregs);
+
         take_txt(ctx, forge_cstr_builder("call ", callee, NULL), 1);
-
         free_reg_literal(callee);
-
         pop_regs(ctx);
 
         return "rax";
@@ -383,7 +422,9 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         int offset = s->resolved->stack_offset;
         char *offset_s = int_to_cstr(offset);
-        take_txt(ctx, forge_cstr_builder("mov DWORD [rsp-", offset_s, "], ", value, NULL), 1);
+        const char *spec = szspec(type_to_int(s->e->type));
+
+        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rsp-", offset_s, "], ", value, NULL), 1);
         free(offset_s);
 
         free_reg_literal(value);
@@ -451,7 +492,9 @@ visit_stmt_exit(visitor *v, stmt_exit *s)
 
         if (reg) {
                 // NOTE: changed RDI to EDI for testing
-                take_txt(ctx, forge_cstr_builder("mov edi, ", reg, NULL), 1);
+                const char *syscall_reg = get_reg_from_size("rdi", type_to_int(s->e->type));
+                const char *spec = szspec(type_to_int(s->e->type));
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", syscall_reg, ", ", reg, NULL), 1);
                 free_reg_literal(reg);
         } else {
                 write_txt(ctx, "mov rdi, 0", 1);
