@@ -54,6 +54,7 @@ typedef struct {
         type base;
         type *rettype;
         const parameter_array *params;
+        int variadic;
 } type_proc;
 
 typedef struct { type base; } type_unknown;
@@ -69,8 +70,11 @@ type_void *type_void_alloc(void);
 type_unknown *type_unknown_alloc(void);
 
 char *type_to_cstr(const type *t);
-type_proc *type_proc_alloc(type *rettype,
-                           const parameter_array *params);
+type_proc *type_proc_alloc(
+        type *rettype,
+        const parameter_array *params,
+        int variadic
+);
 
 int type_is_compat(type **t1, type **t2);
 int type_to_int(const type *t);

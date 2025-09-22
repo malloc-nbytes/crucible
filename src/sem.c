@@ -78,12 +78,14 @@ get_sym_from_scope(symtbl *tbl, const char *id)
 static sym *
 sym_alloc(symtbl     *tbl,
           const char *id,
-          type       *ty)
+          type       *ty,
+          int         extern_)
 {
         sym *s          = (sym *)alloc(sizeof(sym));
         s->id           = id;
         s->ty           = ty;
         s->stack_offset = tbl->stack_offset + type_to_int(ty);
+        s->extern_      = extern_;
 
         return s;
 }
@@ -176,41 +178,51 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 
         // Let's assume that the left-hand-side it will always be a
         // a type of 'proc'.
-        type *proc_rettype = ((expr *)e->lhs)->type;
-        //assert(proc_rettype->kind == TYPE_KIND_PROC);
-        if (proc_rettype->kind != TYPE_KIND_PROC) {
-                pusherr(tbl, e->lhs->loc, "cannot perform a procedure call on type %s", type_to_cstr(proc_rettype));
+        type *lhs_ty = ((expr *)e->lhs)->type;
+        if (lhs_ty->kind != TYPE_KIND_PROC) {
+                pusherr(tbl, e->lhs->loc, "cannot perform a procedure call on type %s", type_to_cstr(lhs_ty));
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
 
+        type_proc *proc_ty = (type_proc *)lhs_ty;
+
         // Check number of arguments
-        if (e->args.len != ((type_proc *)proc_rettype)->params->len) {
+        if (e->args.len != proc_ty->params->len) {
+                if (e->args.len >= proc_ty->params->len && proc_ty->variadic) {
+                        goto ok;
+                }
+
                 pusherr(tbl, ((expr *)e)->loc,
                         "procedure requires %zu arguments but %zu were given",
-                        ((type_proc *)proc_rettype)->params->len, e->args.len);
+                        ((type_proc *)proc_ty)->params->len, e->args.len);
+
                 return NULL;
         }
+ ok:
 
         // This expression's return type is the return type
         // of the function that we are calling.
-        ((expr *)e)->type = ((type_proc *)proc_rettype)->rettype;
+        ((expr *)e)->type = proc_ty->rettype;
 
         // Go through each argument in the procedure call.
         for (size_t i = 0; i < e->args.len; ++i) {
-                e->args.data[i]->accept(e->args.data[i], v);
+                expr *arg = e->args.data[i];
+                arg->accept(arg, v);
 
                 // Type check argument list
-                type *expected = ((type_proc *)proc_rettype)->params->data[i].type;
-                type *got = e->args.data[i]->type;
+                if (i < proc_ty->params->len) {
+                        type *expected = proc_ty->params->data[i].type;
+                        type *got = arg->type;
 
-                assert(expected);
-                assert(got);
+                        assert(expected);
+                        assert(got);
 
-                if (!type_is_compat(&got, &expected)) {
-                        pusherr(tbl, e->args.data[i]->loc,
-                                "type mismatch, expected `%s` but the expression evaluates to `%s`",
-                                type_to_cstr(expected), type_to_cstr(got));
+                        if (!type_is_compat(&got, &expected)) {
+                                pusherr(tbl, arg->loc,
+                                        "type mismatch, expected `%s` but the expression evaluates to `%s`",
+                                        type_to_cstr(expected), type_to_cstr(got));
+                        }
                 }
         }
 
@@ -230,7 +242,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         s->e->accept(s->e, v);
 
-        sym *sym = sym_alloc(tbl, s->id->lx, s->type);
+        sym *sym = sym_alloc(tbl, s->id->lx, s->type, 0);
         insert_sym_into_scope(tbl, sym);
         tbl->stack_offset += type_to_int(sym->ty);
 
@@ -292,8 +304,8 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         }
 
         // Add procedure to the scope.
-        type_proc *proc_ty = type_proc_alloc(s->type, &s->params);
-        insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty));
+        type_proc *proc_ty = type_proc_alloc(s->type, &s->params, s->variadic);
+        insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 0));
 
         // We are pushing scope here so that when this current
         // procedure is finished, the parameters are popped.
@@ -308,7 +320,8 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                 }
                 insert_sym_into_scope(tbl, sym_alloc(tbl,
                                                      s->params.data[i].id->lx,
-                                                     s->params.data[i].type));
+                                                     s->params.data[i].type,
+                                                     0));
                 // TODO: get type sizes for procedure parameters.
         }
 
@@ -387,8 +400,8 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
                 return NULL;
         }
 
-        type_proc *proc_ty = type_proc_alloc(s->type, &s->params);
-        insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty));
+        type_proc *proc_ty = type_proc_alloc(s->type, &s->params, s->variadic);
+        insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 1));
 
         return NULL;
 }

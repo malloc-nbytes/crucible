@@ -11,6 +11,7 @@ typedef struct sym {
         const char *id;
         type *ty;
         int stack_offset;
+        int extern_;
 } sym;
 
 typedef struct {

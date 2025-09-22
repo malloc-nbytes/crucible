@@ -301,11 +301,15 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
 
         assert(e->resolved);
 
-        char *offset_s = int_to_cstr(e->resolved->stack_offset);
-
         int regi = alloc_reg(type_to_int(e->resolved->ty));
         char *reg = g_regs[regi];
-        take_txt(ctx, forge_cstr_builder("mov DWORD ", reg, ", [rsp-", offset_s, "]", NULL), 1);
+
+        if (e->resolved->extern_) {
+                take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->id->lx, NULL), 1);
+        } else {
+                char *offset_s = int_to_cstr(e->resolved->stack_offset);
+                take_txt(ctx, forge_cstr_builder("mov DWORD ", reg, ", [rsp-", offset_s, "]", NULL), 1);
+        }
 
         return reg;
 }
@@ -324,7 +328,7 @@ visit_expr_string_literal(visitor *v, expr_string_literal *e)
         asm_context *ctx = (asm_context *)v->context;
 
         char *lbl = genlbl();
-        char *str = forge_cstr_builder(lbl, ": db \"", e->s->lx, "\", 0", NULL);
+        char *str = forge_cstr_builder(lbl, ": db \"", e->s->lx, "\", 10, 0", NULL);
         dyn_array_append(ctx->data_section, str);
         return lbl;
 }
@@ -351,6 +355,12 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 take_txt(ctx, forge_cstr_builder("mov QWORD ", preg, ", ", value, NULL), 1);
 
                 free_reg_literal(value);
+        }
+
+        assert(e->lhs->type->kind == TYPE_KIND_PROC);
+        type_proc *proc_ty = (type_proc *)e->lhs->type;
+        if (proc_ty->variadic) {
+                write_txt(ctx, "xor rax, rax", 1);
         }
 
         char *callee = e->lhs->accept(e->lhs, v);

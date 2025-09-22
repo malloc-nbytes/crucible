@@ -65,12 +65,14 @@ type_void_alloc(void)
 
 type_proc *
 type_proc_alloc(type                  *rettype,
-                const parameter_array *params)
+                const parameter_array *params,
+                int                    variadic)
 {
         type_proc *t = (type_proc *)alloc(sizeof(type_proc));
         t->base.kind = TYPE_KIND_PROC;
-        t->rettype = rettype;
-        t->params = params;
+        t->rettype   = rettype;
+        t->params    = params;
+        t->variadic  = variadic;
         return t;
 }
 
