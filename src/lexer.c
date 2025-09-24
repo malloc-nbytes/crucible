@@ -9,6 +9,7 @@
 #include <forge/smap.h>
 #include <forge/utils.h>
 #include <forge/cstr.h>
+#include <forge/str.h>
 
 #include <assert.h>
 #include <string.h>
@@ -171,6 +172,35 @@ init_syms(void)
         smap_insert(&g_syms, "...", (void*)&token_type_ellipsis);
 }
 
+static char *
+sanatize(char *s)
+{
+        forge_str out = forge_str_create();
+
+        for (size_t i = 0, esc = 0; s[i]; ++i) {
+                if (s[i] == '\\') {
+                        esc = 1;
+                } else if (esc) {
+                        switch (s[i]) {
+                        case 'n': forge_str_append(&out, '\n'); goto done;
+                        case 't': forge_str_append(&out, '\t'); goto done;
+                        default: forge_err_wargs("unknown escape sequence `\\%c`", s[i]);
+                        }
+                done:
+                        esc = 0;
+                } else {
+                        forge_str_append(&out, s[i]);
+                        esc = 0;
+                }
+        }
+
+        forge_str_append(&out, '\0');
+
+        free(s);
+
+        return out.data;
+}
+
 static token *
 token_alloc(const char *st,
             size_t      st_n,
@@ -180,7 +210,12 @@ token_alloc(const char *st,
             const char *fp)
 {
         token *t = alloc(sizeof(token));
-        t->lx    = strndup(st, st_n);
+
+        if (ty == TOKEN_TYPE_STRING_LITERAL) {
+                t->lx = sanatize(strndup(st, st_n));
+        } else {
+                t->lx = strndup(st, st_n);
+        }
         t->ty    = ty;
         t->loc   = loc_create(fp, r, c);
         t->next  = NULL;

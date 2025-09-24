@@ -6,7 +6,7 @@ import "std/system.rl"; as sys
 import "std/colors.rl"; as colors
 import "std/io.rl";     as io
 
-set_flag("-x");
+set_flag("-xe");
 
 enum FlagType {
     Clean = 1 << 0,
@@ -116,7 +116,7 @@ fn run_tests(config) {
 
         if code != 0 {
             failed += [f];
-            bad(format(colors::Te.Invert, f"FAIL (exited with code {code})"), false);
+            bad(format(colors::Te.Invert, f"FAIL (exited with code {code})" + case code of { 11 = " [segfault]"; _ = ""; }), false);
             dump_asm(config, f);
         } else {
             passed += [f];

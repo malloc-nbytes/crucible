@@ -7,6 +7,7 @@
 #include <forge/err.h>
 #include <forge/utils.h>
 #include <forge/cstr.h>
+#include <forge/str.h>
 #include <forge/array.h>
 
 #include <assert.h>
@@ -468,9 +469,42 @@ visit_expr_string_literal(visitor *v, expr_string_literal *e)
         // TODO: handle escape sequences
         asm_context *ctx = (asm_context *)v->context;
 
+
         char *lbl = genlbl();
-        char *str = forge_cstr_builder(lbl, ": db \"", e->s->lx, "\", 10, 0", NULL);
-        dyn_array_append(ctx->data_section, str);
+        forge_str out = forge_str_create();
+        forge_str_concat(&out, lbl);
+        forge_str_concat(&out, ": db ");
+        const char *actual = e->s->lx;
+        int alpha = 0;
+
+        for (size_t i = 0; actual[i]; ++i) {
+                if (actual[i] == '\n' || actual[i] == '\t') {
+                        if (alpha) forge_str_concat(&out, "\"");
+                        if (i != 0) forge_str_concat(&out, ", ");
+
+                        switch (actual[i]) {
+                        case '\n': forge_str_concat(&out, " 10 "); break;
+                        case '\t': forge_str_concat(&out, " 9 ");  break;
+                        default:   assert(0);
+                        }
+
+                        alpha = 0;
+                } else {
+                        if (!alpha) {
+                                if (i != 0) forge_str_concat(&out, ", ");
+                                forge_str_concat(&out, "\"");
+                        }
+                        forge_str_append(&out, actual[i]);
+                        alpha = 1;
+                }
+        }
+
+        if (alpha) {
+                forge_str_append(&out, '"');
+        }
+        forge_str_concat(&out, ", 0");
+
+        dyn_array_append(ctx->data_section, out.data);
         return lbl;
 }
 
@@ -617,15 +651,14 @@ visit_stmt_exit(visitor *v, stmt_exit *s)
                 reg = s->e->accept(s->e, v);
         }
 
-        write_txt(ctx, "mov rax, 60", 1);
-
         if (reg) {
-                // NOTE: changed RDI to EDI for testing
                 const char *syscall_reg = get_reg_from_size("rdi", type_to_int(s->e->type));
                 const char *spec = szspec(type_to_int(s->e->type));
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", syscall_reg, ", ", reg, NULL), 1);
+                write_txt(ctx, "mov rax, 60", 1);
                 free_reg_literal(reg);
         } else {
+                write_txt(ctx, "mov rax, 60", 1);
                 write_txt(ctx, "mov rdi, 0", 1);
         }
 
