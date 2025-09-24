@@ -248,7 +248,7 @@ push_inuse_regs(asm_context *ctx)
         for (size_t i = 0; i < g_regs_r; ++i) {
                 for (size_t j = 0; j < g_regs_c; ++j) {
                         if (REGAT(i, j, g_inuse_regs)) {
-                                char *reg = REGAT(i, j, g_regs);
+                                char *reg = REGAT(i, 0, g_regs);
                                 take_txt(ctx, forge_cstr_builder("push ", reg, NULL), 1);
                                 dyn_array_append(ctx->pushed_regs, reg);
                         }
@@ -281,9 +281,10 @@ szspec(int sz)
 static void
 prologue(asm_context *ctx, int rsp_n)
 {
-        // TODO: stack overflow
+        // Next multiple of 16.
+        int aligned_rsp_n = (rsp_n + 15) & ~15;
         char rsp[1024] = {0};
-        sprintf(rsp, "%d", rsp_n);
+        sprintf(rsp, "%d", aligned_rsp_n);
 
         write_txt(ctx, "push rbp", 1);
         write_txt(ctx, "mov rbp, rsp", 1);
@@ -317,12 +318,98 @@ visit_expr_bin(visitor *v, expr_bin *e)
                 take_txt(ctx, forge_cstr_builder("add ", spec, " ", reg, ", ", v2, NULL), 1);
                 break;
         case TOKEN_TYPE_MINUS:
-                take_txt(ctx, forge_cstr_builder("sub  ", spec, " ", reg, ", ", v2, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("sub ", spec, " ", reg, ", ", v2, NULL), 1);
                 break;
+        case TOKEN_TYPE_ASTERISK:
+                take_txt(ctx, forge_cstr_builder("imul ", spec, " ", reg, ", ", v2, NULL), 1);
+                break;
+        case TOKEN_TYPE_FORWARDSLASH: {
+                // Note: Division requires rax and rdx
+                write_txt(ctx, "xor rdx, rdx", 1); // Clear (for dividend)
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rax", NULL), 1);
+        } break;
+        case TOKEN_TYPE_PERCENT: {
+                // Note: Modulo requires rax and rdx
+                write_txt(ctx, "xor rdx, rdx", 1); // Clear (for dividend)
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rdx", NULL), 1);
+        } break;
+        case TOKEN_TYPE_DOUBLE_EQUALS:
+        case TOKEN_TYPE_BANG_EQUALS:
         case TOKEN_TYPE_LESSTHAN:
         case TOKEN_TYPE_GREATERTHAN:
-                take_txt(ctx, forge_cstr_builder("cmp ", reg, ", ", v2, NULL), 1);
-                break;
+        case TOKEN_TYPE_LESSTHAN_EQUALS:
+        case TOKEN_TYPE_GREATERTHAN_EQUALS: {
+                char *lbl_true = genlbl();
+                char *lbl_done = genlbl();
+                const char *cmp_op = NULL;
+                switch (e->op->ty) {
+                case TOKEN_TYPE_DOUBLE_EQUALS:      cmp_op = "je";  break;
+                case TOKEN_TYPE_BANG_EQUALS:        cmp_op = "jne"; break;
+                case TOKEN_TYPE_LESSTHAN:           cmp_op = "jl";  break;
+                case TOKEN_TYPE_GREATERTHAN:        cmp_op = "jg";  break;
+                case TOKEN_TYPE_LESSTHAN_EQUALS:    cmp_op = "jle"; break;
+                case TOKEN_TYPE_GREATERTHAN_EQUALS: cmp_op = "jge"; break;
+                default: forge_err_wargs("unimplemented comparison op `%s`", e->op->lx);
+                }
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", ", v2, NULL), 1);
+                take_txt(ctx, forge_cstr_builder(cmp_op, " ", lbl_true, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
+
+                free(lbl_true);
+                free(lbl_done);
+        } break;
+        case TOKEN_TYPE_DOUBLE_AMPERSAND: {
+                char *lbl_false = genlbl();
+                char *lbl_done = genlbl();
+
+                // lhs
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
+
+                // rhs
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", v2, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
+
+                // Both true
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_false, ":", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
+
+                free(lbl_false);
+                free(lbl_done);
+        } break;
+        case TOKEN_TYPE_DOUBLE_PIPE: {
+                char *lbl_true = genlbl();
+                char *lbl_done = genlbl();
+
+                // lhs
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
+
+                // rhs
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", v2, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
+
+                // Both false
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
+
+                free(lbl_true);
+                free(lbl_done);
+        } break;
         default: forge_err_wargs("unimplemented binop `%s`", e->op->lx);
         }
 
@@ -347,7 +434,7 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
         } else {
                 char *offset_s = int_to_cstr(e->resolved->stack_offset);
                 const char *spec = szspec(type_to_int(e->resolved->ty));
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", [rsp-", offset_s, "]", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", [rbp-", offset_s, "]", NULL), 1);
         }
 
         return reg;
@@ -428,7 +515,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
         char *offset_s = int_to_cstr(offset);
         const char *spec = szspec(type_to_int(s->e->type));
 
-        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rsp-", offset_s, "], ", value, NULL), 1);
+        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset_s, "], ", value, NULL), 1);
         free(offset_s);
 
         free_reg_literal(value);
@@ -520,18 +607,33 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
 static void *
 visit_stmt_if(visitor *v, stmt_if *s)
 {
-        /* char *expr = s->e->accept(s->e, v); */
+        asm_context *ctx = (asm_context *)v->context;
 
-        /* write_txt(ctx, "then:", 1); */
+        char *cond = s->e->accept(s->e, v);
+        const char *spec = szspec(type_to_int(s->e->type));
 
-        /* if (s->else_) { */
-        /*         write_txt(ctx, "else:", 1); */
-        /* } */
+        char *lbl_else = s->else_ ? genlbl() : NULL;
+        char *lbl_done = genlbl();
 
-        /* wirte_txt(ctx, "done", 1); */
+        // Compare condition to 0
+        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond, ", 0", NULL), 1);
 
-        NOOP(v, s);
-        forge_todo("");
+        // Jump to `else` (if present) or done if `false`
+        take_txt(ctx, forge_cstr_builder("je ", s->else_ ? lbl_else : lbl_done, NULL), 1);
+
+        s->then->accept(s->then, v);
+
+        if (s->else_) {
+                take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_else, ":", NULL), 1);
+                s->else_->accept(s->else_, v);
+                free(lbl_else);
+        }
+
+        take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
+        free(lbl_done);
+
+        free_reg_literal(cond);
 
         return NULL;
 }

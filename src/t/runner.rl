@@ -116,7 +116,7 @@ fn run_tests(config) {
 
         if code != 0 {
             failed += [f];
-            bad(format(colors::Te.Invert, "FAIL"), false);
+            bad(format(colors::Te.Invert, f"FAIL (exited with code {code})"), false);
             dump_asm(config, f);
         } else {
             passed += [f];

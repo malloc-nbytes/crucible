@@ -1,11 +1,11 @@
 export proc _start(void): ! {
     if (1 == 1) {
         if (2 == 2) {
-            exit 1;
-        } else {
             exit 0;
+        } else {
+            exit 1;
         }
-        exit 0;
+        exit 1;
     }
-    exit 0;
+    exit 1;
 }
