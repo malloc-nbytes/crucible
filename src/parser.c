@@ -330,6 +330,7 @@ parse_parameters(parser_context *ctx, int *variadic)
                 parameter param = (parameter) {
                         .id = id,
                         .type = type,
+                        .resolved = NULL,
                 };
                 dyn_array_append(ar, param);
 

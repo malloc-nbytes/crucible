@@ -1,11 +1,7 @@
+extern proc printf(fmt: u8*, ...): i32;
+
 export proc _start(void): ! {
-    if (1 == 1) {
-        if (2 == 2) {
-            exit 1;
-        } else {
-            exit 0;
-        }
-        exit 0;
-    }
+    let s: i32 = sum("hello");
+
     exit 0;
 }

@@ -135,6 +135,8 @@ typedef struct {
 typedef struct {
         const token *id;
         type *type;
+
+        sym *resolved;
 } parameter;
 
 DYN_ARRAY_TYPE(parameter, parameter_array);

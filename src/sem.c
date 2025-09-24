@@ -315,10 +315,11 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                                 s->params.data[i].id->lx);
                         return NULL;
                 }
-                insert_sym_into_scope(tbl, sym_alloc(tbl,
-                                                     s->params.data[i].id->lx,
-                                                     s->params.data[i].type,
-                                                     0));
+
+                sym *param = sym_alloc(tbl, s->params.data[i].id->lx, s->params.data[i].type, 0);
+                insert_sym_into_scope(tbl, param);
+                tbl->stack_offset += type_to_int(param->ty);
+                s->params.data[i].resolved = param;
                 // TODO: get type sizes for procedure parameters.
         }
 

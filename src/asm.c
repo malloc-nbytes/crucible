@@ -99,6 +99,18 @@ take_txt(asm_context *ctx,
 static const char *
 get_reg_from_size(const char *reg64, int sz)
 {
+        char *err = NULL;
+
+        if (!strcmp(reg64, "rax")) {
+                switch (sz) {
+                case 8: return "rax";
+                case 4: return "eax";
+                case 2: return "ax";
+                case 1: return "al";
+                default: err = "invalid size"; goto bad;
+                }
+        }
+
         for (size_t i = 0; i < g_regs_r; ++i) {
                 if (!strcmp(REGAT(i, 0, g_regs), reg64)) {
                         switch (sz) {
@@ -106,12 +118,15 @@ get_reg_from_size(const char *reg64, int sz)
                         case 4: return REGAT(i, 1, g_regs);
                         case 2: return REGAT(i, 2, g_regs);
                         case 1: return REGAT(i, 3, g_regs);
-                        default: goto bad;
+                        default: err = "invalid size"; goto bad;
                         }
                 }
         }
+
+        err = "no available registers";
  bad:
-        forge_err_wargs("get_reg_from_size(): could not get register of size %d", sz);
+        forge_err_wargs("get_reg_from_size(): could not get (%s) register of size %d: %s",
+                        reg64, sz, err);
         return NULL; // unreachable
 }
 
@@ -429,7 +444,7 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
         int regi = alloc_reg(type_to_int(e->resolved->ty));
         char *reg = g_regs[regi];
 
-        if (e->resolved->extern_) {
+        if (e->resolved->extern_ || ((expr *)e)->type->kind == TYPE_KIND_PROC) {
                 take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->id->lx, NULL), 1);
         } else {
                 char *offset_s = int_to_cstr(e->resolved->stack_offset);
@@ -501,7 +516,7 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         free_reg_literal(callee);
         pop_regs(ctx);
 
-        return "rax";
+        return (void *)get_reg_from_size("rax", type_to_int(proc_ty->rettype));
 }
 
 static void *
@@ -554,6 +569,19 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         take_txt(ctx, forge_cstr_builder(s->id->lx, ":", NULL), 1);
         prologue(ctx, s->rsp);
 
+        const char *param_regs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
+
+        // Put procedure parameters onto the stack.
+        for (size_t i = 0; i < s->params.len; ++i) {
+                sym *param = s->params.data[i].resolved;
+                assert(param);
+                int sz = type_to_int(param->ty);
+                char *offset = int_to_cstr(param->stack_offset);
+                take_txt(ctx, forge_cstr_builder("mov ", szspec(sz), " [rbp-", offset, "], ",
+                                                 get_reg_from_size(param_regs[i], sz), NULL),
+                         1);
+        }
+
         // TODO: procedure parameters
         s->blk->accept(s->blk, v);
 
@@ -564,8 +592,18 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 static void *
 visit_stmt_return(visitor *v, stmt_return *s)
 {
-        NOOP(v, s);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+
+        char *value = s->e->accept(s->e, v);
+        int sz = type_to_int(s->e->type);
+        const char *ret_reg = get_reg_from_size("rax", sz);
+        take_txt(ctx, forge_cstr_builder("mov ", szspec(sz), " ",
+                                         ret_reg, ", ",
+                                         value, NULL), 1);
+        free_reg_literal(value);
+        write_txt(ctx, "leave", 1);
+        write_txt(ctx, "ret", 1);
+        return (void *)ret_reg;
 }
 
 static void *
@@ -727,10 +765,10 @@ asm_gen(program *p, symtbl *tbl)
                 s->accept(s, v);
         }
 
-        write_globals((asm_context *)v->context);
-        write_externs((asm_context *)v->context);
-        write_data_section((asm_context *)v->context);
-        write_txt((asm_context *)v->context, "section .note.GNU-stack", 1);
+        write_globals(&ctx);
+        write_externs(&ctx);
+        write_data_section(&ctx);
+        write_txt(&ctx, "section .note.GNU-stack", 1);
 
         cleanup((asm_context *)v->context);
 }
