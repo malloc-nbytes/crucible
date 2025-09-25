@@ -50,7 +50,7 @@ expr_mut_alloc(expr        *lhs,
                expr        *rhs)
 {
         expr_mut *e    = (expr_mut *)alloc(sizeof(expr_mut));
-        e->base        = init_expr_kind(EXPR_KIND_MUT, NULL);
+        e->base        = init_expr_kind(EXPR_KIND_MUT, accept_expr_mut);
         e->lhs         = lhs;
         e->op          = op;
         e->rhs         = rhs;

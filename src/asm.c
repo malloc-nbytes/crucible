@@ -141,6 +141,22 @@ genlbl(void)
         return strdup(buf);
 }
 
+/* static int */
+/* lvalue(asm_context *ctx, expr *e) */
+/* { */
+/*         switch (e->kind) { */
+/*         case EXPR_KIND_IDENTIFIER: { */
+/*                 write_txt(ctx, "sub rbp, 4", 1); */
+/*         } break; */
+/*         default: { */
+/*                 forge_err_wargs("lvalue(): the lvalue of `%d` is unimplemented", */
+/*                                 (int)e->kind); */
+/*         } break; */
+/*         } */
+
+/*         return NULL; // unreachable */
+/* } */
+
 char *
 int_to_cstr(int i)
 {
@@ -554,6 +570,33 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 }
 
 static void *
+visit_expr_mut(visitor *v, expr_mut *e)
+{
+        asm_context *ctx = (asm_context *)v->context;
+
+        switch (e->lhs->kind) {
+        case EXPR_KIND_IDENTIFIER: {
+                sym *sym = ((expr_identifier *)e->lhs)->resolved;
+                assert(sym);
+
+                const char *spec = szspec(type_to_int(sym->ty));
+                const char *offset = int_to_cstr(sym->stack_offset);
+
+                char *rvalue = e->rhs->accept(e->rhs, v);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", rvalue, NULL), 1);
+
+                return rvalue;
+        } break;
+        default: {
+                forge_err_wargs("lvalue(): the lvalue of `%d` is unimplemented",
+                                (int)e->lhs->kind);
+        } break;
+        }
+
+        return NULL; // unreachable
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -744,6 +787,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_integer_literal,
                 visit_expr_string_literal,
                 visit_expr_proccall,
+                visit_expr_mut,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,

@@ -227,6 +227,20 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 }
 
 static void *
+visit_expr_mut(visitor *v, expr_mut *e)
+{
+        e->lhs->accept(e->lhs, v);
+        e->rhs->accept(e->rhs, v);
+
+        // TODO: support other assignment operators
+        if (e->op->ty != TOKEN_TYPE_EQUALS) {
+                forge_err("only direct assignment is supported `=`");
+        }
+
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -435,6 +449,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_integer_literal,
                 visit_expr_string_literal,
                 visit_expr_proccall,
+                visit_expr_mut,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,
