@@ -125,6 +125,9 @@ type_is_compat(type **t1, type **t2)
         assert(t1);
         assert(t2);
 
+        assert(*t1);
+        assert(*t2);
+
         assert((*t1)->kind != TYPE_KIND_PROC
                && (*t2)->kind != TYPE_KIND_PROC
                && "proc type checking unimplemented");

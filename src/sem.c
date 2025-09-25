@@ -193,8 +193,6 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 pusherr(tbl, ((expr *)e)->loc,
                         "procedure requires %zu arguments but %zu were given",
                         ((type_proc *)proc_ty)->params->len, e->args.len);
-
-                return NULL;
         }
  ok:
 
@@ -208,7 +206,7 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 arg->accept(arg, v);
 
                 // Type check argument list
-                if (i < proc_ty->params->len) {
+                if (i < proc_ty->params->len && proc_ty->variadic) {
                         type *expected = proc_ty->params->data[i].type;
                         type *got = arg->type;
 

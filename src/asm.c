@@ -556,6 +556,11 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         free_reg_literal(callee);
         pop_regs(ctx);
 
+        // Void return type case.
+        if (proc_ty->rettype->kind == TYPE_KIND_VOID) {
+                return "rax";
+        }
+
         return (void *)get_reg_from_size("rax", type_to_int(proc_ty->rettype));
 }
 

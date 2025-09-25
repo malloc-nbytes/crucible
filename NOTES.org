@@ -1,6 +1,6 @@
-* TODO [0%]
-- [ ] while loops
-- [ ] mut statements
+* TODO [18%]
+- [X] while loops
+- [X] mut statements
 - [ ] convert =type_to_int(type)= to =type->sz=
 - [ ] for loops
 - [ ] casting
@@ -16,26 +16,8 @@
 - [ ] imports
 - [ ] move build system to autotools
 
-* Bugs [0%]
+* Bugs
 
 ** Critical
-
-- [ ] cannot get correct size of =void*= type.
-
-#+begin_src
-let p: void* = malloc(100);
-free(p);
-#+end_src
-
-- [ ] The following code results in a segfault.
-
-#+begin_src
-proc f(s: u8*): i32 {}
-
-export proc _start(void): ! {
-    let s: i32 = f(1, 2);
-    exit;
-}
-#+end_src
 
 ** Misc.

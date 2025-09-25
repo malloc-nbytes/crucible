@@ -20,6 +20,7 @@ let cc, name, files, flags, libs = (
 
 if debug {
     $f"{cc} -o {name} {files} {flags} -ggdb -O0 {libs}";
+    $f"gdb ./{name}";
 } else {
     $f"{cc} -o {name} {files} {flags} -O2 {libs}";
 }
