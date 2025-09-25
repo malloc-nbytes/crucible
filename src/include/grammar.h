@@ -34,6 +34,7 @@ typedef enum {
         STMT_KIND_WHILE,
         STMT_KIND_FOR,
         STMT_KIND_BREAK,
+        STMT_KIND_CONTINUE,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -210,6 +211,13 @@ typedef struct {
         const void *resolved_parent;
 } stmt_break;
 
+typedef struct {
+        stmt base;
+
+        // Gets resolved during semantic analysis.
+        const void *resolved_parent;
+} stmt_continue;
+
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
 expr_string_literal *expr_string_literal_alloc(const token *s);
@@ -241,5 +249,6 @@ stmt_if *stmt_if_alloc(expr *e, stmt *then, stmt *else_);
 stmt_while *stmt_while_alloc(expr *e, stmt *body);
 stmt_for *stmt_for_alloc(stmt *init, expr *e, expr *after, stmt *body);
 stmt_break *stmt_break_alloc(void);
+stmt_continue *stmt_continue_alloc(void);
 
 #endif // GRAMMAR_H_INCLUDED

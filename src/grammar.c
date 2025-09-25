@@ -235,3 +235,13 @@ stmt_break_alloc(void)
         s->resolved_parent = NULL;
         return s;
 }
+
+stmt_continue *
+stmt_continue_alloc(void)
+{
+        stmt_continue *s   = alloc(sizeof(stmt_continue));
+        s->base.kind       = STMT_KIND_CONTINUE;
+        s->base.accept     = accept_stmt_continue;
+        s->resolved_parent = NULL;
+        return s;
+}

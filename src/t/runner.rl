@@ -98,7 +98,7 @@ fn compile() {
     let files = sys::get_all_files_by_ext(".", "cr");
 
     foreach f in files {
-        $f"../cruc {f} -o {f}.bin --asm";
+        $f"../cruc -s {f} -o {f}.bin --asm";
     }
 }
 

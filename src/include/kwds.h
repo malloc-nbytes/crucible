@@ -24,6 +24,7 @@
 #define KWD_ELSE  "else"
 
 #define KWD_BREAK "break"
+#define KWD_CONTINUE "continue"
 
 #define KWDS {                                  \
                 KWD_I8,                         \
@@ -46,6 +47,7 @@
                 KWD_EXIT,                       \
                 KWD_EXTERN,                     \
                 KWD_BREAK,                      \
+                KWD_CONTINUE,                   \
 }
 
 #define KWD_TYPES {                             \

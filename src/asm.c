@@ -834,6 +834,27 @@ visit_stmt_break(visitor *v, stmt_break *s)
         return NULL;
 }
 
+static void *
+visit_stmt_continue(visitor *v, stmt_continue *s)
+{
+        asm_context *ctx = (asm_context *)v->context;
+
+        char *lbl = NULL;
+        switch (((stmt *)s->resolved_parent)->kind) {
+        case STMT_KIND_FOR:
+                lbl = ((stmt_for *)s->resolved_parent)->asm_begin_lbl;
+                break;
+        case STMT_KIND_WHILE:
+                lbl = ((stmt_while *)s->resolved_parent)->asm_begin_lbl;
+                break;
+        default: assert(0);
+        }
+
+        take_txt(ctx, forge_cstr_builder("jmp ", lbl, NULL), 1);
+
+        return NULL;
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -855,7 +876,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_if,
                 visit_stmt_while,
                 visit_stmt_for,
-                visit_stmt_break
+                visit_stmt_break,
+                visit_stmt_continue
         );
 }
 

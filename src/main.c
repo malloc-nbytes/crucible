@@ -81,6 +81,8 @@ handle_args(int argc, char **argv)
                                 if (!it->n) { forge_err_wargs("option -%c requires an argument", FLAG_1HY_OUTPUT); }
                                 it = it->n;
                                 g_config.outname = strdup(it->s);
+                        } else if (it->s[0] == FLAG_1HY_SILENT) {
+                                g_config.flags |= FLAG_TYPE_SILENT;
                         } else {
                                 forge_err_wargs("unknown option `%s`", it->s);
                         }
@@ -93,6 +95,8 @@ handle_args(int argc, char **argv)
                                 g_config.outname = strdup(it->s);
                         } else if (!strcmp(it->s, FLAG_2HY_ASM)) {
                                 g_config.flags |= FLAG_TYPE_ASM;
+                        } else if (!strcmp(it->s, FLAG_2HY_SILENT)) {
+                                g_config.flags |= FLAG_TYPE_SILENT;
                         } else {
                                 forge_err_wargs("unknown option `%s`", it->s);
                         }
@@ -102,6 +106,15 @@ handle_args(int argc, char **argv)
         }
 
         forge_arg_free(arg);
+}
+
+static void
+show_progess(const char *msg)
+{
+        if ((g_config.flags & FLAG_TYPE_SILENT) == 0) {
+                printf("                  \r%s", msg);
+                fflush(stdout);
+        }
 }
 
 int
@@ -117,10 +130,18 @@ main(int argc, char **argv)
         }
 
         char *src = forge_io_read_file_to_cstr(g_config.filepath);
+
+        if ((g_config.flags & FLAG_TYPE_SILENT) == 0) {
+                printf("Lexing");
+                fflush(stdout);
+        }
+
         lexer l = lexer_create(src, g_config.filepath);
 
+        show_progess("Parsing...");
         program p = parser_create_program(&l);
 
+        show_progess("Semantic Analysis");
         symtbl tbl = sem_analysis(&p);
         if (tbl.errs.len > 0) {
                 for (size_t i = 0; i < tbl.errs.len; ++i) {
@@ -129,8 +150,10 @@ main(int argc, char **argv)
                 exit(1);
         }
 
+        show_progess("Assembly Generation");
         asm_gen(&p, &tbl);
 
+        show_progess("Assembling and Linking\n");
         assemble();
 
         return 0;

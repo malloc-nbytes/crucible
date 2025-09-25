@@ -1,10 +1,10 @@
-* TODO [35%]
+* TODO [42%]
 - [X] while loops
 - [X] mut statements
 - [X] convert =type_to_int(type)= to =type->sz=
 - [X] for loops
 - [X] break statements
-- [ ] continue statements
+- [X] continue statements
 - [ ] casting
 - [ ] 'address of' operator =&var=
 - [ ] 'dereference operator =*var=

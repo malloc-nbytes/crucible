@@ -468,7 +468,24 @@ visit_stmt_break(visitor *v, stmt_break *s)
         symtbl *tbl = (symtbl *)v->context;
 
         if (!tbl->loop) {
-                pusherr(tbl, ((stmt *)s)->loc, "cannot use `return` when outside of a loop");
+                pusherr(tbl, ((stmt *)s)->loc, "cannot use `break` when outside of a loop");
+                return NULL;
+        }
+
+        s->resolved_parent = tbl->loop;
+
+        return NULL;
+}
+
+void *
+visit_stmt_continue(visitor *v, stmt_continue *s)
+{
+        NOOP(v);
+
+        symtbl *tbl = (symtbl *)v->context;
+
+        if (!tbl->loop) {
+                pusherr(tbl, ((stmt *)s)->loc, "cannot use `continue` when outside of a loop");
                 return NULL;
         }
 
@@ -498,7 +515,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_if,
                 visit_stmt_while,
                 visit_stmt_for,
-                visit_stmt_break
+                visit_stmt_break,
+                visit_stmt_continue
         );
 }
 
