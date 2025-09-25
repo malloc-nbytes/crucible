@@ -70,6 +70,7 @@ typedef struct {
         str_array data_section;
         str_array externs;
         str_array pushed_regs;
+        int_array pushed_regs_idxs;
 } asm_context;
 
 static void
@@ -265,13 +266,11 @@ push_inuse_regs(asm_context *ctx)
                 for (size_t j = 0; j < g_regs_c; ++j) {
                         if (REGAT(i, j, g_inuse_regs)) {
                                 char *reg = REGAT(i, 0, g_regs);
+                                REGAT(i, j, g_inuse_regs) = 0;
+
                                 take_txt(ctx, forge_cstr_builder("push ", reg, NULL), 1);
                                 dyn_array_append(ctx->pushed_regs, reg);
-
-                                /* REGAT(i, 0, g_inuse_regs) = 0; */
-                                /* REGAT(i, 1, g_inuse_regs) = 0; */
-                                /* REGAT(i, 2, g_inuse_regs) = 0; */
-                                /* REGAT(i, 3, g_inuse_regs) = 0; */
+                                dyn_array_append(ctx->pushed_regs_idxs, i * g_regs_c + j);
                         }
                 }
         }
@@ -282,8 +281,10 @@ pop_regs(asm_context *ctx)
 {
         for (int i = ctx->pushed_regs.len-1; i >= 0; --i) {
                 take_txt(ctx, forge_cstr_builder("pop ", ctx->pushed_regs.data[i], NULL), 1);
+                g_inuse_regs[ctx->pushed_regs_idxs.data[i]] = 1;
         }
         dyn_array_clear(ctx->pushed_regs);
+        dyn_array_clear(ctx->pushed_regs_idxs);
 }
 
 static const char *
@@ -805,6 +806,7 @@ init(asm_context *ctx)
         ctx->data_section = dyn_array_empty(str_array);
         ctx->externs = dyn_array_empty(str_array);
         ctx->pushed_regs = dyn_array_empty(str_array);
+        ctx->pushed_regs_idxs = dyn_array_empty(int_array);
 
         write_txt(ctx, "section .text", 1);
 }
