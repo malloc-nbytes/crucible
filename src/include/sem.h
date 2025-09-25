@@ -25,6 +25,8 @@ typedef struct {
 
         str_array errs;
         int stack_offset;
+
+        void *loop;
 } symtbl;
 
 symtbl sem_analysis(program *p);

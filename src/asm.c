@@ -135,16 +135,17 @@ get_reg_from_size(const char *reg64, int sz)
 static char *
 genlbl(const char *name/*=NULL*/)
 {
-        static int i = 0;
+        static int g_loop_iter = 0;
         char buf[256] = {0};
         if (name) {
-                sprintf(buf, "%s%d", name, i);
+                sprintf(buf, "%s%d", name, g_loop_iter);
         } else {
-                sprintf(buf, "t%d", i);
+                sprintf(buf, "t%d", g_loop_iter);
         }
-        ++i;
+        ++g_loop_iter;
         return strdup(buf);
 }
+
 
 char *
 int_to_cstr(int i)
@@ -757,10 +758,12 @@ visit_stmt_if(visitor *v, stmt_if *s)
 static void *
 visit_stmt_while(visitor *v, stmt_while *s)
 {
-        asm_context *ctx     = (asm_context *)v->context;
-        const char *spec     = szspec(s->e->type->sz);
-        char *lbl_loop_begin = genlbl("while");
-        char *lbl_loop_end   = genlbl("end");
+        asm_context *ctx            = (asm_context *)v->context;
+        const char  *spec           = szspec(s->e->type->sz);
+        char        *lbl_loop_begin = genlbl("loop");
+        char        *lbl_loop_end   = genlbl("end");
+        s->asm_begin_lbl            = lbl_loop_begin;
+        s->asm_end_lbl              = lbl_loop_end;
 
         take_txt(ctx, forge_cstr_builder(lbl_loop_begin, ":", NULL), 1);
         char *cond = s->e->accept(s->e, v);
@@ -784,8 +787,11 @@ visit_stmt_for(visitor *v, stmt_for *s)
 {
         asm_context *ctx     = (asm_context *)v->context;
         const char *e_spec   = szspec(s->e->type->sz);
-        char *lbl_for_begin  = genlbl("for");
+        char *lbl_for_begin  = genlbl("loop");
         char *lbl_for_end    = genlbl("end");
+
+        s->asm_begin_lbl = lbl_for_begin;
+        s->asm_end_lbl = lbl_for_end;
 
         free_reg_literal(s->init->accept(s->init, v));
         take_txt(ctx, forge_cstr_builder(lbl_for_begin, ":", NULL), 1);
@@ -803,6 +809,27 @@ visit_stmt_for(visitor *v, stmt_for *s)
 
         free(lbl_for_begin);
         free(lbl_for_end);
+
+        return NULL;
+}
+
+static void *
+visit_stmt_break(visitor *v, stmt_break *s)
+{
+        asm_context *ctx = (asm_context *)v->context;
+
+        char *lbl = NULL;
+        switch (((stmt *)s->resolved_parent)->kind) {
+        case STMT_KIND_FOR:
+                lbl = ((stmt_for *)s->resolved_parent)->asm_end_lbl;
+                break;
+        case STMT_KIND_WHILE:
+                lbl = ((stmt_while *)s->resolved_parent)->asm_end_lbl;
+                break;
+        default: assert(0);
+        }
+
+        take_txt(ctx, forge_cstr_builder("jmp ", lbl, NULL), 1);
 
         return NULL;
 }
@@ -827,7 +854,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_extern_proc,
                 visit_stmt_if,
                 visit_stmt_while,
-                visit_stmt_for
+                visit_stmt_for,
+                visit_stmt_break
         );
 }
 

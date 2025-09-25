@@ -487,6 +487,14 @@ parse_stmt_for(parser_context *ctx)
         return stmt_for_alloc(init, e, after, body);
 }
 
+static stmt_break *
+parse_stmt_break(parser_context *ctx)
+{
+        (void)expectkw(ctx, KWD_BREAK);
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        return stmt_break_alloc();
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -508,6 +516,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_while(ctx);
         } else if (!strcmp(hd->lx, KWD_FOR)) {
                 return (stmt *)parse_stmt_for(ctx);
+        } else if (!strcmp(hd->lx, KWD_BREAK)) {
+                return (stmt *)parse_stmt_break(ctx);
         }
 
         assert(0 && "todo");

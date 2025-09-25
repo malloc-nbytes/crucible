@@ -198,11 +198,13 @@ stmt_if_alloc(expr *e, stmt *then, stmt *else_)
 stmt_while *
 stmt_while_alloc(expr *e, stmt *body)
 {
-        stmt_while *s   = alloc(sizeof(stmt_while));
-        s->base.kind    = STMT_KIND_WHILE;
-        s->base.accept  = accept_stmt_while;
-        s->e            = e;
-        s->body         = body;
+        stmt_while *s    = alloc(sizeof(stmt_while));
+        s->base.kind     = STMT_KIND_WHILE;
+        s->base.accept   = accept_stmt_while;
+        s->e             = e;
+        s->body          = body;
+        s->asm_begin_lbl = NULL;
+        s->asm_end_lbl   = NULL;
         return s;
 }
 
@@ -212,12 +214,24 @@ stmt_for_alloc(stmt *init,
                expr *after,
                stmt *body)
 {
-        stmt_for *s     = alloc(sizeof(stmt_for));
-        s->base.kind    = STMT_KIND_FOR;
-        s->base.accept  = accept_stmt_for;
-        s->init         = init;
-        s->e            = e;
-        s->after        = after;
-        s->body         = body;
+        stmt_for *s      = alloc(sizeof(stmt_for));
+        s->base.kind     = STMT_KIND_FOR;
+        s->base.accept   = accept_stmt_for;
+        s->init          = init;
+        s->e             = e;
+        s->after         = after;
+        s->body          = body;
+        s->asm_begin_lbl = NULL;
+        s->asm_end_lbl   = NULL;
+        return s;
+}
+
+stmt_break *
+stmt_break_alloc(void)
+{
+        stmt_break *s      = alloc(sizeof(stmt_break));
+        s->base.kind       = STMT_KIND_BREAK;
+        s->base.accept     = accept_stmt_break;
+        s->resolved_parent = NULL;
         return s;
 }

@@ -33,6 +33,7 @@ typedef enum {
         STMT_KIND_IF,
         STMT_KIND_WHILE,
         STMT_KIND_FOR,
+        STMT_KIND_BREAK,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -184,6 +185,10 @@ typedef struct {
         stmt base;
         expr *e;
         stmt *body;
+
+        // Gets resolved during assembly generation
+        char *asm_begin_lbl;
+        char *asm_end_lbl;
 } stmt_while;
 
 typedef struct {
@@ -192,7 +197,18 @@ typedef struct {
         expr *e;
         expr *after;
         stmt *body;
+
+        // Gets resolved during assembly generation
+        char *asm_begin_lbl;
+        char *asm_end_lbl;
 } stmt_for;
+
+typedef struct {
+        stmt base;
+
+        // Gets resolved during semantic analysis.
+        const void *resolved_parent;
+} stmt_break;
 
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
@@ -224,5 +240,6 @@ stmt_exit *stmt_exit_alloc(expr *e);
 stmt_if *stmt_if_alloc(expr *e, stmt *then, stmt *else_);
 stmt_while *stmt_while_alloc(expr *e, stmt *body);
 stmt_for *stmt_for_alloc(stmt *init, expr *e, expr *after, stmt *body);
+stmt_break *stmt_break_alloc(void);
 
 #endif // GRAMMAR_H_INCLUDED

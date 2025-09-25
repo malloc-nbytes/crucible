@@ -23,6 +23,8 @@
 #define KWD_FOR   "for"
 #define KWD_ELSE  "else"
 
+#define KWD_BREAK "break"
+
 #define KWDS {                                  \
                 KWD_I8,                         \
                 KWD_I16,                        \
@@ -43,6 +45,7 @@
                 KWD_RETURN,                     \
                 KWD_EXIT,                       \
                 KWD_EXTERN,                     \
+                KWD_BREAK,                      \
 }
 
 #define KWD_TYPES {                             \

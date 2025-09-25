@@ -432,8 +432,12 @@ visit_stmt_if(visitor *v, stmt_if *s)
 static void *
 visit_stmt_while(visitor *v, stmt_while *s)
 {
+        symtbl *tbl = (symtbl *)v->context;
+
         s->e->accept(s->e, v);
+        tbl->loop = (void *)s;
         s->body->accept(s->body, v);
+        tbl->loop = NULL;
         return NULL;
 }
 
@@ -446,8 +450,29 @@ visit_stmt_for(visitor *v, stmt_for *s)
         s->init->accept(s->init, v);
         s->e->accept(s->e, v);
         s->after->accept(s->after, v);
+
+        tbl->loop = (void *)s;
         s->body->accept(s->body, v);
+
         pop_scope(tbl);
+        tbl->loop = NULL;
+
+        return NULL;
+}
+
+void *
+visit_stmt_break(visitor *v, stmt_break *s)
+{
+        NOOP(v);
+
+        symtbl *tbl = (symtbl *)v->context;
+
+        if (!tbl->loop) {
+                pusherr(tbl, ((stmt *)s)->loc, "cannot use `return` when outside of a loop");
+                return NULL;
+        }
+
+        s->resolved_parent = tbl->loop;
 
         return NULL;
 }
@@ -472,7 +497,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_extern_proc,
                 visit_stmt_if,
                 visit_stmt_while,
-                visit_stmt_for
+                visit_stmt_for,
+                visit_stmt_break
         );
 }
 
@@ -487,6 +513,7 @@ sem_analysis(program *p)
                 },
                 .errs = dyn_array_empty(str_array),
                 .stack_offset = 0,
+                .loop = NULL,
         };
 
         // Need to immediately add a scope for global scope.
