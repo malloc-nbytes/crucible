@@ -194,3 +194,14 @@ stmt_if_alloc(expr *e, stmt *then, stmt *else_)
         s->else_        = else_;
         return s;
 }
+
+stmt_while *
+stmt_while_alloc(expr *e, stmt *body)
+{
+        stmt_while *s   = alloc(sizeof(stmt_while));
+        s->base.kind    = STMT_KIND_WHILE;
+        s->base.accept  = accept_stmt_while;
+        s->e            = e;
+        s->body         = body;
+        return s;
+}

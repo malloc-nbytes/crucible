@@ -709,6 +709,31 @@ visit_stmt_if(visitor *v, stmt_if *s)
         return NULL;
 }
 
+static void *
+visit_stmt_while(visitor *v, stmt_while *s)
+{
+        asm_context *ctx     = (asm_context *)v->context;
+        char *cond           = s->e->accept(s->e, v);
+        const char *spec     = szspec(type_to_int(s->e->type));
+        char *lbl_loop_begin = genlbl();
+        char *lbl_loop_end   = genlbl();
+
+        take_txt(ctx, forge_cstr_builder(lbl_loop_begin, ":", NULL), 1);
+        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond, ", 0", NULL), 1);
+
+        take_txt(ctx, forge_cstr_builder("je ", lbl_loop_end, NULL), 1);
+
+        (void)s->body->accept(s->body, v);
+        take_txt(ctx, forge_cstr_builder("jmp ", lbl_loop_begin, NULL), 1);
+
+        take_txt(ctx, forge_cstr_builder(lbl_loop_end, ":", NULL), 1);
+
+        free(lbl_loop_begin);
+        free(lbl_loop_end);
+
+        return NULL;
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -726,7 +751,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_return,
                 visit_stmt_exit,
                 visit_stmt_extern_proc,
-                visit_stmt_if
+                visit_stmt_if,
+                visit_stmt_while
         );
 }
 

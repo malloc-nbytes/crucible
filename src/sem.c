@@ -417,6 +417,14 @@ visit_stmt_if(visitor *v, stmt_if *s)
         return NULL;
 }
 
+static void *
+visit_stmt_while(visitor *v, stmt_while *s)
+{
+        s->e->accept(s->e, v);
+        s->body->accept(s->body, v);
+        return NULL;
+}
+
 static visitor *
 sem_visitor_alloc(symtbl *tbl)
 {
@@ -434,7 +442,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_return,
                 visit_stmt_exit,
                 visit_stmt_extern_proc,
-                visit_stmt_if
+                visit_stmt_if,
+                visit_stmt_while
         );
 }
 

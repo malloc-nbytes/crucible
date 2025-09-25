@@ -1,2 +1,0 @@
-* TODO
-- [ ] convert =type_to_int(type)= to =type->sz=
