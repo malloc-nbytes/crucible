@@ -28,7 +28,10 @@ typedef enum {
         TYPE_KIND_UNKNOWN,
 } type_kind;
 
-typedef struct { type_kind kind; } type;
+typedef struct {
+        type_kind kind;
+        int sz;
+} type;
 
 typedef struct { type base; } type_i8;
 typedef struct { type base; } type_i16;

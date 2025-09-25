@@ -467,6 +467,26 @@ parse_stmt_while(parser_context *ctx)
         return stmt_while_alloc(e, body);
 }
 
+static stmt_for *
+parse_stmt_for(parser_context *ctx)
+{
+        stmt *init   = NULL;
+        expr *e      = NULL;
+        expr *after  = NULL;
+        stmt *body   = NULL;
+
+        lexer_discard(ctx->l); // for
+        (void)expect(ctx, TOKEN_TYPE_LEFT_PARENTHESIS);
+        init = parse_stmt(ctx);
+        e = parse_expr(ctx);
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        after = parse_expr(ctx);
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
+        body = parse_stmt(ctx);
+
+        return stmt_for_alloc(init, e, after, body);
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -486,6 +506,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_if(ctx);
         } else if (!strcmp(hd->lx, KWD_WHILE)) {
                 return (stmt *)parse_stmt_while(ctx);
+        } else if (!strcmp(hd->lx, KWD_FOR)) {
+                return (stmt *)parse_stmt_for(ctx);
         }
 
         assert(0 && "todo");

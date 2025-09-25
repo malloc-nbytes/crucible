@@ -133,11 +133,15 @@ get_reg_from_size(const char *reg64, int sz)
 }
 
 static char *
-genlbl(void)
+genlbl(const char *name/*=NULL*/)
 {
         static int i = 0;
         char buf[256] = {0};
-        sprintf(buf, "t%d", i);
+        if (name) {
+                sprintf(buf, "%s%d", name, i);
+        } else {
+                sprintf(buf, "t%d", i);
+        }
         ++i;
         return strdup(buf);
 }
@@ -166,6 +170,8 @@ int_to_cstr(int i)
 static void
 free_reg_literal(const char *reg)
 {
+        if (!reg) return;
+
         for (size_t i = 0; i < g_regs_n; ++i) {
                 if (!strcmp(reg, g_regs[i])) {
                         assert(g_inuse_regs[i]);
@@ -328,9 +334,9 @@ visit_expr_bin(visitor *v, expr_bin *e)
         char *v1 = e->lhs->accept(e->lhs, v);
         char *v2 = e->rhs->accept(e->rhs, v);
 
-        const char *spec = szspec(type_to_int(e->lhs->type));
+        const char *spec = szspec(e->lhs->type->sz);
 
-        int regi = alloc_reg(type_to_int(e->lhs->type));
+        int regi = alloc_reg(e->lhs->type->sz);
         char *reg = g_regs[regi];
 
         take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v1, NULL), 1);
@@ -365,8 +371,8 @@ visit_expr_bin(visitor *v, expr_bin *e)
         case TOKEN_TYPE_GREATERTHAN:
         case TOKEN_TYPE_LESSTHAN_EQUALS:
         case TOKEN_TYPE_GREATERTHAN_EQUALS: {
-                char *lbl_true = genlbl();
-                char *lbl_done = genlbl();
+                char *lbl_true = genlbl(NULL);
+                char *lbl_done = genlbl(NULL);
                 const char *cmp_op = NULL;
                 switch (e->op->ty) {
                 case TOKEN_TYPE_DOUBLE_EQUALS:      cmp_op = "je";  break;
@@ -389,8 +395,8 @@ visit_expr_bin(visitor *v, expr_bin *e)
                 free(lbl_done);
         } break;
         case TOKEN_TYPE_DOUBLE_AMPERSAND: {
-                char *lbl_false = genlbl();
-                char *lbl_done = genlbl();
+                char *lbl_false = genlbl(NULL);
+                char *lbl_done = genlbl(NULL);
 
                 // lhs
                 take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
@@ -411,8 +417,8 @@ visit_expr_bin(visitor *v, expr_bin *e)
                 free(lbl_done);
         } break;
         case TOKEN_TYPE_DOUBLE_PIPE: {
-                char *lbl_true = genlbl();
-                char *lbl_done = genlbl();
+                char *lbl_true = genlbl(NULL);
+                char *lbl_done = genlbl(NULL);
 
                 // lhs
                 take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
@@ -448,14 +454,14 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
 
         assert(e->resolved);
 
-        int regi = alloc_reg(type_to_int(e->resolved->ty));
+        int regi = alloc_reg(e->resolved->ty->sz);
         char *reg = g_regs[regi];
 
         if (e->resolved->extern_ || ((expr *)e)->type->kind == TYPE_KIND_PROC) {
                 take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->id->lx, NULL), 1);
         } else {
                 char *offset_s = int_to_cstr(e->resolved->stack_offset);
-                const char *spec = szspec(type_to_int(e->resolved->ty));
+                const char *spec = szspec(e->resolved->ty->sz);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", [rbp-", offset_s, "]", NULL), 1);
         }
 
@@ -476,7 +482,7 @@ visit_expr_string_literal(visitor *v, expr_string_literal *e)
         asm_context *ctx = (asm_context *)v->context;
 
 
-        char *lbl = genlbl();
+        char *lbl = genlbl(NULL);
         forge_str out = forge_str_create();
         forge_str_concat(&out, lbl);
         forge_str_concat(&out, ": db ");
@@ -529,9 +535,9 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 expr *arg = e->args.data[i];
                 char *value = arg->accept(arg, v);
 
-                int pregi = alloc_param_regs(type_to_int(arg->type));
+                int pregi = alloc_param_regs(arg->type->sz);
                 char *preg = g_regs[pregi];
-                const char *spec = szspec(type_to_int(arg->type));
+                const char *spec = szspec(arg->type->sz);
 
                 dyn_array_append(pregs, pregi);
 
@@ -557,11 +563,12 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         pop_regs(ctx);
 
         // Void return type case.
-        if (proc_ty->rettype->kind == TYPE_KIND_VOID) {
+        if (proc_ty->rettype->kind == TYPE_KIND_VOID
+            || proc_ty->rettype->kind == TYPE_KIND_NORETURN) {
                 return "rax";
         }
 
-        return (void *)get_reg_from_size("rax", type_to_int(proc_ty->rettype));
+        return (void *)get_reg_from_size("rax", proc_ty->rettype->sz);
 }
 
 static void *
@@ -574,7 +581,7 @@ visit_expr_mut(visitor *v, expr_mut *e)
                 sym *sym = ((expr_identifier *)e->lhs)->resolved;
                 assert(sym);
 
-                const char *spec = szspec(type_to_int(sym->ty));
+                const char *spec = szspec(sym->ty->sz);
                 const char *offset = int_to_cstr(sym->stack_offset);
 
                 char *rvalue = e->rhs->accept(e->rhs, v);
@@ -600,7 +607,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         int offset = s->resolved->stack_offset;
         char *offset_s = int_to_cstr(offset);
-        const char *spec = szspec(type_to_int(s->e->type));
+        const char *spec = szspec(s->e->type->sz);
 
         take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset_s, "], ", value, NULL), 1);
         free(offset_s);
@@ -647,7 +654,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         for (size_t i = 0; i < s->params.len; ++i) {
                 sym *param = s->params.data[i].resolved;
                 assert(param);
-                int sz = type_to_int(param->ty);
+                int sz = param->ty->sz;
                 char *offset = int_to_cstr(param->stack_offset);
                 take_txt(ctx, forge_cstr_builder("mov ", szspec(sz), " [rbp-", offset, "], ",
                                                  get_reg_from_size(param_regs[i], sz), NULL),
@@ -667,7 +674,7 @@ visit_stmt_return(visitor *v, stmt_return *s)
         asm_context *ctx = (asm_context *)v->context;
 
         char *value = s->e->accept(s->e, v);
-        int sz = type_to_int(s->e->type);
+        int sz = s->e->type->sz;
         const char *ret_reg = get_reg_from_size("rax", sz);
         take_txt(ctx, forge_cstr_builder("mov ", szspec(sz), " ",
                                          ret_reg, ", ",
@@ -690,8 +697,8 @@ visit_stmt_exit(visitor *v, stmt_exit *s)
         }
 
         if (reg) {
-                const char *syscall_reg = get_reg_from_size("rdi", type_to_int(s->e->type));
-                const char *spec = szspec(type_to_int(s->e->type));
+                const char *syscall_reg = get_reg_from_size("rdi", s->e->type->sz);
+                const char *spec = szspec(s->e->type->sz);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", syscall_reg, ", ", reg, NULL), 1);
                 write_txt(ctx, "mov rax, 60", 1);
                 free_reg_literal(reg);
@@ -719,10 +726,10 @@ visit_stmt_if(visitor *v, stmt_if *s)
         asm_context *ctx = (asm_context *)v->context;
 
         char *cond = s->e->accept(s->e, v);
-        const char *spec = szspec(type_to_int(s->e->type));
+        const char *spec = szspec(s->e->type->sz);
 
-        char *lbl_else = s->else_ ? genlbl() : NULL;
-        char *lbl_done = genlbl();
+        char *lbl_else = s->else_ ? genlbl("else") : NULL;
+        char *lbl_done = genlbl("done");
 
         // Compare condition to 0
         take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond, ", 0", NULL), 1);
@@ -751,9 +758,9 @@ static void *
 visit_stmt_while(visitor *v, stmt_while *s)
 {
         asm_context *ctx     = (asm_context *)v->context;
-        const char *spec     = szspec(type_to_int(s->e->type));
-        char *lbl_loop_begin = genlbl();
-        char *lbl_loop_end   = genlbl();
+        const char *spec     = szspec(s->e->type->sz);
+        char *lbl_loop_begin = genlbl("while");
+        char *lbl_loop_end   = genlbl("end");
 
         take_txt(ctx, forge_cstr_builder(lbl_loop_begin, ":", NULL), 1);
         char *cond = s->e->accept(s->e, v);
@@ -768,6 +775,34 @@ visit_stmt_while(visitor *v, stmt_while *s)
 
         free(lbl_loop_begin);
         free(lbl_loop_end);
+
+        return NULL;
+}
+
+static void *
+visit_stmt_for(visitor *v, stmt_for *s)
+{
+        asm_context *ctx     = (asm_context *)v->context;
+        const char *e_spec   = szspec(s->e->type->sz);
+        char *lbl_for_begin  = genlbl("for");
+        char *lbl_for_end    = genlbl("end");
+
+        free_reg_literal(s->init->accept(s->init, v));
+        take_txt(ctx, forge_cstr_builder(lbl_for_begin, ":", NULL), 1);
+
+        char *cond = s->e->accept(s->e, v);
+        take_txt(ctx, forge_cstr_builder("cmp ", e_spec, " ", cond, ", 0", NULL), 1);
+        take_txt(ctx, forge_cstr_builder("je ", lbl_for_end, NULL), 1);
+        free_reg_literal(cond);
+
+        (void)s->body->accept(s->body, v);
+        free_reg_literal(s->after->accept(s->after, v));
+        take_txt(ctx, forge_cstr_builder("jmp ", lbl_for_begin, NULL), 1);
+
+        take_txt(ctx, forge_cstr_builder(lbl_for_end, ":", NULL), 1);
+
+        free(lbl_for_begin);
+        free(lbl_for_end);
 
         return NULL;
 }
@@ -791,7 +826,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_exit,
                 visit_stmt_extern_proc,
                 visit_stmt_if,
-                visit_stmt_while
+                visit_stmt_while,
+                visit_stmt_for
         );
 }
 

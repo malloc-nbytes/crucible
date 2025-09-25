@@ -19,7 +19,8 @@ visitor_alloc(void                           *ctx,
               visit_stmt_exit_sig             visit_stmt_exit,
               visit_stmt_extern_proc_sig      visit_stmt_extern_proc,
               visit_stmt_if_sig               visit_stmt_if,
-              visit_stmt_while_sig            visit_stmt_while) {
+              visit_stmt_while_sig            visit_stmt_while,
+              visit_stmt_for_sig              visit_stmt_for) {
 
         visitor *v = (visitor *)alloc(sizeof(visitor));
 
@@ -41,6 +42,7 @@ visitor_alloc(void                           *ctx,
         v->visit_stmt_extern_proc     = visit_stmt_extern_proc;
         v->visit_stmt_if              = visit_stmt_if;
         v->visit_stmt_while           = visit_stmt_while;
+        v->visit_stmt_for             = visit_stmt_for;
 
         return v;
 }
@@ -180,6 +182,15 @@ accept_stmt_while(stmt *s, visitor *v)
 {
         if (v->visit_stmt_while) {
                 return v->visit_stmt_while(v, (stmt_while *)s);
+        }
+        return NULL;
+}
+
+void *
+accept_stmt_for(stmt *s, visitor *v)
+{
+        if (v->visit_stmt_for) {
+                return v->visit_stmt_for(v, (stmt_for *)s);
         }
         return NULL;
 }

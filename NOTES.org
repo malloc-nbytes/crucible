@@ -1,7 +1,7 @@
-* TODO [18%]
+* TODO [27%]
 - [X] while loops
 - [X] mut statements
-- [ ] convert =type_to_int(type)= to =type->sz=
+- [X] convert =type_to_int(type)= to =type->sz=
 - [ ] for loops
 - [ ] casting
 - [ ] 'address of' operator =&var=

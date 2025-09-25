@@ -19,6 +19,7 @@ typedef void *(*visit_stmt_exit_sig)(visitor *v, stmt_exit *s);
 typedef void *(*visit_stmt_extern_proc_sig)(visitor *v, stmt_extern_proc *s);
 typedef void *(*visit_stmt_if_sig)(visitor *v, stmt_if *s);
 typedef void *(*visit_stmt_while_sig)(visitor *v, stmt_while *s);
+typedef void *(*visit_stmt_for_sig)(visitor *v, stmt_for *s);
 
 typedef struct visitor {
         void *context;
@@ -39,6 +40,7 @@ typedef struct visitor {
         visit_stmt_extern_proc_sig     visit_stmt_extern_proc;
         visit_stmt_if_sig              visit_stmt_if;
         visit_stmt_while_sig           visit_stmt_while;
+        visit_stmt_for_sig             visit_stmt_for;
 } visitor;
 
 visitor *visitor_alloc(
@@ -57,7 +59,8 @@ visitor *visitor_alloc(
         visit_stmt_exit_sig            visit_stmt_exit,
         visit_stmt_extern_proc_sig     visit_stmt_extern_proc,
         visit_stmt_if_sig              visit_stmt_if,
-        visit_stmt_while_sig           visit_stmt_while
+        visit_stmt_while_sig           visit_stmt_while,
+        visit_stmt_for_sig             visit_stmt_for
 );
 
 void *accept_expr_bin(expr *e, visitor *v);
@@ -76,5 +79,6 @@ void *accept_stmt_exit(stmt *s, visitor *v);
 void *accept_stmt_extern_proc(stmt *s, visitor *v);
 void *accept_stmt_if(stmt *s, visitor *v);
 void *accept_stmt_while(stmt *s, visitor *v);
+void *accept_stmt_for(stmt *s, visitor *v);
 
 #endif // VISITOR_H_INCLUDED

@@ -437,6 +437,21 @@ visit_stmt_while(visitor *v, stmt_while *s)
         return NULL;
 }
 
+static void *
+visit_stmt_for(visitor *v, stmt_for *s)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        push_scope(tbl);
+        s->init->accept(s->init, v);
+        s->e->accept(s->e, v);
+        s->after->accept(s->after, v);
+        s->body->accept(s->body, v);
+        pop_scope(tbl);
+
+        return NULL;
+}
+
 static visitor *
 sem_visitor_alloc(symtbl *tbl)
 {
@@ -456,7 +471,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_exit,
                 visit_stmt_extern_proc,
                 visit_stmt_if,
-                visit_stmt_while
+                visit_stmt_while,
+                visit_stmt_for
         );
 }
 

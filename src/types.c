@@ -11,6 +11,7 @@ type_i32_alloc(void)
 {
         type_i32 *t = (type_i32 *)alloc(sizeof(type_i32));
         t->base.kind = TYPE_KIND_I32;
+        t->base.sz   = 4;
         return t;
 }
 
@@ -19,6 +20,7 @@ type_i64_alloc(void)
 {
         type_i64 *t = (type_i64 *)alloc(sizeof(type_i64));
         t->base.kind = TYPE_KIND_I64;
+        t->base.sz   = 8;
         return t;
 }
 
@@ -27,6 +29,7 @@ type_u32_alloc(void)
 {
         type_u32 *t = (type_u32 *)alloc(sizeof(type_u32));
         t->base.kind = TYPE_KIND_U32;
+        t->base.sz   = 4;
         return t;
 }
 
@@ -35,6 +38,7 @@ type_u8_alloc(void)
 {
         type_u8 *t = (type_u8 *)alloc(sizeof(type_u8));
         t->base.kind = TYPE_KIND_U8;
+        t->base.sz   = 8;
         return t;
 }
 
@@ -43,6 +47,7 @@ type_noreturn_alloc(void)
 {
         type_noreturn *t = (type_noreturn *)alloc(sizeof(type_noreturn));
         t->base.kind = TYPE_KIND_NORETURN;
+        t->base.sz   = 0;
         return t;
 }
 
@@ -51,6 +56,7 @@ type_ptr_alloc(type *to)
 {
         type_ptr *t = (type_ptr *)alloc(sizeof(type_ptr));
         t->base.kind = TYPE_KIND_PTR;
+        t->base.sz   = 8;
         t->to = to;
         return t;
 }
@@ -60,6 +66,7 @@ type_void_alloc(void)
 {
         type_void *t = (type_void *)alloc(sizeof(type_void));
         t->base.kind = TYPE_KIND_VOID;
+        t->base.sz   = 0;
         return t;
 }
 
@@ -70,6 +77,7 @@ type_proc_alloc(type                  *rettype,
 {
         type_proc *t = (type_proc *)alloc(sizeof(type_proc));
         t->base.kind = TYPE_KIND_PROC;
+        t->base.sz   = 8;
         t->rettype   = rettype;
         t->params    = params;
         t->variadic  = variadic;
@@ -81,6 +89,7 @@ type_unknown_alloc(void)
 {
         type_unknown *t = (type_unknown *)alloc(sizeof(type_unknown));
         t->base.kind = TYPE_KIND_UNKNOWN;
+        t->base.sz   = 0;
         return t;
 }
 
@@ -89,6 +98,7 @@ type_number_alloc(void)
 {
         type_number *t = (type_number *)alloc(sizeof(type_number));
         t->base.kind = TYPE_KIND_NUMBER;
+        t->base.sz   = 4;
         return t;
 }
 

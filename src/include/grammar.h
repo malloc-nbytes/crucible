@@ -32,6 +32,7 @@ typedef enum {
         STMT_KIND_EXTERN_PROC,
         STMT_KIND_IF,
         STMT_KIND_WHILE,
+        STMT_KIND_FOR,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -185,6 +186,14 @@ typedef struct {
         stmt *body;
 } stmt_while;
 
+typedef struct {
+        stmt base;
+        stmt *init;
+        expr *e;
+        expr *after;
+        stmt *body;
+} stmt_for;
+
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
 expr_string_literal *expr_string_literal_alloc(const token *s);
@@ -214,5 +223,6 @@ stmt_return *stmt_return_alloc(expr *e);
 stmt_exit *stmt_exit_alloc(expr *e);
 stmt_if *stmt_if_alloc(expr *e, stmt *then, stmt *else_);
 stmt_while *stmt_while_alloc(expr *e, stmt *body);
+stmt_for *stmt_for_alloc(stmt *init, expr *e, expr *after, stmt *body);
 
 #endif // GRAMMAR_H_INCLUDED

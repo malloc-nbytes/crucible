@@ -205,3 +205,19 @@ stmt_while_alloc(expr *e, stmt *body)
         s->body         = body;
         return s;
 }
+
+stmt_for *
+stmt_for_alloc(stmt *init,
+               expr *e,
+               expr *after,
+               stmt *body)
+{
+        stmt_for *s     = alloc(sizeof(stmt_for));
+        s->base.kind    = STMT_KIND_FOR;
+        s->base.accept  = accept_stmt_for;
+        s->init         = init;
+        s->e            = e;
+        s->after        = after;
+        s->body         = body;
+        return s;
+}
