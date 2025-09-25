@@ -1,9 +1,9 @@
 proc f(a: i32): i32 {
-    let x: i32 = 3%4;
+    let x: i32 = 5;
 
-    if a == 3 {
+    if (a == 3) {
         return 1;
-    } else if a == 2 {
+    } else if (a == 2) {
         return 1;
     } else {
         return 0;

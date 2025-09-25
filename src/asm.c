@@ -141,22 +141,6 @@ genlbl(void)
         return strdup(buf);
 }
 
-/* static int */
-/* lvalue(asm_context *ctx, expr *e) */
-/* { */
-/*         switch (e->kind) { */
-/*         case EXPR_KIND_IDENTIFIER: { */
-/*                 write_txt(ctx, "sub rbp, 4", 1); */
-/*         } break; */
-/*         default: { */
-/*                 forge_err_wargs("lvalue(): the lvalue of `%d` is unimplemented", */
-/*                                 (int)e->kind); */
-/*         } break; */
-/*         } */
-
-/*         return NULL; // unreachable */
-/* } */
-
 char *
 int_to_cstr(int i)
 {
@@ -283,6 +267,11 @@ push_inuse_regs(asm_context *ctx)
                                 char *reg = REGAT(i, 0, g_regs);
                                 take_txt(ctx, forge_cstr_builder("push ", reg, NULL), 1);
                                 dyn_array_append(ctx->pushed_regs, reg);
+
+                                /* REGAT(i, 0, g_inuse_regs) = 0; */
+                                /* REGAT(i, 1, g_inuse_regs) = 0; */
+                                /* REGAT(i, 2, g_inuse_regs) = 0; */
+                                /* REGAT(i, 3, g_inuse_regs) = 0; */
                         }
                 }
         }
@@ -291,7 +280,7 @@ push_inuse_regs(asm_context *ctx)
 static void
 pop_regs(asm_context *ctx)
 {
-        for (size_t i = 0; i < ctx->pushed_regs.len; ++i) {
+        for (int i = ctx->pushed_regs.len-1; i >= 0; --i) {
                 take_txt(ctx, forge_cstr_builder("pop ", ctx->pushed_regs.data[i], NULL), 1);
         }
         dyn_array_clear(ctx->pushed_regs);
@@ -756,12 +745,12 @@ static void *
 visit_stmt_while(visitor *v, stmt_while *s)
 {
         asm_context *ctx     = (asm_context *)v->context;
-        char *cond           = s->e->accept(s->e, v);
         const char *spec     = szspec(type_to_int(s->e->type));
         char *lbl_loop_begin = genlbl();
         char *lbl_loop_end   = genlbl();
 
         take_txt(ctx, forge_cstr_builder(lbl_loop_begin, ":", NULL), 1);
+        char *cond = s->e->accept(s->e, v);
         take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond, ", 0", NULL), 1);
 
         take_txt(ctx, forge_cstr_builder("je ", lbl_loop_end, NULL), 1);
