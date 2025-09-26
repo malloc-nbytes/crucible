@@ -252,7 +252,7 @@ stmt_struct_alloc(const token     *id,
 {
         stmt_struct *s     = alloc(sizeof(stmt_struct));
         s->base.kind       = STMT_KIND_STRUCT;
-        s->base.accept     = NULL;
+        s->base.accept     = accept_stmt_struct;
         s->id              = id;
         s->members         = members;
         return s;

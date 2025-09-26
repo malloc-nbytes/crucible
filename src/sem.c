@@ -332,7 +332,6 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                 insert_sym_into_scope(tbl, param);
                 tbl->stack_offset += type_to_int(param->ty);
                 s->params.data[i].resolved = param;
-                // TODO: get type sizes for procedure parameters.
         }
 
         // We are currently inside of a procedure, keep track
@@ -477,7 +476,7 @@ visit_stmt_break(visitor *v, stmt_break *s)
         return NULL;
 }
 
-void *
+static void *
 visit_stmt_continue(visitor *v, stmt_continue *s)
 {
         NOOP(v);
@@ -490,6 +489,47 @@ visit_stmt_continue(visitor *v, stmt_continue *s)
         }
 
         s->resolved_parent = tbl->loop;
+
+        return NULL;
+}
+
+static void *
+visit_stmt_struct(visitor *v, stmt_struct *s)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        // Check if this struct already exists.
+        if (sym_exists_in_scope(tbl, s->id->lx)) {
+                pusherr(tbl, s->id->loc, "struct `%s` is already defined", s->id->lx);
+        }
+
+        str_array member_names = dyn_array_empty(str_array);
+        size_t sz = 0;
+        for (size_t i = 0; i < s->members.len; ++i) {
+                const parameter *p = &s->members.data[i];
+
+                for (size_t j = 0; j < member_names.len; ++j) {
+                        if (!strcmp(member_names.data[j], p->id->lx)) {
+                                pusherr(tbl, p->id->loc, "the member of struct `%s` is already defined", p->id->lx);
+                        }
+                }
+
+                sz += type_to_int(p->type);
+                s->members.data[i].resolved = sym_alloc(tbl, p->id->lx, p->type, 0);
+                p->resolved->stack_offset = sz;
+
+                dyn_array_append(member_names, p->id->lx);
+        }
+
+        dyn_array_free(member_names);
+
+        if (sz == 0) {
+                pusherr(tbl, s->id->loc, "struct `%s` has no members", s->id->lx);
+        }
+
+        type_struct *st_ty = type_struct_alloc(&s->members, sz);
+        sym *sym = sym_alloc(tbl, s->id->lx, (type *)st_ty, 0);
+        insert_sym_into_scope(tbl, sym);
 
         return NULL;
 }
@@ -516,7 +556,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_while,
                 visit_stmt_for,
                 visit_stmt_break,
-                visit_stmt_continue
+                visit_stmt_continue,
+                visit_stmt_struct
         );
 }
 

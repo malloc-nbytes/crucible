@@ -855,6 +855,13 @@ visit_stmt_continue(visitor *v, stmt_continue *s)
         return NULL;
 }
 
+static void *
+visit_stmt_struct(visitor *v, stmt_struct *s)
+{
+        NOOP(v, s);
+        return NULL;
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -877,7 +884,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_while,
                 visit_stmt_for,
                 visit_stmt_break,
-                visit_stmt_continue
+                visit_stmt_continue,
+                visit_stmt_struct
         );
 }
 
