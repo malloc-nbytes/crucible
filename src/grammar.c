@@ -245,3 +245,15 @@ stmt_continue_alloc(void)
         s->resolved_parent = NULL;
         return s;
 }
+
+stmt_struct *
+stmt_struct_alloc(const token     *id,
+                  parameter_array  members)
+{
+        stmt_struct *s     = alloc(sizeof(stmt_struct));
+        s->base.kind       = STMT_KIND_STRUCT;
+        s->base.accept     = NULL;
+        s->id              = id;
+        s->members         = members;
+        return s;
+}

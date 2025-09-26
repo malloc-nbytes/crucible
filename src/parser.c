@@ -104,6 +104,35 @@ parse_comma_sep_exprs(parser_context *ctx)
         return ar;
 }
 
+static parameter_array
+parse_bracket_ids_and_types(parser_context *ctx)
+{
+        parameter_array members = dyn_array_empty(parameter_array);
+
+        (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
+
+        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
+                const token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+                (void)expect(ctx, TOKEN_TYPE_COLON);
+                type *type = parse_type(ctx);
+
+                dyn_array_append(members, ((parameter) {
+                        .id = id,
+                        .type = type,
+                }));
+
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                        lexer_discard(ctx->l);
+                } else {
+                        break;
+                }
+        }
+
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
+
+        return members;
+}
+
 expr *
 parse_primary_expr(parser_context *ctx)
 {
@@ -503,6 +532,15 @@ parse_stmt_continue(parser_context *ctx)
         return stmt_continue_alloc();
 }
 
+static stmt_struct *
+parse_stmt_struct(parser_context *ctx)
+{
+        (void)expectkw(ctx, KWD_STRUCT);
+        const token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+        parameter_array members = parse_bracket_ids_and_types(ctx);
+        return stmt_struct_alloc(id, members);
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -528,6 +566,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_break(ctx);
         } else if (!strcmp(hd->lx, KWD_CONTINUE)) {
                 return (stmt *)parse_stmt_continue(ctx);
+        } else if (!strcmp(hd->lx, KWD_STRUCT)) {
+                return (stmt *)parse_stmt_struct(ctx);
         }
 
         assert(0 && "todo");

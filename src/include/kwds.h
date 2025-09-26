@@ -23,8 +23,10 @@
 #define KWD_FOR   "for"
 #define KWD_ELSE  "else"
 
-#define KWD_BREAK "break"
+#define KWD_BREAK    "break"
 #define KWD_CONTINUE "continue"
+
+#define KWD_STRUCT "struct"
 
 #define KWDS {                                  \
                 KWD_I8,                         \
@@ -48,6 +50,7 @@
                 KWD_EXTERN,                     \
                 KWD_BREAK,                      \
                 KWD_CONTINUE,                   \
+                KWD_STRUCT,                     \
 }
 
 #define KWD_TYPES {                             \
