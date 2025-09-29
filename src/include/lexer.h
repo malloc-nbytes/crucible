@@ -3,6 +3,8 @@
 
 #include "loc.h"
 
+#include <forge/array.h>
+
 #include <stddef.h>
 
 typedef enum {
@@ -72,6 +74,8 @@ typedef struct token {
         loc loc;
         struct token *next;
 } token;
+
+DYN_ARRAY_TYPE(token *, token_array);
 
 typedef struct {
         token *hd;

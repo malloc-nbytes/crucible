@@ -9,6 +9,7 @@ typedef void *(*visit_expr_integer_literal_sig)(visitor *v, expr_integer_literal
 typedef void *(*visit_expr_string_literal_sig)(visitor *v, expr_string_literal *e);
 typedef void *(*visit_expr_proccall_sig)(visitor *v, expr_proccall *e);
 typedef void *(*visit_expr_mut_sig)(visitor *v, expr_mut *e);
+typedef void *(*visit_expr_brace_init_sig)(visitor *v, expr_brace_init *e);
 
 typedef void *(*visit_stmt_let_sig)(visitor *v, stmt_let *s);
 typedef void *(*visit_stmt_expr_sig)(visitor *v, stmt_expr *s);
@@ -33,6 +34,7 @@ typedef struct visitor {
         visit_expr_string_literal_sig  visit_expr_string_literal;
         visit_expr_proccall_sig        visit_expr_proccall;
         visit_expr_mut_sig             visit_expr_mut;
+        visit_expr_brace_init_sig      visit_expr_brace_init;
 
         visit_stmt_let_sig             visit_stmt_let;
         visit_stmt_expr_sig            visit_stmt_expr;
@@ -57,6 +59,7 @@ visitor *visitor_alloc(
         visit_expr_string_literal_sig  visit_expr_string_literal,
         visit_expr_proccall_sig        visit_expr_proccall,
         visit_expr_mut_sig             visit_expr_mut,
+        visit_expr_brace_init_sig      visit_expr_brace_init,
         visit_stmt_let_sig             visit_stmt_let,
         visit_stmt_expr_sig            visit_stmt_expr,
         visit_stmt_block_sig           visit_stmt_block,
@@ -78,6 +81,7 @@ void *accept_expr_identifier(expr *e, visitor *v);
 void *accept_expr_string_literal(expr *e, visitor *v);
 void *accept_expr_proccall(expr *e, visitor *v);
 void *accept_expr_mut(expr *e, visitor *v);
+void *accept_expr_brace_init(expr *e, visitor *v);
 
 void *accept_stmt_let(stmt *s, visitor *v);
 void *accept_stmt_expr(stmt *s, visitor *v);

@@ -20,6 +20,7 @@ typedef enum {
         EXPR_KIND_MUT,
         EXPR_KIND_UNARY,
         EXPR_KIND_PROCCALL,
+        EXPR_KIND_BRACE_INIT,
 } expr_kind;
 
 typedef enum {
@@ -105,6 +106,13 @@ typedef struct {
         expr *lhs;
         expr_array args;
 } expr_proccall;
+
+typedef struct {
+        expr base;
+        token_array ids;
+        expr_array exprs;
+        const token *struct_id; // to be resolved in lexer
+} expr_brace_init;
 
 ///////////////////////////////////////////
 // STATEMENTS
@@ -232,6 +240,7 @@ expr_mut *expr_mut_alloc(expr *lhs, const token *op, expr *rhs);
 expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_un *expr_un_alloc(expr *operand, const token *op);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
+expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
 
 stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);

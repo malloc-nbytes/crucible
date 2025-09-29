@@ -239,6 +239,59 @@ visit_expr_mut(visitor *v, expr_mut *e)
 }
 
 static void *
+visit_expr_brace_init(visitor *v, expr_brace_init *e)
+{
+        assert(e->struct_id);
+        assert(e->ids.len == e->exprs.len);
+
+        symtbl *tbl = (symtbl *)v->context;
+
+        const char *struct_id = e->struct_id->lx;
+
+        if (!sym_exists_in_scope(tbl, struct_id)) {
+                pusherr(tbl, ((expr *)e)->loc, "struct `%s` is not defined", struct_id);
+                return NULL;
+        }
+
+        const sym *struct_sym = get_sym_from_scope(tbl, struct_id);
+        assert(struct_sym);
+
+        // Should not be needed but doesn't hurt.
+        if (struct_sym->ty->kind != TYPE_KIND_STRUCT) {
+                pusherr(tbl, ((expr *)e)->loc,
+                        "cannot use a brace initalizer on type `%s`",
+                        type_to_cstr(struct_sym->ty));
+                return NULL;
+        }
+
+        type_struct *struct_ty = (type_struct *)struct_sym->ty;
+
+        // Make sure members length matches the struct's members.
+        if (e->ids.len != struct_ty->members->len) {
+                pusherr(tbl, e->struct_id->loc,
+                        "struct `%s` requires %zu members but %zu were supplied",
+                        struct_id, struct_ty->members->len, e->ids.len);
+                return NULL;
+        }
+
+        // Verify members and their expressions.
+        for (size_t i = 0; i < e->ids.len; ++i) {
+                const char *got = e->ids.data[i]->lx;
+                const char *expected = struct_ty->members->data[i].id->lx;
+                if (strcmp(got, expected)) {
+                        pusherr(tbl, e->ids.data[i]->loc,
+                                "expected member ID `%s` but got `%s`",
+                                expected, got);
+                }
+                e->exprs.data[i]->accept(e->exprs.data[i], v);
+        }
+
+        ((expr *)e)->type = struct_sym->ty;
+
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -257,6 +310,11 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         if (tbl->proc.inproc) {
                 tbl->proc.rsp += type_to_int(sym->ty);
+        }
+
+        if (s->type->kind == TYPE_KIND_CUSTOM
+            && s->e->type->kind == TYPE_KIND_STRUCT) {
+                s->type = s->e->type;
         }
 
         // Typecheck the 'let' statement's given type
@@ -545,6 +603,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_string_literal,
                 visit_expr_proccall,
                 visit_expr_mut,
+                visit_expr_brace_init,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,

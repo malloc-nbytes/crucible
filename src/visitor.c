@@ -11,6 +11,7 @@ visitor_alloc(void                           *ctx,
               visit_expr_string_literal_sig   visit_expr_string_literal,
               visit_expr_proccall_sig         visit_expr_proccall,
               visit_expr_mut_sig              visit_expr_mut,
+              visit_expr_brace_init_sig       visit_expr_brace_init,
               visit_stmt_let_sig              visit_stmt_let,
               visit_stmt_expr_sig             visit_stmt_expr,
               visit_stmt_block_sig            visit_stmt_block,
@@ -35,6 +36,7 @@ visitor_alloc(void                           *ctx,
         v->visit_expr_string_literal  = visit_expr_string_literal;
         v->visit_expr_proccall        = visit_expr_proccall;
         v->visit_expr_mut             = visit_expr_mut;
+        v->visit_expr_brace_init      = visit_expr_brace_init;
 
         v->visit_stmt_let             = visit_stmt_let;
         v->visit_stmt_expr            = visit_stmt_expr;
@@ -105,6 +107,15 @@ accept_expr_mut(expr *e, visitor *v)
 {
         if (v->visit_expr_mut) {
                 return v->visit_expr_mut(v, (expr_mut *)e);
+        }
+        return NULL;
+}
+
+void *
+accept_expr_brace_init(expr *e, visitor *v)
+{
+        if (v->visit_expr_brace_init) {
+                return v->visit_expr_brace_init(v, (expr_brace_init *)e);
         }
         return NULL;
 }

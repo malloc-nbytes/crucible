@@ -73,7 +73,7 @@ parse_type(parser_context *ctx)
         } else if (hd->ty == TOKEN_TYPE_BANG) {
                 ty = (type *)type_noreturn_alloc();
         } else {
-                forge_err_wargs("could not parse type at `%s`", lx);
+                ty = (type *)type_custom_alloc(hd);
         }
 
         // Handles all pointer types (ex: u8**).
@@ -133,6 +133,33 @@ parse_bracket_ids_and_types(parser_context *ctx)
         return members;
 }
 
+static expr_brace_init *
+parse_brace_initializer(parser_context *ctx)
+{
+        (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
+
+        token_array ids = dyn_array_empty(token_array);
+        expr_array exprs = dyn_array_empty(expr_array);
+
+        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
+                (void)expect(ctx, TOKEN_TYPE_PERIOD);
+
+                dyn_array_append(ids, expect(ctx, TOKEN_TYPE_IDENTIFIER));
+                (void)expect(ctx, TOKEN_TYPE_EQUALS);
+                dyn_array_append(exprs, parse_expr(ctx));
+
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                        lexer_discard(ctx->l); // ,
+                } else {
+                        break;
+                }
+        }
+
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
+
+        return expr_brace_init_alloc(ids, exprs);
+}
+
 expr *
 parse_primary_expr(parser_context *ctx)
 {
@@ -169,6 +196,10 @@ parse_primary_expr(parser_context *ctx)
                                 left = parse_expr(ctx);
                                 (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
                         }
+                        left->loc = hd->loc;
+                } break;
+                case TOKEN_TYPE_LEFT_CURLY: {
+                        left = (expr *)parse_brace_initializer(ctx);
                         left->loc = hd->loc;
                 } break;
                 default: return left;
@@ -312,6 +343,13 @@ parse_stmt_let(parser_context *ctx)
         (void)expect(ctx, TOKEN_TYPE_EQUALS);
         expr *e = parse_expr(ctx);
         (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+
+        // Structs need extra information to be filled out.
+        if (ty->kind == TYPE_KIND_CUSTOM
+            && e->kind == EXPR_KIND_BRACE_INIT) {
+                ((expr_brace_init *)e)->struct_id = ((type_custom *)ty)->struct_id;
+        }
+
         return stmt_let_alloc(id, ty, e);
 }
 
