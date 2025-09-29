@@ -602,6 +602,10 @@ visit_expr_mut(visitor *v, expr_mut *e)
 static void *
 visit_expr_brace_init(visitor *v, expr_brace_init *e)
 {
+        for (size_t i = 0; i < e->resolved_syms->len; ++i) {
+                printf("%s: %d\n", e->resolved_syms->data[i]->id, e->resolved_syms->data[i]->stack_offset);
+        }
+
         NOOP(v, e);
         forge_todo("");
 }

@@ -276,6 +276,8 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
 
         // Verify members and their expressions.
         for (size_t i = 0; i < e->ids.len; ++i) {
+                //struct_ty->members->data[i]->stack_offset += 
+
                 const char *got = e->ids.data[i]->lx;
                 const char *expected = struct_ty->members->data[i].id->lx;
                 if (strcmp(got, expected)) {
@@ -287,6 +289,9 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
         }
 
         ((expr *)e)->type = struct_sym->ty;
+
+        e->resolved_syms = (sym_array *)alloc(sizeof(sym_array));
+        *e->resolved_syms = dyn_array_empty(sym_array);
 
         return NULL;
 }
@@ -315,6 +320,21 @@ visit_stmt_let(visitor *v, stmt_let *s)
         if (s->type->kind == TYPE_KIND_CUSTOM
             && s->e->type->kind == TYPE_KIND_STRUCT) {
                 s->type = s->e->type;
+
+                // No need for type checking for casting, done earlier.
+                expr_brace_init *br = (expr_brace_init *)s->e;
+                assert(br->resolved_syms); // alloc'd in sem.c:visit_expr_brace_init
+
+                const char *st_id = br->struct_id->lx;
+                assert(st_id);
+
+                type_struct *stty = (type_struct *)get_sym_from_scope(tbl, st_id)->ty;
+                assert(stty);
+
+                for (size_t i = 0; i < br->ids.len; ++i) {
+                        assert(stty->members->data[i].resolved);
+                        dyn_array_append(*br->resolved_syms, stty->members->data[i].resolved);
+                }
         }
 
         // Typecheck the 'let' statement's given type

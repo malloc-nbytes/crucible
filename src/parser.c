@@ -144,9 +144,9 @@ parse_brace_initializer(parser_context *ctx)
         while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
                 (void)expect(ctx, TOKEN_TYPE_PERIOD);
 
-                dyn_array_append(ids, expect(ctx, TOKEN_TYPE_IDENTIFIER));
+                dyn_array_append(ids, (expect(ctx, TOKEN_TYPE_IDENTIFIER)));
                 (void)expect(ctx, TOKEN_TYPE_EQUALS);
-                dyn_array_append(exprs, parse_expr(ctx));
+                dyn_array_append(exprs, (parse_expr(ctx)));
 
                 if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
                         lexer_discard(ctx->l); // ,

@@ -2,6 +2,8 @@
 #include "mem.h"
 #include "visitor.h"
 
+#include <forge/array.h>
+
 static expr
 init_expr_kind(expr_kind kind,
                void *(accept)(expr *, visitor *))

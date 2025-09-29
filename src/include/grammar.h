@@ -8,7 +8,7 @@
 #include <forge/array.h>
 
 typedef struct sym sym;
-
+typedef struct sym_array sym_array;
 typedef struct visitor visitor;
 
 typedef enum {
@@ -109,9 +109,12 @@ typedef struct {
 
 typedef struct {
         expr base;
-        token_array ids;
-        expr_array exprs;
-        const token *struct_id; // to be resolved in lexer
+        token_array ids;        // assert(ids.len == exprs.len)
+        expr_array exprs;       // assert(ids.len == exprs.len)
+        const token *struct_id; // to be resolved in parser
+
+        sym_array *resolved_syms; // assert(resolved_syms.len == ids.len == exprs.len)
+                                  // to be resolved in semantic analysis
 } expr_brace_init;
 
 ///////////////////////////////////////////
