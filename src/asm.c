@@ -602,13 +602,22 @@ visit_expr_mut(visitor *v, expr_mut *e)
 static void *
 visit_expr_brace_init(visitor *v, expr_brace_init *e)
 {
+        asm_context *ctx = (asm_context *)v->context;
+
         for (size_t i = 0; i < e->resolved_syms->len; ++i) {
-                printf("%s: %d\n", e->resolved_syms->data[i]->id, e->resolved_syms->data[i]->stack_offset);
+                //printf("%s: %d\n", e->resolved_syms->data[i]->id, e->resolved_syms->data[i]->stack_offset);
+                const sym *sym = e->resolved_syms->data[i];
+                const char *spec = szspec(sym->ty->sz);
+                char *offset = int_to_cstr(sym->stack_offset);
+                char *value = e->exprs.data[i]->accept(e->exprs.data[i], v);
+
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", value, NULL), 1);
+
+                free_reg_literal(value);
+                free(offset);
         }
 
-        NOOP(v, e);
-        /* forge_todo(""); */
-        return NULL;
+        return "rax";
 }
 
 static void *
