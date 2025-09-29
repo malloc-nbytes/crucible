@@ -7,13 +7,17 @@ struct Point {
 }
 
 export proc _start(void): ! {
-    let _: i32 = 0;
+
+    let test1: i32 = 99;
+    let test2: i32 = 0;
 
     let p: Point = {
         .x = 1,
         .s = "foo",
         .y = 2,
     };
+
+    printf("in input: %d\n", test1);
 
     exit 0;
 }

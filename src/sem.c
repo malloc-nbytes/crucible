@@ -276,8 +276,6 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
 
         // Verify members and their expressions.
         for (size_t i = 0; i < e->ids.len; ++i) {
-                //struct_ty->members->data[i]->stack_offset += 
-
                 const char *got = e->ids.data[i]->lx;
                 const char *expected = struct_ty->members->data[i].id->lx;
                 if (strcmp(got, expected)) {
@@ -313,12 +311,9 @@ visit_stmt_let(visitor *v, stmt_let *s)
         insert_sym_into_scope(tbl, sym);
         tbl->stack_offset += type_to_int(sym->ty);
 
-        if (tbl->proc.inproc) {
-                tbl->proc.rsp += type_to_int(sym->ty);
-        }
-
         if (s->type->kind == TYPE_KIND_CUSTOM
             && s->e->type->kind == TYPE_KIND_STRUCT) {
+                free(s->type); // free temporary `custom` type.
                 s->type = s->e->type;
 
                 // No need for type checking for casting, done earlier.
@@ -328,13 +323,26 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 const char *st_id = br->struct_id->lx;
                 assert(st_id);
 
-                type_struct *stty = (type_struct *)get_sym_from_scope(tbl, st_id)->ty;
+                sym = get_sym_from_scope(tbl, st_id);
+                sym->stack_offset = 0;
+
+                type_struct *stty = (type_struct *)sym->ty;
                 assert(stty);
 
                 for (size_t i = 0; i < br->ids.len; ++i) {
                         assert(stty->members->data[i].resolved);
                         dyn_array_append(*br->resolved_syms, stty->members->data[i].resolved);
+
+                        // Make symbols align with the stack. Originally, the symbols are
+                        // just offsets from each other, but now we update it to align
+                        // with the current global stack offset.
+                        br->resolved_syms->data[i]->stack_offset += tbl->stack_offset;
                 }
+        }
+
+        // Increase the procedures RSP register subtraction amount.
+        if (tbl->proc.inproc) {
+                tbl->proc.rsp += type_to_int(sym->ty);
         }
 
         // Typecheck the 'let' statement's given type

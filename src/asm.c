@@ -607,7 +607,8 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
         }
 
         NOOP(v, e);
-        forge_todo("");
+        /* forge_todo(""); */
+        return NULL;
 }
 
 static void *
