@@ -143,7 +143,7 @@ type_to_cstr(const type *t)
         case TYPE_KIND_NORETURN: return "!";
         case TYPE_KIND_UNKNOWN:  return "<unknown>";
         case TYPE_KIND_STRUCT:   return "<struct>";
-        case TYPE_KIND_CUSTOM:   return "<custom [unresolved]>";
+        case TYPE_KIND_CUSTOM:   return "<struct>";
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
         } break;

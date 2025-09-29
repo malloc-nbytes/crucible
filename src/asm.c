@@ -302,7 +302,7 @@ szspec(int sz)
         case 4: return "DWORD";
         case 2: return "WORD";
         case 1: return "BYTE";
-        default: forge_err_wargs("get_size_specifier(): cannot get size specfifier for size %d", sz);
+        default: forge_err_wargs("szspec(): cannot get size specfifier for size %d", sz);
         }
         return NULL; // unreachable
 }
@@ -618,12 +618,14 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         char *value = (char *)s->e->accept(s->e, v);
 
-        int offset = s->resolved->stack_offset;
-        char *offset_s = int_to_cstr(offset);
-        const char *spec = szspec(s->e->type->sz);
+        if (s->resolved->ty->kind != TYPE_KIND_STRUCT) {
+                int offset = s->resolved->stack_offset;
+                char *offset_s = int_to_cstr(offset);
+                const char *spec = szspec(s->e->type->sz);
 
-        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset_s, "], ", value, NULL), 1);
-        free(offset_s);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset_s, "], ", value, NULL), 1);
+                free(offset_s);
+        }
 
         free_reg_literal(value);
 

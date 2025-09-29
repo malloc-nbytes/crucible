@@ -261,6 +261,7 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
                 pusherr(tbl, ((expr *)e)->loc,
                         "cannot use a brace initalizer on type `%s`",
                         type_to_cstr(struct_sym->ty));
+                ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
 
@@ -271,6 +272,7 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
                 pusherr(tbl, e->struct_id->loc,
                         "struct `%s` requires %zu members but %zu were supplied",
                         struct_id, struct_ty->members->len, e->ids.len);
+                ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
 
@@ -308,9 +310,8 @@ visit_stmt_let(visitor *v, stmt_let *s)
         s->e->accept(s->e, v);
 
         sym *sym = sym_alloc(tbl, s->id->lx, s->type, 0);
-        insert_sym_into_scope(tbl, sym);
-        tbl->stack_offset += type_to_int(sym->ty);
 
+        // Structs need a bit more information to compute.
         if (s->type->kind == TYPE_KIND_CUSTOM
             && s->e->type->kind == TYPE_KIND_STRUCT) {
                 free(s->type); // free temporary `custom` type.
@@ -323,8 +324,9 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 const char *st_id = br->struct_id->lx;
                 assert(st_id);
 
+                free(sym);
                 sym = get_sym_from_scope(tbl, st_id);
-                sym->stack_offset = 0;
+                //sym->stack_offset = 0;
 
                 type_struct *stty = (type_struct *)sym->ty;
                 assert(stty);
@@ -339,6 +341,9 @@ visit_stmt_let(visitor *v, stmt_let *s)
                         br->resolved_syms->data[i]->stack_offset += tbl->stack_offset;
                 }
         }
+
+        insert_sym_into_scope(tbl, sym);
+        tbl->stack_offset += type_to_int(sym->ty);
 
         // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {

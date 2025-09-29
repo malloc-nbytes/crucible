@@ -126,8 +126,8 @@ fn run_tests(config) {
         println();
     }
 
-    ok(format("Passed: ", len(passed)), true);
-    bad(format("Failed: ", len(failed)), true);
+    ok(format(Colors::Te.Invert, "Passed: ", len(passed)), true);
+    bad(format(Colors::Te.Invert, "Failed: ", len(failed)), true);
 }
 
 let config = Config();
