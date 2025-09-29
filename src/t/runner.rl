@@ -6,7 +6,7 @@ import "std/system.rl"; as sys
 import "std/colors.rl"; as colors
 import "std/io.rl";     as io
 
-set_flag("-xe");
+set_flag("-e");
 
 enum FlagType {
     Clean = 1 << 0,
@@ -70,17 +70,26 @@ fn dump_asm(config, fp) {
 }
 
 fn cleanup(config) {
-    if (config.flags `& FlagType.Clean) == 0 {
-        println();
-    }
+    info("=== CLEANUP ===", 1);
+
+    # if (config.flags `& FlagType.Clean) == 0 {
+    #     println();
+    # }
 
     let bins, asms = (
         sys::get_all_files_by_ext(".", "bin"),
         sys::get_all_files_by_ext(".", "asm"),
     );
 
-    bins.foreach(|f| { $f"rm {f}"; });
-    asms.foreach(|f| { $f"rm {f}"; });
+    foreach b in bins {
+        println(f"[RM] {b}");
+        $f"rm {b}";
+    }
+
+    foreach a in asms {
+        println(f"[RM] {a}");
+        $f"rm {a}";
+    }
 
     if (config.flags `& FlagType.Clean) != 0 {
         exit(0);
@@ -88,6 +97,7 @@ fn cleanup(config) {
 }
 
 fn setup_compiler() {
+    info("=== BUILDING COMPILER ===", 1);
     $"pwd" |> let cwd;
     cd("..");
     $"earl build.rl";
@@ -95,24 +105,42 @@ fn setup_compiler() {
 }
 
 fn compile() {
+    info("=== COMPILING TESTS ===", 1);
+
     let files = sys::get_all_files_by_ext(".", "cr");
 
     foreach f in files {
-        $f"../cruc {f} -o {f}.bin --asm";
+
+        let cmd = f"../cruc {f} -o {f}.bin --asm";
+
+        println(f"[CC] {cmd}");
+
+        with code = sys::cmdstr_wexitcode(cmd)[0]
+        in if code != 0 {
+            bad(format(colors::Te.Invert, "compilation error: ", code), 1);
+            bad("Aborting...", 1);
+            exit(0);
+        }
     }
 }
 
 fn run_tests(config) {
+    info("=== RUNNING TESTS ===", 0);
+
     let files = sys::get_all_files_by_ext(".", "bin");
     let passed, failed = ([], []);
 
     println();
 
+    let maxfsz = files.fold(|f, acc| {
+        case len(f) > acc of { true = len(f); _ = acc; };
+    }, 0);
+
     foreach f in files {
         let code = sys::cmdstr_wexitcode(f"{f}")[0];
 
-        info(f"Test: {f}", false);
-        print(" ... ");
+        info(format(colors::Te.Bold, f"[T] {f}"), false);
+        for i in 0 to maxfsz-len(f)+1 { print(' '); }
 
         if code != 0 {
             failed += [f];
@@ -126,8 +154,8 @@ fn run_tests(config) {
         println();
     }
 
-    ok(format(Colors::Te.Invert, "Passed: ", len(passed)), true);
-    bad(format(Colors::Te.Invert, "Failed: ", len(failed)), true);
+    ok(format('\n', colors::Te.Invert, "Passed: ", len(passed)), true);
+    bad(format(colors::Te.Invert, "Failed: ", len(failed)), true);
 }
 
 let config = Config();
