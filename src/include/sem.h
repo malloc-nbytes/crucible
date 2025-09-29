@@ -14,6 +14,8 @@ typedef struct sym {
         int extern_;
 } sym;
 
+DYN_ARRAY_TYPE(sym *, sym_array);
+
 typedef struct {
         smap_array scope;
 

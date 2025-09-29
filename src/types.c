@@ -5,6 +5,7 @@
 #include <forge/err.h>
 
 #include <assert.h>
+#include <stddef.h>
 
 type_i32 *
 type_i32_alloc(void)
@@ -102,6 +103,26 @@ type_number_alloc(void)
         return t;
 }
 
+type_struct *
+type_struct_alloc(const parameter_array *members, size_t sz)
+{
+        type_struct *t = (type_struct *)alloc(sizeof(type_struct));
+        t->base.kind   = TYPE_KIND_STRUCT;
+        t->base.sz     = sz;
+        t->members     = members;
+
+        return t;
+}
+
+type_custom *
+type_custom_alloc(const token *struct_id)
+{
+        type_custom *t   = (type_custom *)alloc(sizeof(type_custom));
+        t->base.kind     = TYPE_KIND_CUSTOM;
+        t->struct_id     = struct_id;
+        return t;
+}
+
 char *
 type_to_cstr(const type *t)
 {
@@ -121,6 +142,8 @@ type_to_cstr(const type *t)
         case TYPE_KIND_VOID:     return "void";
         case TYPE_KIND_NORETURN: return "!";
         case TYPE_KIND_UNKNOWN:  return "<unknown>";
+        case TYPE_KIND_STRUCT:   return "<struct>";
+        case TYPE_KIND_CUSTOM:   return "<struct>";
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
         } break;
@@ -178,6 +201,8 @@ type_to_int(const type *t)
         case TYPE_KIND_NORETURN: return 0;
         case TYPE_KIND_UNKNOWN:  return 0;
         case TYPE_KIND_PROC:     return 8;
+        case TYPE_KIND_STRUCT:   return t->sz;
+        case TYPE_KIND_CUSTOM:   return 0;
         default: {
                 forge_err_wargs("type_to_int(): unknown type `%d`", (int)t->kind);
         } break;

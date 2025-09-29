@@ -2,6 +2,8 @@
 #include "mem.h"
 #include "visitor.h"
 
+#include <forge/array.h>
+
 static expr
 init_expr_kind(expr_kind kind,
                void *(accept)(expr *, visitor *))
@@ -89,6 +91,18 @@ expr_proccall_alloc(expr       *lhs,
         e->base          = init_expr_kind(EXPR_KIND_PROCCALL, accept_expr_proccall);
         e->lhs           = lhs;
         e->args          = args;
+        return e;
+}
+
+expr_brace_init *
+expr_brace_init_alloc(token_array ids,
+                      expr_array  exprs)
+{
+        expr_brace_init *e = (expr_brace_init *)alloc(sizeof(expr_brace_init));
+        e->base            = init_expr_kind(EXPR_KIND_BRACE_INIT, accept_expr_brace_init);
+        e->ids             = ids;
+        e->exprs           = exprs;
+        e->struct_id       = NULL; // to be resolved in lexer
         return e;
 }
 
@@ -243,5 +257,17 @@ stmt_continue_alloc(void)
         s->base.kind       = STMT_KIND_CONTINUE;
         s->base.accept     = accept_stmt_continue;
         s->resolved_parent = NULL;
+        return s;
+}
+
+stmt_struct *
+stmt_struct_alloc(const token     *id,
+                  parameter_array  members)
+{
+        stmt_struct *s     = alloc(sizeof(stmt_struct));
+        s->base.kind       = STMT_KIND_STRUCT;
+        s->base.accept     = accept_stmt_struct;
+        s->id              = id;
+        s->members         = members;
         return s;
 }

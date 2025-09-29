@@ -239,6 +239,64 @@ visit_expr_mut(visitor *v, expr_mut *e)
 }
 
 static void *
+visit_expr_brace_init(visitor *v, expr_brace_init *e)
+{
+        assert(e->struct_id);
+        assert(e->ids.len == e->exprs.len);
+
+        symtbl *tbl = (symtbl *)v->context;
+
+        const char *struct_id = e->struct_id->lx;
+
+        if (!sym_exists_in_scope(tbl, struct_id)) {
+                pusherr(tbl, ((expr *)e)->loc, "struct `%s` is not defined", struct_id);
+                return NULL;
+        }
+
+        const sym *struct_sym = get_sym_from_scope(tbl, struct_id);
+        assert(struct_sym);
+
+        // Should not be needed but doesn't hurt.
+        if (struct_sym->ty->kind != TYPE_KIND_STRUCT) {
+                pusherr(tbl, ((expr *)e)->loc,
+                        "cannot use a brace initalizer on type `%s`",
+                        type_to_cstr(struct_sym->ty));
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                return NULL;
+        }
+
+        type_struct *struct_ty = (type_struct *)struct_sym->ty;
+
+        // Make sure members length matches the struct's members.
+        if (e->ids.len != struct_ty->members->len) {
+                pusherr(tbl, e->struct_id->loc,
+                        "struct `%s` requires %zu members but %zu were supplied",
+                        struct_id, struct_ty->members->len, e->ids.len);
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                return NULL;
+        }
+
+        // Verify members and their expressions.
+        for (size_t i = 0; i < e->ids.len; ++i) {
+                const char *got = e->ids.data[i]->lx;
+                const char *expected = struct_ty->members->data[i].id->lx;
+                if (strcmp(got, expected)) {
+                        pusherr(tbl, e->ids.data[i]->loc,
+                                "expected member ID `%s` but got `%s`",
+                                expected, got);
+                }
+                e->exprs.data[i]->accept(e->exprs.data[i], v);
+        }
+
+        ((expr *)e)->type = struct_sym->ty;
+
+        e->resolved_syms = (sym_array *)alloc(sizeof(sym_array));
+        *e->resolved_syms = dyn_array_empty(sym_array);
+
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -252,9 +310,42 @@ visit_stmt_let(visitor *v, stmt_let *s)
         s->e->accept(s->e, v);
 
         sym *sym = sym_alloc(tbl, s->id->lx, s->type, 0);
+
+        // Structs need a bit more information to compute.
+        if (s->type->kind == TYPE_KIND_CUSTOM
+            && s->e->type->kind == TYPE_KIND_STRUCT) {
+                free(s->type); // free temporary `custom` type.
+                s->type = s->e->type;
+
+                // No need for type checking for casting, done earlier.
+                expr_brace_init *br = (expr_brace_init *)s->e;
+                assert(br->resolved_syms); // alloc'd in sem.c:visit_expr_brace_init
+
+                const char *st_id = br->struct_id->lx;
+                assert(st_id);
+
+                free(sym);
+                sym = get_sym_from_scope(tbl, st_id);
+                //sym->stack_offset = 0;
+
+                type_struct *stty = (type_struct *)sym->ty;
+                assert(stty);
+
+                for (size_t i = 0; i < br->ids.len; ++i) {
+                        assert(stty->members->data[i].resolved);
+                        dyn_array_append(*br->resolved_syms, stty->members->data[i].resolved);
+
+                        // Make symbols align with the stack. Originally, the symbols are
+                        // just offsets from each other, but now we update it to align
+                        // with the current global stack offset.
+                        br->resolved_syms->data[i]->stack_offset += tbl->stack_offset;
+                }
+        }
+
         insert_sym_into_scope(tbl, sym);
         tbl->stack_offset += type_to_int(sym->ty);
 
+        // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {
                 tbl->proc.rsp += type_to_int(sym->ty);
         }
@@ -332,7 +423,6 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                 insert_sym_into_scope(tbl, param);
                 tbl->stack_offset += type_to_int(param->ty);
                 s->params.data[i].resolved = param;
-                // TODO: get type sizes for procedure parameters.
         }
 
         // We are currently inside of a procedure, keep track
@@ -477,7 +567,7 @@ visit_stmt_break(visitor *v, stmt_break *s)
         return NULL;
 }
 
-void *
+static void *
 visit_stmt_continue(visitor *v, stmt_continue *s)
 {
         NOOP(v);
@@ -494,6 +584,47 @@ visit_stmt_continue(visitor *v, stmt_continue *s)
         return NULL;
 }
 
+static void *
+visit_stmt_struct(visitor *v, stmt_struct *s)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        // Check if this struct already exists.
+        if (sym_exists_in_scope(tbl, s->id->lx)) {
+                pusherr(tbl, s->id->loc, "struct `%s` is already defined", s->id->lx);
+        }
+
+        str_array member_names = dyn_array_empty(str_array);
+        size_t sz = 0;
+        for (size_t i = 0; i < s->members.len; ++i) {
+                const parameter *p = &s->members.data[i];
+
+                for (size_t j = 0; j < member_names.len; ++j) {
+                        if (!strcmp(member_names.data[j], p->id->lx)) {
+                                pusherr(tbl, p->id->loc, "the member of struct `%s` is already defined", p->id->lx);
+                        }
+                }
+
+                sz += type_to_int(p->type);
+                s->members.data[i].resolved = sym_alloc(tbl, p->id->lx, p->type, 0);
+                p->resolved->stack_offset = sz;
+
+                dyn_array_append(member_names, p->id->lx);
+        }
+
+        dyn_array_free(member_names);
+
+        if (sz == 0) {
+                pusherr(tbl, s->id->loc, "struct `%s` has no members", s->id->lx);
+        }
+
+        type_struct *st_ty = type_struct_alloc(&s->members, sz);
+        sym *sym = sym_alloc(tbl, s->id->lx, (type *)st_ty, 0);
+        insert_sym_into_scope(tbl, sym);
+
+        return NULL;
+}
+
 static visitor *
 sem_visitor_alloc(symtbl *tbl)
 {
@@ -505,6 +636,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_string_literal,
                 visit_expr_proccall,
                 visit_expr_mut,
+                visit_expr_brace_init,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,
@@ -516,7 +648,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_while,
                 visit_stmt_for,
                 visit_stmt_break,
-                visit_stmt_continue
+                visit_stmt_continue,
+                visit_stmt_struct
         );
 }
 

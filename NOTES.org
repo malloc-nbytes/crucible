@@ -5,6 +5,10 @@
 - [X] for loops
 - [X] break statements
 - [X] continue statements
+- [ ] structs
+  - [ ] statement =struct P {}=
+  - [ ] literals =(obj) {.x = 1, .y = 2}=
+- [ ] more mutation operators (+=, -=, etc).
 - [ ] casting
 - [ ] 'address of' operator =&var=
 - [ ] 'dereference operator =*var=
@@ -12,9 +16,6 @@
   - [ ] indexing operator =[i]=
   - [ ] literals ={1, 2, 3}=
   - [ ] pointer arithmetic =ar + i=
-- [ ] structs
-  - [ ] statement =struct P {}=
-  - [ ] literals =(obj) {.x = 1, .y = 2}=
 - [ ] enums
 - [ ] imports
 - [ ] move build system to autotools

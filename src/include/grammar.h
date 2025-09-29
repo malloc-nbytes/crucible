@@ -8,7 +8,7 @@
 #include <forge/array.h>
 
 typedef struct sym sym;
-
+typedef struct sym_array sym_array;
 typedef struct visitor visitor;
 
 typedef enum {
@@ -20,6 +20,7 @@ typedef enum {
         EXPR_KIND_MUT,
         EXPR_KIND_UNARY,
         EXPR_KIND_PROCCALL,
+        EXPR_KIND_BRACE_INIT,
 } expr_kind;
 
 typedef enum {
@@ -35,6 +36,7 @@ typedef enum {
         STMT_KIND_FOR,
         STMT_KIND_BREAK,
         STMT_KIND_CONTINUE,
+        STMT_KIND_STRUCT,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -104,6 +106,16 @@ typedef struct {
         expr *lhs;
         expr_array args;
 } expr_proccall;
+
+typedef struct {
+        expr base;
+        token_array ids;        // assert(ids.len == exprs.len)
+        expr_array exprs;       // assert(ids.len == exprs.len)
+        const token *struct_id; // to be resolved in parser
+
+        sym_array *resolved_syms; // assert(resolved_syms.len == ids.len == exprs.len)
+                                  // to be resolved in semantic analysis
+} expr_brace_init;
 
 ///////////////////////////////////////////
 // STATEMENTS
@@ -218,6 +230,12 @@ typedef struct {
         const void *resolved_parent;
 } stmt_continue;
 
+typedef struct {
+        stmt base;
+        const token *id;
+        parameter_array members;
+} stmt_struct;
+
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
 expr_string_literal *expr_string_literal_alloc(const token *s);
@@ -225,6 +243,7 @@ expr_mut *expr_mut_alloc(expr *lhs, const token *op, expr *rhs);
 expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_un *expr_un_alloc(expr *operand, const token *op);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
+expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
 
 stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);
@@ -250,5 +269,6 @@ stmt_while *stmt_while_alloc(expr *e, stmt *body);
 stmt_for *stmt_for_alloc(stmt *init, expr *e, expr *after, stmt *body);
 stmt_break *stmt_break_alloc(void);
 stmt_continue *stmt_continue_alloc(void);
+stmt_struct *stmt_struct_alloc(const token *id, parameter_array members);
 
 #endif // GRAMMAR_H_INCLUDED

@@ -302,7 +302,7 @@ szspec(int sz)
         case 4: return "DWORD";
         case 2: return "WORD";
         case 1: return "BYTE";
-        default: forge_err_wargs("get_size_specifier(): cannot get size specfifier for size %d", sz);
+        default: forge_err_wargs("szspec(): cannot get size specfifier for size %d", sz);
         }
         return NULL; // unreachable
 }
@@ -600,18 +600,41 @@ visit_expr_mut(visitor *v, expr_mut *e)
 }
 
 static void *
+visit_expr_brace_init(visitor *v, expr_brace_init *e)
+{
+        asm_context *ctx = (asm_context *)v->context;
+
+        for (size_t i = 0; i < e->resolved_syms->len; ++i) {
+                //printf("%s: %d\n", e->resolved_syms->data[i]->id, e->resolved_syms->data[i]->stack_offset);
+                const sym *sym = e->resolved_syms->data[i];
+                const char *spec = szspec(sym->ty->sz);
+                char *offset = int_to_cstr(sym->stack_offset);
+                char *value = e->exprs.data[i]->accept(e->exprs.data[i], v);
+
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", value, NULL), 1);
+
+                free_reg_literal(value);
+                free(offset);
+        }
+
+        return "rax";
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
 
         char *value = (char *)s->e->accept(s->e, v);
 
-        int offset = s->resolved->stack_offset;
-        char *offset_s = int_to_cstr(offset);
-        const char *spec = szspec(s->e->type->sz);
+        if (s->resolved->ty->kind != TYPE_KIND_STRUCT) {
+                int offset = s->resolved->stack_offset;
+                char *offset_s = int_to_cstr(offset);
+                const char *spec = szspec(s->e->type->sz);
 
-        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset_s, "], ", value, NULL), 1);
-        free(offset_s);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset_s, "], ", value, NULL), 1);
+                free(offset_s);
+        }
 
         free_reg_literal(value);
 
@@ -855,6 +878,13 @@ visit_stmt_continue(visitor *v, stmt_continue *s)
         return NULL;
 }
 
+static void *
+visit_stmt_struct(visitor *v, stmt_struct *s)
+{
+        NOOP(v, s);
+        return NULL;
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -866,6 +896,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_string_literal,
                 visit_expr_proccall,
                 visit_expr_mut,
+                visit_expr_brace_init,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,
@@ -877,7 +908,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_while,
                 visit_stmt_for,
                 visit_stmt_break,
-                visit_stmt_continue
+                visit_stmt_continue,
+                visit_stmt_struct
         );
 }
 

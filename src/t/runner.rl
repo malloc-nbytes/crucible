@@ -98,7 +98,7 @@ fn compile() {
     let files = sys::get_all_files_by_ext(".", "cr");
 
     foreach f in files {
-        $f"../cruc -s {f} -o {f}.bin --asm";
+        $f"../cruc {f} -o {f}.bin --asm";
     }
 }
 
@@ -126,8 +126,8 @@ fn run_tests(config) {
         println();
     }
 
-    ok(format("Passed: ", len(passed)), true);
-    bad(format("Failed: ", len(failed)), true);
+    ok(format(Colors::Te.Invert, "Passed: ", len(passed)), true);
+    bad(format(Colors::Te.Invert, "Failed: ", len(failed)), true);
 }
 
 let config = Config();
