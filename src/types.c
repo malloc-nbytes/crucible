@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <string.h>
 
 type_i32 *
 type_i32_alloc(void)
@@ -145,8 +146,8 @@ type_to_cstr(const type *t)
         case TYPE_KIND_VOID:     return "void";
         case TYPE_KIND_NORETURN: return "!";
         case TYPE_KIND_UNKNOWN:  return "<unknown>";
-        case TYPE_KIND_STRUCT:   return "<struct>";
-        case TYPE_KIND_CUSTOM:   return "<struct>";
+        case TYPE_KIND_STRUCT:   return ((type_struct *)t)->id->lx;
+        case TYPE_KIND_CUSTOM:   return "<struct [unresolved]>";
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
         } break;
@@ -179,6 +180,10 @@ type_is_compat(type **t1, type **t2)
         } else if ((*t1)->kind < TYPE_KIND_NUMBER
                    && (*t2)->kind == TYPE_KIND_NUMBER) {
                 (*t2) = (*t1);
+        } else if ((*t1)->kind == TYPE_KIND_STRUCT && (*t2)->kind == TYPE_KIND_STRUCT) {
+                const type_struct *st1 = (type_struct *)(*t1);
+                const type_struct *st2 = (type_struct *)(*t2);
+                return !strcmp(st1->id->lx, st2->id->lx);
         }
 
         return (*t1)->kind == (*t2)->kind;

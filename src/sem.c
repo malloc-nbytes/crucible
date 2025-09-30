@@ -139,7 +139,6 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
                 e->resolved = sym;
         }
 
-
         return NULL;
 }
 
@@ -367,15 +366,13 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 const char *st_id = br->struct_id->lx;
                 assert(st_id);
 
-                //free(sym);
-                //sym = get_sym_from_scope(tbl, st_id);
                 sym->ty = get_sym_from_scope(tbl, st_id)->ty;
-                /* struct sym *stsym = get_sym_from_scope(tbl, st_id); */
-                /* sym->ty = type_struct_alloc(((type_struct *)stsym->ty)->members, 0); */
 
                 type_struct *stty = (type_struct *)sym->ty;
                 assert(stty);
 
+                // Append resolved symbols and align each symbol with the
+                // procedure's stack offset (for RSP).
                 for (size_t i = 0; i < br->ids.len; ++i) {
                         assert(stty->members->data[i].resolved);
                         dyn_array_append(*br->resolved_syms, stty->members->data[i].resolved);
@@ -642,12 +639,19 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
         str_array member_names = dyn_array_empty(str_array);
         size_t sz = 0;
         for (size_t i = 0; i < s->members.len; ++i) {
-                const parameter *p = &s->members.data[i];
+                parameter *p = &s->members.data[i];
 
                 for (size_t j = 0; j < member_names.len; ++j) {
                         if (!strcmp(member_names.data[j], p->id->lx)) {
                                 pusherr(tbl, p->id->loc, "the member of struct `%s` is already defined", p->id->lx);
                         }
+                }
+
+                // TODO: better error handling
+                if (p->type->kind == TYPE_KIND_CUSTOM) {
+                        type_custom *cust = (type_custom *)p->type;
+                        p->type = get_sym_from_scope(tbl, cust->struct_id->lx)->ty;
+                        assert(p->type);
                 }
 
                 sz += type_to_int(p->type);

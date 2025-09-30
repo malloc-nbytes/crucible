@@ -298,7 +298,7 @@ lexer_peek(const lexer *l,
 {
         if (!l->hd) return NULL;
         token *it = l->hd;
-        for (size_t i = 0; it && i < peek; ++i);
+        for (size_t i = 0; it && i < peek; ++i, it = it->next);
         return it;
 }
 

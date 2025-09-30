@@ -605,7 +605,6 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
         asm_context *ctx = (asm_context *)v->context;
 
         for (size_t i = 0; i < e->resolved_syms->len; ++i) {
-                //printf("%s: %d\n", e->resolved_syms->data[i]->id, e->resolved_syms->data[i]->stack_offset);
                 const sym *sym = e->resolved_syms->data[i];
                 const char *spec = szspec(sym->ty->sz);
                 char *offset = int_to_cstr(sym->stack_offset);

@@ -5,7 +5,7 @@ struct F {
 }
 
 export proc _start(void): ! {
-    let f: F = {
+    let f: F = (F) {
         .y = 0,
         .x = 5,
         .s = "foo",

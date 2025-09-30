@@ -134,7 +134,7 @@ parse_bracket_ids_and_types(parser_context *ctx)
 }
 
 static expr_brace_init *
-parse_brace_initializer(parser_context *ctx)
+parse_brace_initializer(parser_context *ctx, const token *id)
 {
         (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
 
@@ -157,7 +157,7 @@ parse_brace_initializer(parser_context *ctx)
 
         (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
 
-        return expr_brace_init_alloc(ids, exprs);
+        return expr_brace_init_alloc(id, ids, exprs);
 }
 
 expr *
@@ -190,7 +190,15 @@ parse_primary_expr(parser_context *ctx)
                                 // function call
                                 expr_array args = parse_comma_sep_exprs(ctx);
                                 left = (expr *)expr_proccall_alloc(left, args);
+                        } else if (LSP(ctx->l, 1)->ty == TOKEN_TYPE_IDENTIFIER
+                                   && LSP(ctx->l, 2)->ty == TOKEN_TYPE_RIGHT_PARENTHESIS) {
+                                lexer_discard(ctx->l); // (
+                                token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+                                lexer_discard(ctx->l); // )
+                                left = (expr *)parse_brace_initializer(ctx, id);
+                                left->loc = hd->loc;
                         } else {
+                                assert(0);
                                 // Math expression
                                 lexer_discard(ctx->l); // (
                                 left = parse_expr(ctx);
@@ -198,10 +206,10 @@ parse_primary_expr(parser_context *ctx)
                         }
                         left->loc = hd->loc;
                 } break;
-                case TOKEN_TYPE_LEFT_CURLY: {
-                        left = (expr *)parse_brace_initializer(ctx);
-                        left->loc = hd->loc;
-                } break;
+                /* case TOKEN_TYPE_LEFT_CURLY: { */
+                /*         left = (expr *)parse_brace_initializer(ctx); */
+                /*         left->loc = hd->loc; */
+                /* } break; */
                 default: return left;
                 }
         }
@@ -355,7 +363,8 @@ parse_stmt_let(parser_context *ctx)
         // Structs need extra information to be filled out.
         if (ty->kind == TYPE_KIND_CUSTOM
             && e->kind == EXPR_KIND_BRACE_INIT) {
-                ((expr_brace_init *)e)->struct_id = ((type_custom *)ty)->struct_id;
+                /* ((expr_brace_init *)e)->struct_id = ((type_custom *)ty)->struct_id; */
+                assert(((expr_brace_init *)e)->struct_id);
         }
 
         return stmt_let_alloc(id, ty, e);

@@ -9,6 +9,7 @@
   - [X] statement =struct P {}=
   - [X] literals =(obj) {.x = 1, .y = 2}=
   - [X] member access
+- [ ] imports
 - [ ] more mutation operators (+=, -=, etc).
 - [ ] casting
 - [ ] 'address of' operator =&var=
@@ -18,7 +19,6 @@
   - [ ] literals ={1, 2, 3}=
   - [ ] pointer arithmetic =ar + i=
 - [ ] enums
-- [ ] imports
 - [ ] move build system to autotools
 
 * Bugs
