@@ -4,6 +4,10 @@
 
 #include <forge/array.h>
 
+/////////////////////
+// EXPRESSIONS
+/////////////////////
+
 static expr
 init_expr_kind(expr_kind kind,
                void *(accept)(expr *, visitor *))
@@ -105,6 +109,20 @@ expr_brace_init_alloc(token_array ids,
         e->struct_id       = NULL; // to be resolved in lexer
         return e;
 }
+
+expr_member *
+expr_member_alloc(expr *lhs, const token *member)
+{
+        expr_member *e   = (expr_member *)alloc(sizeof(expr_member));
+        e->base          = init_expr_kind(EXPR_KIND_MEMBER, accept_expr_member);
+        e->lhs           = lhs;
+        e->member        = member;
+        return e;
+}
+
+/////////////////////
+// STATEMENTS
+/////////////////////
 
 stmt_let *
 stmt_let_alloc(const token *id,

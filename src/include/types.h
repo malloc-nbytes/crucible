@@ -73,6 +73,7 @@ typedef struct {
 
 typedef struct {
         type base;
+        const token *id;
         const parameter_array *members;
 } type_struct;
 
@@ -80,6 +81,7 @@ typedef struct {
         type base;
         const token *struct_id;
 } type_custom;
+
 typedef struct { type base; } type_unknown;
 
 type_i32 *type_i32_alloc(void);
@@ -90,7 +92,7 @@ type_number *type_number_alloc(void);
 type_noreturn *type_noreturn_alloc(void);
 type_ptr *type_ptr_alloc(type *to);
 type_void *type_void_alloc(void);
-type_struct *type_struct_alloc(const parameter_array *members, size_t sz);
+type_struct *type_struct_alloc(const parameter_array *members, const token *id, size_t sz);
 type_custom *type_custom_alloc(const token *struct_id);
 type_unknown *type_unknown_alloc(void);
 

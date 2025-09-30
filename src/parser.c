@@ -212,7 +212,15 @@ parse_primary_expr(parser_context *ctx)
 expr *
 parse_member_expr(parser_context *ctx)
 {
-        return parse_primary_expr(ctx);
+        expr *lhs = parse_primary_expr(ctx);
+        token *cur = lexer_peek(ctx->l, 0);
+        while (cur && cur->ty == TOKEN_TYPE_PERIOD) {
+                lexer_discard(ctx->l); // .
+                const token *member = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+                lhs = (expr *)expr_member_alloc(lhs, member);
+                cur = lexer_peek(ctx->l, 0);
+        }
+        return lhs;
 }
 
 expr *

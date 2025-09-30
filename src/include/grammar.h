@@ -21,6 +21,7 @@ typedef enum {
         EXPR_KIND_UNARY,
         EXPR_KIND_PROCCALL,
         EXPR_KIND_BRACE_INIT,
+        EXPR_KIND_MEMBER,
 } expr_kind;
 
 typedef enum {
@@ -117,6 +118,14 @@ typedef struct {
                                   // to be resolved in semantic analysis
 } expr_brace_init;
 
+typedef struct {
+        expr base;
+        expr *lhs;
+        const token *member;
+
+        sym *resolved_member; // to be resolved in semantic analysis
+} expr_member;
+
 ///////////////////////////////////////////
 // STATEMENTS
 ///////////////////////////////////////////
@@ -152,7 +161,7 @@ typedef struct {
         const token *id;
         type *type;
 
-        sym *resolved;
+        sym *resolved; // resolved in semantic analysis
 } parameter;
 
 DYN_ARRAY_TYPE(parameter, parameter_array);
@@ -244,6 +253,7 @@ expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_un *expr_un_alloc(expr *operand, const token *op);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
 expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
+expr_member *expr_member_alloc(expr *lhs, const token *member);
 
 stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);

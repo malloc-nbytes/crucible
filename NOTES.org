@@ -1,13 +1,14 @@
-* TODO [42%]
+* TODO [46%]
 - [X] while loops
 - [X] mut statements
 - [X] convert =type_to_int(type)= to =type->sz=
 - [X] for loops
 - [X] break statements
 - [X] continue statements
-- [ ] structs
-  - [ ] statement =struct P {}=
-  - [ ] literals =(obj) {.x = 1, .y = 2}=
+- [X] structs
+  - [X] statement =struct P {}=
+  - [X] literals =(obj) {.x = 1, .y = 2}=
+  - [X] member access
 - [ ] more mutation operators (+=, -=, etc).
 - [ ] casting
 - [ ] 'address of' operator =&var=

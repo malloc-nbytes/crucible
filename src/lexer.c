@@ -344,8 +344,8 @@ lexer_create(const char *src,
                 // TODO: comments
                 if (ch == '-' && src[i+1] == '-') {
                         size_t len = consume_while(src+i, not_eol);
-                        i += len+1;
-                        c += len+1;
+                        i += len;
+                        c += len;
                 } else if (ch == ' ') {
                         ++i, ++c;
                 } else if (ch == '\n') {

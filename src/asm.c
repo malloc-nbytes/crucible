@@ -621,6 +621,23 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
 }
 
 static void *
+visit_expr_member(visitor *v, expr_member *e)
+{
+        asm_context *ctx = (asm_context *)v->context;
+
+        const char *spec   = szspec(e->resolved_member->ty->sz);
+        char       *offset = int_to_cstr(e->resolved_member->stack_offset);
+        int         regi   = alloc_reg(e->resolved_member->ty->sz);
+        char       *reg    = g_regs[regi];
+
+        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", [rbp-", offset, "]", NULL), 1);
+
+        free(offset);
+
+        return reg;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -897,6 +914,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_proccall,
                 visit_expr_mut,
                 visit_expr_brace_init,
+                visit_expr_member,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,

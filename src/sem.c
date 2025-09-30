@@ -280,18 +280,61 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
         for (size_t i = 0; i < e->ids.len; ++i) {
                 const char *got = e->ids.data[i]->lx;
                 const char *expected = struct_ty->members->data[i].id->lx;
+
                 if (strcmp(got, expected)) {
                         pusherr(tbl, e->ids.data[i]->loc,
                                 "expected member ID `%s` but got `%s`",
                                 expected, got);
                 }
+
                 e->exprs.data[i]->accept(e->exprs.data[i], v);
+
+                if (!type_is_compat(&e->exprs.data[i]->type, &struct_ty->members->data[i].type)) {
+                        pusherr(tbl, e->exprs.data[i]->loc, "expected type `%s` but got type `%s`",
+                                type_to_cstr(struct_ty->members->data[i].type),
+                                type_to_cstr(e->exprs.data[i]->type));
+                }
         }
 
         ((expr *)e)->type = struct_sym->ty;
 
         e->resolved_syms = (sym_array *)alloc(sizeof(sym_array));
         *e->resolved_syms = dyn_array_empty(sym_array);
+
+        return NULL;
+}
+
+static void *
+visit_expr_member(visitor *v, expr_member *e)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        e->lhs->accept(e->lhs, v);
+
+        if (e->lhs->type->kind != TYPE_KIND_STRUCT) {
+                pusherr(tbl, e->lhs->loc,
+                        "the left-hand-side expression evaluates to type `%s`, but type `<struct>` is needed",
+                        type_to_cstr(e->lhs->type));
+                return NULL;
+        }
+
+        const type_struct *stty = (type_struct *)e->lhs->type;
+
+        sym *member_sym = NULL;
+        for (size_t i = 0; i < stty->members->len; ++i) {
+                if (!strcmp(stty->members->data[i].id->lx, e->member->lx)) {
+                        member_sym = stty->members->data[i].resolved;
+                        break;
+                }
+        }
+        if (!member_sym) {
+                pusherr(tbl, e->member->loc, "struct `%s` has no member named `%s`",
+                        stty->id->lx, e->member->lx);
+                return NULL;
+        }
+
+        ((expr *)e)->type = member_sym->ty;
+        e->resolved_member = member_sym;
 
         return NULL;
 }
@@ -324,9 +367,11 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 const char *st_id = br->struct_id->lx;
                 assert(st_id);
 
-                free(sym);
-                sym = get_sym_from_scope(tbl, st_id);
-                //sym->stack_offset = 0;
+                //free(sym);
+                //sym = get_sym_from_scope(tbl, st_id);
+                sym->ty = get_sym_from_scope(tbl, st_id)->ty;
+                /* struct sym *stsym = get_sym_from_scope(tbl, st_id); */
+                /* sym->ty = type_struct_alloc(((type_struct *)stsym->ty)->members, 0); */
 
                 type_struct *stty = (type_struct *)sym->ty;
                 assert(stty);
@@ -618,7 +663,7 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
                 pusherr(tbl, s->id->loc, "struct `%s` has no members", s->id->lx);
         }
 
-        type_struct *st_ty = type_struct_alloc(&s->members, sz);
+        type_struct *st_ty = type_struct_alloc(&s->members, s->id, sz);
         sym *sym = sym_alloc(tbl, s->id->lx, (type *)st_ty, 0);
         insert_sym_into_scope(tbl, sym);
 
@@ -637,6 +682,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_proccall,
                 visit_expr_mut,
                 visit_expr_brace_init,
+                visit_expr_member,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,
