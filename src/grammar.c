@@ -106,6 +106,17 @@ expr_brace_init_alloc(token_array ids,
         return e;
 }
 
+expr_namespace *
+expr_namespace_alloc(const token *namespace,
+                     const token *id)
+{
+        expr_namespace *e = (expr_namespace *)alloc(sizeof(expr_namespace));
+        e->base           = init_expr_kind(EXPR_KIND_PROCCALL, NULL);
+        e->namespace      = namespace;
+        e->id             = id;
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                type        *type,
@@ -269,5 +280,26 @@ stmt_struct_alloc(const token     *id,
         s->base.accept     = accept_stmt_struct;
         s->id              = id;
         s->members         = members;
+        return s;
+}
+
+stmt_module *
+stmt_module_alloc(const token *modname)
+{
+        stmt_module *s     = alloc(sizeof(stmt_module));
+        s->base.kind       = STMT_KIND_MODULE;
+        s->base.accept     = accept_stmt_module;
+        s->modname         = modname;
+        return s;
+}
+
+stmt_import *
+stmt_import_alloc(char *filepath, int local)
+{
+        stmt_import *s     = alloc(sizeof(stmt_import));
+        s->base.kind       = STMT_KIND_IMPORT;
+        s->base.accept     = accept_stmt_import;
+        s->filepath        = filepath;
+        s->local           = local;
         return s;
 }

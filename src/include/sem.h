@@ -16,7 +16,9 @@ typedef struct sym {
 
 DYN_ARRAY_TYPE(sym *, sym_array);
 
-typedef struct {
+typedef struct symtbl {
+        const char *modname;
+
         smap_array scope;
 
         struct {
@@ -29,6 +31,11 @@ typedef struct {
         int stack_offset;
 
         void *loop;
+
+        struct {
+                struct symtbl *data;
+                size_t len, cap;
+        } imports;
 } symtbl;
 
 symtbl sem_analysis(program *p);

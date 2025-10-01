@@ -5,6 +5,7 @@
 #include <forge/array.h>
 #include <forge/utils.h>
 #include <forge/err.h>
+#include <forge/str.h>
 
 #include <assert.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 typedef struct {
         lexer *l;
         int in_global;
+        const char *module;
 } parser_context;
 
 static stmt *parse_stmt(parser_context *ctx);
@@ -26,6 +28,19 @@ expect(parser_context *ctx, token_type ty)
         if (t->ty != ty) {
                 forge_err_wargs("%sexpected token of type `%s` but got `%s`",
                                 loc_err(t->loc), token_type_to_cstr(ty), t->lx);
+        }
+        return t;
+}
+
+token *
+expect_or(parser_context *ctx,
+          token_type      t0,
+          token_type      t1)
+{
+        token *t = lexer_next(ctx->l);
+        if (t->ty != t0 && t->ty != t1) {
+                forge_err_wargs("%sexpected token of type `%s` or `%s` but got `%s`",
+                                loc_err(t->loc), token_type_to_cstr(t0), token_type_to_cstr(t1), t->lx);
         }
         return t;
 }
@@ -579,6 +594,47 @@ parse_stmt_struct(parser_context *ctx)
         return stmt_struct_alloc(id, members);
 }
 
+static stmt_module *
+parse_stmt_module(parser_context *ctx)
+{
+        (void)expectkw(ctx, KWD_MODULE);
+        const token *modname = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        ctx->module = strdup(modname->lx);
+        return stmt_module_alloc(modname);
+}
+
+static stmt_import *
+parse_stmt_import(parser_context *ctx)
+{
+        char *filepath = NULL;
+        int local = 0;
+
+        lexer_discard(ctx->l); // import
+
+        token *path = expect_or(ctx, TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_STRING_LITERAL);
+
+        if (path->ty == TOKEN_TYPE_IDENTIFIER) {
+                forge_str buf = forge_str_from(path->lx);
+
+                while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_SEMICOLON) {
+                        token *next = expect_or(ctx, TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_PERIOD);
+                        forge_str_concat(&buf, next->ty == TOKEN_TYPE_PERIOD ? "/" : next->lx);
+                }
+
+                forge_str_concat(&buf, ".cr");
+
+                filepath = buf.data;
+        } else {
+                local = 1;
+                filepath = strdup(path->lx);
+        }
+
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+
+        return stmt_import_alloc(filepath, local);
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -606,6 +662,10 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_continue(ctx);
         } else if (!strcmp(hd->lx, KWD_STRUCT)) {
                 return (stmt *)parse_stmt_struct(ctx);
+        } else if (!strcmp(hd->lx, KWD_MODULE)) {
+                return (stmt *)parse_stmt_module(ctx);
+        } else if (!strcmp(hd->lx, KWD_IMPORT)) {
+                return (stmt *)parse_stmt_import(ctx);
         }
 
         assert(0 && "todo");
@@ -639,15 +699,23 @@ parser_create_program(lexer *l)
         parser_context ctx = (parser_context) {
                 .l = l,
                 .in_global = 1,
+                .module = NULL,
         };
 
         program p = (program) {
                 .stmts = dyn_array_empty(stmt_array),
+                .modname = NULL,
         };
 
         while (LSP(ctx.l, 0)->ty != TOKEN_TYPE_EOF) {
                 dyn_array_append(p.stmts, parse_stmt(&ctx));
         }
+
+        if (!ctx.module) {
+                forge_err("a module name is required in each file");
+        }
+
+        p.modname = ctx.module;
 
         return p;
 }

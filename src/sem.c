@@ -6,6 +6,7 @@
 #include <forge/array.h>
 #include <forge/utils.h>
 #include <forge/err.h>
+#include <forge/io.h>
 
 #include <assert.h>
 #include <string.h>
@@ -625,6 +626,28 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
         return NULL;
 }
 
+static void *
+visit_stmt_module(visitor *v, stmt_module *s)
+{
+        NOOP(v, s);
+        return NULL;
+}
+
+static void *
+visit_stmt_import(visitor *v, stmt_import *s)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        char *src = forge_io_read_file_to_cstr(s->filepath);
+        lexer l = lexer_create(src, s->filepath);
+        program p = parser_create_program(&l);
+        symtbl import_tbl = sem_analysis(&p);
+
+        dyn_array_append(tbl->imports, import_tbl);
+
+        return NULL;
+}
+
 static visitor *
 sem_visitor_alloc(symtbl *tbl)
 {
@@ -649,7 +672,9 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_for,
                 visit_stmt_break,
                 visit_stmt_continue,
-                visit_stmt_struct
+                visit_stmt_struct,
+                visit_stmt_module,
+                visit_stmt_import
         );
 }
 
@@ -657,6 +682,7 @@ symtbl
 sem_analysis(program *p)
 {
         symtbl tbl = (symtbl) {
+                .modname = p->modname,
                 .scope = dyn_array_empty(smap_array),
                 .proc = {
                         .type = NULL,
@@ -665,6 +691,11 @@ sem_analysis(program *p)
                 .errs = dyn_array_empty(str_array),
                 .stack_offset = 0,
                 .loop = NULL,
+                .imports = {
+                        .data = NULL,
+                        .len = 0,
+                        .cap = 0,
+                },
         };
 
         // Need to immediately add a scope for global scope.
@@ -674,6 +705,10 @@ sem_analysis(program *p)
 
         for (size_t i = 0; i < p->stmts.len; ++i) {
                 p->stmts.data[i]->accept(p->stmts.data[i], v);
+        }
+
+        if (tbl.imports.len > 0) {
+                printf("%s\n", tbl.imports.data[0].modname);
         }
 
         return tbl;

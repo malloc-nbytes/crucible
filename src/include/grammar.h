@@ -21,6 +21,7 @@ typedef enum {
         EXPR_KIND_UNARY,
         EXPR_KIND_PROCCALL,
         EXPR_KIND_BRACE_INIT,
+        EXPR_KIND_NAMESPACE,
 } expr_kind;
 
 typedef enum {
@@ -37,6 +38,8 @@ typedef enum {
         STMT_KIND_BREAK,
         STMT_KIND_CONTINUE,
         STMT_KIND_STRUCT,
+        STMT_KIND_MODULE,
+        STMT_KIND_IMPORT,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -116,6 +119,12 @@ typedef struct {
         sym_array *resolved_syms; // assert(resolved_syms.len == ids.len == exprs.len)
                                   // to be resolved in semantic analysis
 } expr_brace_init;
+
+typedef struct {
+        expr base;
+        const token *namespace;
+        const token *id;
+} expr_namespace;
 
 ///////////////////////////////////////////
 // STATEMENTS
@@ -236,6 +245,17 @@ typedef struct {
         parameter_array members;
 } stmt_struct;
 
+typedef struct {
+        stmt base;
+        const token *modname;
+} stmt_module;
+
+typedef struct {
+        stmt base;
+        char *filepath;
+        int local;
+} stmt_import;
+
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
 expr_string_literal *expr_string_literal_alloc(const token *s);
@@ -244,6 +264,7 @@ expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_un *expr_un_alloc(expr *operand, const token *op);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
 expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
+expr_namespace *expr_namespace_alloc(const token *namespace, const token *id);
 
 stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);
@@ -270,5 +291,7 @@ stmt_for *stmt_for_alloc(stmt *init, expr *e, expr *after, stmt *body);
 stmt_break *stmt_break_alloc(void);
 stmt_continue *stmt_continue_alloc(void);
 stmt_struct *stmt_struct_alloc(const token *id, parameter_array members);
+stmt_module *stmt_module_alloc(const token *modname);
+stmt_import *stmt_import_alloc(char *filepath, int local);
 
 #endif // GRAMMAR_H_INCLUDED

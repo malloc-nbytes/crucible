@@ -24,6 +24,8 @@ typedef void *(*visit_stmt_for_sig)(visitor *v, stmt_for *s);
 typedef void *(*visit_stmt_break_sig)(visitor *v, stmt_break *s);
 typedef void *(*visit_stmt_continue_sig)(visitor *v, stmt_continue *s);
 typedef void *(*visit_stmt_struct_sig)(visitor *v, stmt_struct *s);
+typedef void *(*visit_stmt_module_sig)(visitor *v, stmt_module *s);
+typedef void *(*visit_stmt_import_sig)(visitor *v, stmt_import *s);
 
 typedef struct visitor {
         void *context;
@@ -49,6 +51,8 @@ typedef struct visitor {
         visit_stmt_break_sig           visit_stmt_break;
         visit_stmt_continue_sig        visit_stmt_continue;
         visit_stmt_struct_sig          visit_stmt_struct;
+        visit_stmt_module_sig          visit_stmt_module;
+        visit_stmt_import_sig          visit_stmt_import;
 } visitor;
 
 visitor *visitor_alloc(
@@ -72,7 +76,9 @@ visitor *visitor_alloc(
         visit_stmt_for_sig             visit_stmt_for,
         visit_stmt_break_sig           visit_stmt_break,
         visit_stmt_continue_sig        visit_stmt_continue,
-        visit_stmt_struct_sig          visit_stmt_struct
+        visit_stmt_struct_sig          visit_stmt_struct,
+        visit_stmt_module_sig          visit_stmt_module,
+        visit_stmt_import_sig          visit_stmt_import
 );
 
 void *accept_expr_bin(expr *e, visitor *v);
@@ -96,5 +102,7 @@ void *accept_stmt_for(stmt *s, visitor *v);
 void *accept_stmt_break(stmt *s, visitor *v);
 void *accept_stmt_continue(stmt *s, visitor *v);
 void *accept_stmt_struct(stmt *s, visitor *v);
+void *accept_stmt_module(stmt *s, visitor *v);
+void *accept_stmt_import(stmt *s, visitor *v);
 
 #endif // VISITOR_H_INCLUDED

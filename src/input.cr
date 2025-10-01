@@ -1,18 +1,9 @@
-extern proc printf(fmt: u8*, ...): i32;
+module main;
 
-struct Point {
-    x: i32,
-    s: u8*,
-    y: i32,
-}
+import "other.cr";
 
 export proc _start(void): ! {
-
-    let p: Point = {
-        .x = 1,
-        .s = "foo",
-        .y = 2,
-    };
+    other::sum(1, 2);
 
     exit 0;
 }

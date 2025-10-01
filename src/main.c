@@ -116,13 +116,11 @@ main(int argc, char **argv)
                 g_config.outname = "a.out";
         }
 
-        char *src = forge_io_read_file_to_cstr(g_config.filepath);
+        char    *src = forge_io_read_file_to_cstr(g_config.filepath);
+        lexer    l   = lexer_create(src, g_config.filepath);
+        program  p   = parser_create_program(&l);
+        symtbl   tbl = sem_analysis(&p);
 
-        lexer l = lexer_create(src, g_config.filepath);
-
-        program p = parser_create_program(&l);
-
-        symtbl tbl = sem_analysis(&p);
         if (tbl.errs.len > 0) {
                 for (size_t i = 0; i < tbl.errs.len; ++i) {
                         fprintf(stderr, "%s\n", tbl.errs.data[i]);
@@ -131,7 +129,6 @@ main(int argc, char **argv)
         }
 
         asm_gen(&p, &tbl);
-
         assemble();
 
         return 0;

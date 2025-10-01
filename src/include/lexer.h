@@ -38,6 +38,7 @@ typedef enum {
         TOKEN_TYPE_SEMICOLON,
         TOKEN_TYPE_COLON,
         TOKEN_TYPE_ELLIPSIS,
+        TOKEN_TYPE_DOUBLE_COLON,
 
         TOKEN_TYPE_OTHER_LEN,
 

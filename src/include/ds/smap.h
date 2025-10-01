@@ -5,6 +5,8 @@
 
 #include <stddef.h>
 
+#define smap(_0) smap
+
 #define SMAP_DEFAULT_TBL_CAPACITY 256
 
 typedef unsigned (*smap_hash_sig)(const char *);

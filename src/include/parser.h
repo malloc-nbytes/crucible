@@ -7,6 +7,7 @@
 
 typedef struct {
         stmt_array stmts;
+        const char *modname;
 } program;
 
 program parser_create_program(lexer *l);
