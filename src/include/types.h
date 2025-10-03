@@ -66,9 +66,11 @@ typedef struct { type base; } type_noreturn;
 
 typedef struct {
         type base;
+        const char *id;
         type *rettype;
         const parameter_array *params;
         int variadic;
+        int export;
 } type_proc;
 
 typedef struct {
@@ -96,9 +98,11 @@ type_unknown *type_unknown_alloc(void);
 
 char *type_to_cstr(const type *t);
 type_proc *type_proc_alloc(
+        const char *id,
         type *rettype,
         const parameter_array *params,
-        int variadic
+        int variadic,
+        int export
 );
 
 int type_is_compat(type **t1, type **t2);

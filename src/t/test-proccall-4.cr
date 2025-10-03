@@ -1,3 +1,5 @@
+module test;
+
 proc _f(a: i32): i32 {
     return a-3;
 }

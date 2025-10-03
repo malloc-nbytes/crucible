@@ -37,6 +37,8 @@ typedef struct symtbl {
                 struct symtbl **data;
                 size_t len, cap;
         } imports;
+
+        int context_switch;
 } symtbl;
 
 symtbl *sem_analysis(program *p);

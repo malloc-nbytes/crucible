@@ -1,3 +1,5 @@
+module test;
+
 proc f(a: i64): i64 {
     return a;
 }

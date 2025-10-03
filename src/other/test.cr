@@ -1,5 +1,5 @@
 module other;
 
-export proc sum(a: i32, b: i32): i32 {
+proc sum(a: i32, b: i32): i32 {
     return a+b;
 }

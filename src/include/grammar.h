@@ -51,6 +51,7 @@ typedef struct expr {
         type *type;
         loc loc;
         void *(*accept)(struct expr *e, visitor *v);
+        int export;
 } expr;
 
 DYN_ARRAY_TYPE(expr *, expr_array);

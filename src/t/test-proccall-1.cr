@@ -1,3 +1,5 @@
+module test;
+
 proc f(void): i32 {
     return 0;
 }

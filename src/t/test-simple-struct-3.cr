@@ -1,3 +1,5 @@
+module test;
+
 struct F {
     x: i32,
     s: u8*,

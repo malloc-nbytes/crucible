@@ -1,3 +1,5 @@
+module test;
+
 export proc _start(void): ! {
     let x: i32 = 10;
     let y: i32 = 10;

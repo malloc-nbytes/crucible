@@ -140,7 +140,6 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
                 e->resolved = sym;
         }
 
-
         return NULL;
 }
 
@@ -185,6 +184,16 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 
         type_proc *proc_ty = (type_proc *)lhs_ty;
 
+        if (tbl->context_switch && !proc_ty->export) {
+                pusherr(tbl, ((expr *)e)->loc,
+                        "procedure `%s::%s()` is not marked as export",
+                        tbl->modname, proc_ty->id);
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                tbl->context_switch = 0;
+                return NULL;
+        }
+        tbl->context_switch = 0;
+
         // Check number of arguments
         if (e->args.len != proc_ty->params->len) {
                 if (e->args.len >= proc_ty->params->len && proc_ty->variadic) {
@@ -193,7 +202,7 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 
                 pusherr(tbl, ((expr *)e)->loc,
                         "procedure requires %zu arguments but %zu were given",
-                        ((type_proc *)proc_ty)->params->len, e->args.len);
+                        proc_ty->params->len, e->args.len);
         }
  ok:
 
@@ -318,8 +327,11 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
                 return NULL;
         }
 
+        other->context_switch = 1;
         v->context = (void *)other;
         e->e->accept(e->e, v);
+
+        other->context_switch = 0;
         v->context = (void *)tbl;
 
         if (other->errs.len > 0) {
@@ -442,7 +454,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         }
 
         // Add procedure to the scope.
-        type_proc *proc_ty = type_proc_alloc(s->type, &s->params, s->variadic);
+        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, s->export);
         insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 0));
 
         // We are pushing scope here so that when this current
@@ -538,7 +550,7 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
                 return NULL;
         }
 
-        type_proc *proc_ty = type_proc_alloc(s->type, &s->params, s->variadic);
+        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, 0/*TODO: allow exported extern procs*/);
         insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 1));
 
         return NULL;
@@ -719,17 +731,18 @@ sem_visitor_alloc(symtbl *tbl)
 symtbl *
 sem_analysis(program *p)
 {
-        symtbl *tbl       = (symtbl *)alloc(sizeof(symtbl));
-        tbl->modname      = p->modname;
-        tbl->scope        = dyn_array_empty(smap_array);
-        tbl->proc.type    = NULL;
-        tbl->proc.inproc  = 0;
-        tbl->errs         = dyn_array_empty(str_array);
-        tbl->stack_offset = 0;
-        tbl->loop         = NULL;
-        tbl->imports.data = NULL;
-        tbl->imports.len  = 0;
-        tbl->imports.cap  = 0;
+        symtbl *tbl         = (symtbl *)alloc(sizeof(symtbl));
+        tbl->modname        = p->modname;
+        tbl->scope          = dyn_array_empty(smap_array);
+        tbl->proc.type      = NULL;
+        tbl->proc.inproc    = 0;
+        tbl->errs           = dyn_array_empty(str_array);
+        tbl->stack_offset   = 0;
+        tbl->loop           = NULL;
+        tbl->imports.data   = NULL;
+        tbl->imports.len    = 0;
+        tbl->imports.cap    = 0;
+        tbl->context_switch = 0;
 
         // Need to immediately add a scope for global scope.
         dyn_array_append(tbl->scope, smap_create(NULL));
