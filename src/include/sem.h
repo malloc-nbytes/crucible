@@ -4,6 +4,7 @@
 #include "types.h"
 #include "parser.h"
 #include "ds/smap.h"
+#include "visitor.h"
 
 #include <forge/array.h>
 
@@ -33,11 +34,11 @@ typedef struct symtbl {
         void *loop;
 
         struct {
-                struct symtbl *data;
+                visitor **data;
                 size_t len, cap;
         } imports;
 } symtbl;
 
-symtbl sem_analysis(program *p);
+visitor *sem_analysis(program *p);
 
 #endif // SEM_H_INCLUDED

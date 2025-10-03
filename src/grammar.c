@@ -108,12 +108,12 @@ expr_brace_init_alloc(token_array ids,
 
 expr_namespace *
 expr_namespace_alloc(const token *namespace,
-                     const token *id)
+                     expr        *expr)
 {
         expr_namespace *e = (expr_namespace *)alloc(sizeof(expr_namespace));
         e->base           = init_expr_kind(EXPR_KIND_PROCCALL, accept_expr_namespace);
         e->namespace      = namespace;
-        e->id             = id;
+        e->e              = expr;
         return e;
 }
 

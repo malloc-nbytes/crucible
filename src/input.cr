@@ -1,9 +1,9 @@
 module main;
 
-import "other.cr";
+import "other/test.cr";
 
 export proc _start(void): ! {
-    other::sum(1, 2);
+    let x: i32 = other::sum(1, 2);
 
     exit 0;
 }

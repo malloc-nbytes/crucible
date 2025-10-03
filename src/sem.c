@@ -207,7 +207,7 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 arg->accept(arg, v);
 
                 // Type check argument list
-                if (i < proc_ty->params->len && proc_ty->variadic) {
+                if (i < proc_ty->params->len) {
                         type *expected = proc_ty->params->data[i].type;
                         type *got = arg->type;
 
@@ -302,10 +302,14 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
 {
         symtbl *tbl = (symtbl *)v->context;
         symtbl *other = NULL;
+        visitor *othervis = NULL;
 
         for (size_t i = 0; i < tbl->imports.len; ++i) {
-                if (!strcmp(e->namespace->lx, tbl->imports.data[i].modname)) {
-                        other = &tbl->imports.data[i];
+                symtbl *t = (symtbl *)tbl->imports.data[i]->context;
+                assert(t);
+                if (!strcmp(e->namespace->lx, t->modname)) {
+                        other = t;
+                        othervis = tbl->imports.data[i];
                         break;
                 }
         }
@@ -315,11 +319,16 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
                 return NULL;
         }
 
-        if (!sym_exists_in_scope(other, e->id->lx)) {
-                pusherr(tbl, e->id->loc, "identifier `%s` was not found in module `%s`",
-                        e->id->lx, e->namespace->lx);
-                return NULL;
+        e->e->accept(e->e, othervis);
+
+        if (other->errs.len > 0) {
+                for (size_t i = 0; i < other->errs.len; ++i) {
+                        fprintf(stderr, "%s\n", other->errs.data[i]);
+                }
+                exit(1);
         }
+
+        ((expr *)e)->type = e->e->type;
 
         return NULL;
 }
@@ -668,9 +677,18 @@ visit_stmt_import(visitor *v, stmt_import *s)
         char *src = forge_io_read_file_to_cstr(s->filepath);
         lexer l = lexer_create(src, s->filepath);
         program p = parser_create_program(&l);
-        symtbl import_tbl = sem_analysis(&p);
+        visitor *semvis = sem_analysis(&p);
 
-        dyn_array_append(tbl->imports, import_tbl);
+        symtbl *import_tbl = (symtbl *)semvis->context;
+
+        if (import_tbl->errs.len > 0) {
+                for (size_t i = 0; i < import_tbl->errs.len; ++i) {
+                        fprintf(stderr, "%s\n", import_tbl->errs.data[i]);
+                }
+                exit(1);
+        }
+
+        dyn_array_append(tbl->imports, semvis);
 
         return NULL;
 }
@@ -706,38 +724,29 @@ sem_visitor_alloc(symtbl *tbl)
         );
 }
 
-symtbl
+visitor *
 sem_analysis(program *p)
 {
-        symtbl tbl = (symtbl) {
-                .modname = p->modname,
-                .scope = dyn_array_empty(smap_array),
-                .proc = {
-                        .type = NULL,
-                        .inproc = 0,
-                },
-                .errs = dyn_array_empty(str_array),
-                .stack_offset = 0,
-                .loop = NULL,
-                .imports = {
-                        .data = NULL,
-                        .len = 0,
-                        .cap = 0,
-                },
-        };
+        symtbl *tbl = (symtbl *)alloc(sizeof(symtbl));
+        tbl->modname = p->modname;
+        tbl->scope = dyn_array_empty(smap_array);
+        tbl->proc.type = NULL;
+        tbl->proc.inproc = 0;
+        tbl->errs = dyn_array_empty(str_array);
+        tbl->stack_offset = 0;
+        tbl->loop = NULL;
+        tbl->imports.data = NULL;
+        tbl->imports.len = 0;
+        tbl->imports.cap = 0;
 
         // Need to immediately add a scope for global scope.
-        dyn_array_append(tbl.scope, smap_create(NULL));
+        dyn_array_append(tbl->scope, smap_create(NULL));
 
-        visitor *v = sem_visitor_alloc(&tbl);
+        visitor *v = sem_visitor_alloc(tbl);
 
         for (size_t i = 0; i < p->stmts.len; ++i) {
                 p->stmts.data[i]->accept(p->stmts.data[i], v);
         }
 
-        if (tbl.imports.len > 0) {
-                printf("%s\n", tbl.imports.data[0].modname);
-        }
-
-        return tbl;
+        return v;
 }
