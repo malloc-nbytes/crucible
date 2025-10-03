@@ -34,11 +34,11 @@ typedef struct symtbl {
         void *loop;
 
         struct {
-                visitor **data;
+                struct symtbl **data;
                 size_t len, cap;
         } imports;
 } symtbl;
 
-visitor *sem_analysis(program *p);
+symtbl *sem_analysis(program *p);
 
 #endif // SEM_H_INCLUDED

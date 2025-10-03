@@ -302,24 +302,25 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
 {
         symtbl *tbl = (symtbl *)v->context;
         symtbl *other = NULL;
-        visitor *othervis = NULL;
 
         for (size_t i = 0; i < tbl->imports.len; ++i) {
-                symtbl *t = (symtbl *)tbl->imports.data[i]->context;
+                symtbl *t = tbl->imports.data[i];
                 assert(t);
                 if (!strcmp(e->namespace->lx, t->modname)) {
                         other = t;
-                        othervis = tbl->imports.data[i];
                         break;
                 }
         }
 
         if (!other) {
                 pusherr(tbl, ((expr *)e)->loc, "module `%s` was not found", e->namespace->lx);
+                ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
 
-        e->e->accept(e->e, othervis);
+        v->context = (void *)other;
+        e->e->accept(e->e, v);
+        v->context = (void *)tbl;
 
         if (other->errs.len > 0) {
                 for (size_t i = 0; i < other->errs.len; ++i) {
@@ -674,21 +675,12 @@ visit_stmt_import(visitor *v, stmt_import *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
-        char *src = forge_io_read_file_to_cstr(s->filepath);
-        lexer l = lexer_create(src, s->filepath);
-        program p = parser_create_program(&l);
-        visitor *semvis = sem_analysis(&p);
+        char    *src        = forge_io_read_file_to_cstr(s->filepath);
+        lexer    l          = lexer_create(src, s->filepath);
+        program  p          = parser_create_program(&l);
+        symtbl  *import_tbl = sem_analysis(&p);
 
-        symtbl *import_tbl = (symtbl *)semvis->context;
-
-        if (import_tbl->errs.len > 0) {
-                for (size_t i = 0; i < import_tbl->errs.len; ++i) {
-                        fprintf(stderr, "%s\n", import_tbl->errs.data[i]);
-                }
-                exit(1);
-        }
-
-        dyn_array_append(tbl->imports, semvis);
+        dyn_array_append(tbl->imports, import_tbl);
 
         return NULL;
 }
@@ -724,20 +716,20 @@ sem_visitor_alloc(symtbl *tbl)
         );
 }
 
-visitor *
+symtbl *
 sem_analysis(program *p)
 {
-        symtbl *tbl = (symtbl *)alloc(sizeof(symtbl));
-        tbl->modname = p->modname;
-        tbl->scope = dyn_array_empty(smap_array);
-        tbl->proc.type = NULL;
-        tbl->proc.inproc = 0;
-        tbl->errs = dyn_array_empty(str_array);
+        symtbl *tbl       = (symtbl *)alloc(sizeof(symtbl));
+        tbl->modname      = p->modname;
+        tbl->scope        = dyn_array_empty(smap_array);
+        tbl->proc.type    = NULL;
+        tbl->proc.inproc  = 0;
+        tbl->errs         = dyn_array_empty(str_array);
         tbl->stack_offset = 0;
-        tbl->loop = NULL;
+        tbl->loop         = NULL;
         tbl->imports.data = NULL;
-        tbl->imports.len = 0;
-        tbl->imports.cap = 0;
+        tbl->imports.len  = 0;
+        tbl->imports.cap  = 0;
 
         // Need to immediately add a scope for global scope.
         dyn_array_append(tbl->scope, smap_create(NULL));
@@ -748,5 +740,12 @@ sem_analysis(program *p)
                 p->stmts.data[i]->accept(p->stmts.data[i], v);
         }
 
-        return v;
+        if (tbl->errs.len > 0) {
+                for (size_t i = 0; i < tbl->errs.len; ++i) {
+                        fprintf(stderr, "%s\n", tbl->errs.data[i]);
+                }
+                exit(1);
+        }
+
+        return tbl;
 }

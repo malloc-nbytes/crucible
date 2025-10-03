@@ -120,15 +120,7 @@ main(int argc, char **argv)
         char    *src    = forge_io_read_file_to_cstr(g_config.filepath);
         lexer    l      = lexer_create(src, g_config.filepath);
         program  p      = parser_create_program(&l);
-        visitor *semvis = sem_analysis(&p);
-        symtbl  *tbl    = (symtbl *)semvis->context;
-
-        if (tbl->errs.len > 0) {
-                for (size_t i = 0; i < tbl->errs.len; ++i) {
-                        fprintf(stderr, "%s\n", tbl->errs.data[i]);
-                }
-                exit(1);
-        }
+        symtbl  *tbl    = sem_analysis(&p);
 
         asm_gen(&p, tbl);
         assemble();
