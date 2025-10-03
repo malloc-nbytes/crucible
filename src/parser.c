@@ -187,8 +187,15 @@ parse_primary_expr(parser_context *ctx)
                 switch (hd->ty) {
                 case TOKEN_TYPE_IDENTIFIER: {
                         const token *i = lexer_next(ctx->l);
-                        left = (expr *)expr_identifier_alloc(i);
-                        left->loc = hd->loc;
+                        if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_DOUBLE_COLON
+                            && LSP(ctx->l, 1)->ty == TOKEN_TYPE_IDENTIFIER) {
+                                lexer_discard(ctx->l); // ::
+                                const token *i2 = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+                                left = (expr *)expr_namespace_alloc(i, i2);
+                        } else {
+                                left = (expr *)expr_identifier_alloc(i);
+                                left->loc = hd->loc;
+                        }
                 } break;
                 case TOKEN_TYPE_INTEGER_LITERAL: {
                         const token *i = lexer_next(ctx->l);

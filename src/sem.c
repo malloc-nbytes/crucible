@@ -298,6 +298,33 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
 }
 
 static void *
+visit_expr_namespace(visitor *v, expr_namespace *e)
+{
+        symtbl *tbl = (symtbl *)v->context;
+        symtbl *other = NULL;
+
+        for (size_t i = 0; i < tbl->imports.len; ++i) {
+                if (!strcmp(e->namespace->lx, tbl->imports.data[i].modname)) {
+                        other = &tbl->imports.data[i];
+                        break;
+                }
+        }
+
+        if (!other) {
+                pusherr(tbl, ((expr *)e)->loc, "module `%s` was not found", e->namespace->lx);
+                return NULL;
+        }
+
+        if (!sym_exists_in_scope(other, e->id->lx)) {
+                pusherr(tbl, e->id->loc, "identifier `%s` was not found in module `%s`",
+                        e->id->lx, e->namespace->lx);
+                return NULL;
+        }
+
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -660,6 +687,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_proccall,
                 visit_expr_mut,
                 visit_expr_brace_init,
+                visit_expr_namespace,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,
