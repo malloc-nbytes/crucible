@@ -1,7 +1,7 @@
 module test;
 
-import t.artifacts.strs;
-import t.artifacts.math;
+import artifacts.strs;
+import artifacts.math;
 
 extern proc strcmp(s0: u8*, s1: u8*): i32;
 
