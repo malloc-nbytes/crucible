@@ -245,6 +245,8 @@ visit_expr_mut(visitor *v, expr_mut *e)
                 forge_err("only direct assignment is supported `=`");
         }
 
+        ((expr *)e)->type = e->lhs->type;
+
         return NULL;
 }
 
