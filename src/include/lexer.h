@@ -81,6 +81,7 @@ DYN_ARRAY_TYPE(token *, token_array);
 typedef struct {
         token *hd;
         token *tl;
+        const char *src_filepath;
 } lexer;
 
 lexer lexer_create(const char *src, const char *fp);

@@ -9,9 +9,10 @@
 #include <forge/err.h>
 #include <forge/io.h>
 #include <forge/utils.h>
-#include <forge/cmd.h>
-#include <forge/cstr.h>
 #include <forge/chooser.h>
+#include <forge/str.h>
+#include <forge/cstr.h>
+#include <forge/cmd.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -40,29 +41,23 @@ usage(void)
 }
 
 static void
-assemble(void)
+link(str_array obj_filepaths)
 {
-        char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", g_config.filepath, ".asm -o ",
-                                        g_config.outname, ".o", NULL);
-        char *ld = forge_cstr_builder("ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc -o ",
-                                      g_config.outname, " ",
-                                      g_config.outname, ".o", NULL);
+        forge_str ld = forge_str_from("ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc -o ");
+        forge_str_concat(&ld, g_config.outname);
 
-        char *rm_o = forge_cstr_builder("rm ", g_config.outname, ".o ", NULL);
-        char *rm_asm = forge_cstr_builder("rm ", g_config.filepath, ".asm", NULL);
+        FOREACH(obj, obj_filepaths.data, obj_filepaths.len, {
+                forge_str_append(&ld, ' ');
+                forge_str_concat(&ld, obj);
+        });
 
-        cmd_s(nasm);
-        cmd_s(ld);
-        cmd_s(rm_o);
+        cmd(ld.data);
 
-        if ((g_config.flags & FLAG_TYPE_ASM) == 0) {
-                cmd_s(rm_asm);
-        }
+        FOREACH(obj, obj_filepaths.data, obj_filepaths.len, {
+                cmd(forge_cstr_builder("rm ", obj, NULL));
+        });
 
-        free(nasm);
-        free(ld);
-        free(rm_o);
-        free(rm_asm);
+        forge_str_destroy(&ld);
 }
 
 static void
@@ -119,11 +114,10 @@ main(int argc, char **argv)
 
         char    *src    = forge_io_read_file_to_cstr(g_config.filepath);
         lexer    l      = lexer_create(src, g_config.filepath);
-        program  p      = parser_create_program(&l);
-        symtbl  *tbl    = sem_analysis(&p);
+        program  *p     = parser_create_program(&l);
+        symtbl  *tbl    = sem_analysis(p);
 
-        asm_gen(&p, tbl);
-        assemble();
+        link(asm_gen(p, tbl));
 
         return 0;
 }

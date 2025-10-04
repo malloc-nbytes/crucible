@@ -8,10 +8,9 @@
 typedef struct {
         stmt_array stmts;
         const char *modname;
+        const char *src_filepath;
 } program;
 
-program parser_create_program(lexer *l);
-
-void parser_dump_program(const program *p);
+program *parser_create_program(lexer *l);
 
 #endif // PARSER_H_INCLUDED

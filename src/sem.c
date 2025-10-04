@@ -689,8 +689,8 @@ visit_stmt_import(visitor *v, stmt_import *s)
 
         char    *src        = forge_io_read_file_to_cstr(s->filepath);
         lexer    l          = lexer_create(src, s->filepath);
-        program  p          = parser_create_program(&l);
-        symtbl  *import_tbl = sem_analysis(&p);
+        program *p          = parser_create_program(&l);
+        symtbl  *import_tbl = sem_analysis(p);
 
         dyn_array_append(tbl->imports, import_tbl);
 
@@ -732,8 +732,10 @@ symtbl *
 sem_analysis(program *p)
 {
         symtbl *tbl         = (symtbl *)alloc(sizeof(symtbl));
+        tbl->src_filepath   = p->src_filepath;
         tbl->modname        = p->modname;
         tbl->scope          = dyn_array_empty(smap_array);
+        tbl->program        = p;
         tbl->proc.type      = NULL;
         tbl->proc.inproc    = 0;
         tbl->errs           = dyn_array_empty(str_array);

@@ -336,6 +336,7 @@ lexer_create(const char *src,
         lexer l = (lexer) {
                 .hd = NULL,
                 .tl = NULL,
+                .src_filepath = fp,
         };
 
         int i = 0;

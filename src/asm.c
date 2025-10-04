@@ -3,12 +3,15 @@
 #include "global.h"
 #include "types.h"
 #include "lexer.h"
+#include "flags.h"
 
 #include <forge/err.h>
 #include <forge/utils.h>
 #include <forge/cstr.h>
 #include <forge/str.h>
 #include <forge/array.h>
+#include <forge/io.h>
+#include <forge/cmd.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -66,12 +69,38 @@ static int g_inuse_regs[g_regs_r * g_regs_c] = {
 
 typedef struct {
         FILE *out;
+        symtbl *tbl;
         str_array globals;
         str_array data_section;
         str_array externs;
         str_array pushed_regs;
         int_array pushed_regs_idxs;
+        str_array obj_filepaths;
 } asm_context;
+
+static void
+assemble(asm_context *ctx)
+{
+        /* char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", g_config.filepath, ".asm -o ", */
+        /*                                 g_config.outname, ".o", NULL); */
+
+        const char *basename = forge_io_basename(ctx->tbl->src_filepath);
+
+        char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", basename, ".asm -o ",
+                                        basename, ".o", NULL);
+
+
+        /* char *rm_asm = forge_cstr_builder("rm ", g_config.filepath, ".asm", NULL); */
+
+        cmd_s(nasm);
+
+        /* if ((g_config.flags & FLAG_TYPE_ASM) == 0) { */
+        /*         cmd_s(rm_asm); */
+        /* } */
+
+        /* free(nasm); */
+        /* free(rm_asm); */
+}
 
 static void
 write_txt(asm_context *ctx,
@@ -622,8 +651,7 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
 static void *
 visit_expr_namespace(visitor *v, expr_namespace *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        return e->e->accept(e->e, v);
 }
 
 static void *
@@ -901,8 +929,24 @@ visit_stmt_module(visitor *v, stmt_module *s)
 static void *
 visit_stmt_import(visitor *v, stmt_import *s)
 {
-        NOOP(v, s);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+        symtbl *import_tbl = NULL;
+
+        for (size_t i = 0; i < ctx->tbl->imports.len; ++i) {
+                if (!strcmp(s->filepath, ctx->tbl->imports.data[i]->src_filepath)) {
+                        import_tbl = ctx->tbl->imports.data[i];
+                        break;
+                }
+        }
+
+        assert(import_tbl);
+
+        str_array obj_filepaths = asm_gen(import_tbl->program, import_tbl);
+        for (size_t i = 0; i < obj_filepaths.len; ++i) {
+                dyn_array_append(ctx->obj_filepaths, obj_filepaths.data[i]);
+        }
+
+        return NULL;
 }
 
 static visitor *
@@ -937,10 +981,12 @@ asm_visitor_alloc(asm_context *ctx)
 }
 
 static void
-init(asm_context *ctx)
+init(asm_context *ctx, symtbl *tbl)
 {
-        char *asm_fp = forge_cstr_builder(g_config.filepath, ".asm", NULL);
+        const char *basename = forge_io_basename(tbl->src_filepath);
+        char *asm_fp = forge_cstr_builder(basename, ".asm", NULL);
         ctx->out = fopen(asm_fp, "w");
+        ctx->tbl = tbl;
         free(asm_fp);
 
         if (!ctx->out) {
@@ -948,11 +994,14 @@ init(asm_context *ctx)
                 exit(1);
         }
 
-        ctx->globals = dyn_array_empty(str_array);
-        ctx->data_section = dyn_array_empty(str_array);
-        ctx->externs = dyn_array_empty(str_array);
-        ctx->pushed_regs = dyn_array_empty(str_array);
+        ctx->globals          = dyn_array_empty(str_array);
+        ctx->data_section     = dyn_array_empty(str_array);
+        ctx->externs          = dyn_array_empty(str_array);
+        ctx->pushed_regs      = dyn_array_empty(str_array);
         ctx->pushed_regs_idxs = dyn_array_empty(int_array);
+        ctx->obj_filepaths    = dyn_array_empty(str_array);
+
+        dyn_array_append(ctx->obj_filepaths, forge_cstr_builder(basename, ".o", NULL));
 
         write_txt(ctx, "section .text", 1);
 }
@@ -991,14 +1040,14 @@ write_externs(asm_context *ctx)
         }
 }
 
-void
+str_array
 asm_gen(program *p, symtbl *tbl)
 {
         NOOP(tbl, free_reg, alloc_param_regs);
 
         asm_context ctx = {0};
         visitor *v = asm_visitor_alloc(&ctx);
-        init((asm_context *)v->context);
+        init((asm_context *)v->context, tbl);
 
         for (size_t i = 0; i < p->stmts.len; ++i) {
                 stmt *s = p->stmts.data[i];
@@ -1011,4 +1060,8 @@ asm_gen(program *p, symtbl *tbl)
         write_txt(&ctx, "section .note.GNU-stack", 1);
 
         cleanup((asm_context *)v->context);
+
+        assemble(&ctx);
+
+        return ctx.obj_filepaths;
 }
