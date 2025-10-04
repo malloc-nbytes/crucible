@@ -13,6 +13,7 @@ typedef struct sym {
         type *ty;
         int stack_offset;
         int extern_;
+        const char *modname;
 } sym;
 
 DYN_ARRAY_TYPE(sym *, sym_array);
