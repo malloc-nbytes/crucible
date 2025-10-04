@@ -22,6 +22,8 @@ Begin the tests by doing:
   earl runner.rl
 #+end_src
 
+See =earl runner.rl -- help= for more options.
+
 ** bootstrap
 Begin the tests by doing:
 
@@ -29,5 +31,3 @@ Begin the tests by doing:
   cd bootstrap
   /bin/bash run.sh
 #+end_src
-
-See =earl runner.rl -- help= for more options.
