@@ -8,3 +8,4 @@ src/program
 *.S
 *.bin
 *.out
+*.o

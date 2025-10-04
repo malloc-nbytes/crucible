@@ -76,9 +76,10 @@ fn cleanup(config) {
     #     println();
     # }
 
-    let bins, asms = (
+    let bins, asms, os = (
         sys::get_all_files_by_ext(".", "bin"),
         sys::get_all_files_by_ext(".", "asm"),
+        sys::get_all_files_by_ext(".", "o"),
     );
 
     foreach b in bins {
@@ -91,6 +92,11 @@ fn cleanup(config) {
         $f"rm {a}";
     }
 
+    foreach o in os {
+        println(f"[RM] {o}");
+        $f"rm {o}";
+    }
+
     if (config.flags `& FlagType.Clean) != 0 {
         exit(0);
     }
@@ -99,7 +105,7 @@ fn cleanup(config) {
 fn setup_compiler() {
     info("=== BUILDING COMPILER ===", 1);
     $"pwd" |> let cwd;
-    cd("..");
+    cd("../../");
     $"earl build.rl";
     cd(cwd);
 }
@@ -111,7 +117,7 @@ fn compile() {
 
     foreach f in files {
 
-        let cmd = f"../cruc {f} -o {f}.bin --asm";
+        let cmd = f"../../cruc {f} -o {f}.bin --asm";
 
         println(f"[CC] {cmd}");
 

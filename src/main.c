@@ -46,16 +46,31 @@ link(str_array obj_filepaths)
         forge_str ld = forge_str_from("ld -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lc -o ");
         forge_str_concat(&ld, g_config.outname);
 
-        FOREACH(obj, obj_filepaths.data, obj_filepaths.len, {
+        str_array found = dyn_array_empty(str_array);
+
+        for (size_t i = 0; i < obj_filepaths.len; ++i) {
+                int ok = 1;
+                for (size_t j = 0; j < found.len; ++j) {
+                        if (!strcmp(obj_filepaths.data[i], found.data[j])) {
+                                ok = 0;
+                                break;
+                        }
+                }
+                if (ok) {
+                        dyn_array_append(found, obj_filepaths.data[i]);
+                }
+        }
+
+        FOREACH(obj, found.data, found.len, {
                 forge_str_append(&ld, ' ');
                 forge_str_concat(&ld, obj);
         });
 
         cmd_s(ld.data);
 
-        FOREACH(obj, obj_filepaths.data, obj_filepaths.len, {
-                cmd_s(forge_cstr_builder("rm ", obj, NULL));
-        });
+        /* FOREACH(obj, obj_filepaths.data, obj_filepaths.len, { */
+        /*         cmd_s(forge_cstr_builder("rm ", obj, NULL)); */
+        /* }); */
 
         forge_str_destroy(&ld);
 }

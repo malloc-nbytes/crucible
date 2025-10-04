@@ -450,7 +450,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         symtbl *tbl = (symtbl *)v->context;
 
         // Add exported procedures to the export_syms table
-        // for ASM generation 'global' section.
+        // for ASM generation 'extern' section.
         if (s->export) {
                 dyn_array_append(tbl->export_syms, s->id->lx);
         }

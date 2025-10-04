@@ -78,22 +78,32 @@ typedef struct {
         str_array obj_filepaths;
 } asm_context;
 
+static str_array g_already_assembled = dyn_array_empty(str_array);
+
 static void
 assemble(asm_context *ctx)
 {
         /* char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", g_config.filepath, ".asm -o ", */
         /*                                 g_config.outname, ".o", NULL); */
 
-        const char *basename = forge_io_basename(ctx->tbl->src_filepath);
+        const char *src_filepath = ctx->tbl->src_filepath;
+
+        // Check to see if we have already assembled this file...
+        for (size_t i = 0; i < g_already_assembled.len; ++i) {
+                if (!strcmp(g_already_assembled.data[i], src_filepath)) {
+                        return;
+                }
+        }
+
+        const char *basename = forge_io_basename(src_filepath);
 
         char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", basename, ".asm -o ",
                                         basename, ".o", NULL);
-
-
-        /* char *rm_asm = forge_cstr_builder("rm ", g_config.filepath, ".asm", NULL); */
-
         cmd_s(nasm);
 
+        dyn_array_append(g_already_assembled, strdup(src_filepath));
+
+        /* char *rm_asm = forge_cstr_builder("rm ", g_config.filepath, ".asm", NULL); */
         /* if ((g_config.flags & FLAG_TYPE_ASM) == 0) { */
         /*         cmd_s(rm_asm); */
         /* } */
@@ -942,6 +952,7 @@ visit_stmt_import(visitor *v, stmt_import *s)
         assert(import_tbl);
 
         str_array obj_filepaths = asm_gen(import_tbl->program, import_tbl);
+
         for (size_t i = 0; i < obj_filepaths.len; ++i) {
                 dyn_array_append(ctx->obj_filepaths, obj_filepaths.data[i]);
         }

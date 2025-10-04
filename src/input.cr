@@ -1,9 +1,11 @@
-module test;
+module main;
 
-extern proc printf(fmt: u8*, ...): i32;
+import other.other1;
+import other.other2;
 
 export proc _start(void): ! {
-    let x: i32 = 0;
+    other1::test1();
+    other2::test2();
 
     exit;
 }

@@ -2,10 +2,32 @@
 
 This is the test suite for crucible. To run the tests, the [[https://github.com/malloc-nbytes/earl][EARL language]] must be installed.
 
+There are two different directories, namely:
+- old [uses EARL to run the tests]
+- bootstrap [uses crucible to run the tests]
+
+To run both of the tests, simply run:
+
+#+begin_src
+  /bin/bash run.sh
+#+end_src
+
+and it will run both test suites.
+
+** old
 Begin the tests by doing:
 
 #+begin_src
+  cd old
   earl runner.rl
+#+end_src
+
+** bootstrap
+Begin the tests by doing:
+
+#+begin_src
+  cd bootstrap
+  /bin/bash run.sh
 #+end_src
 
 See =earl runner.rl -- help= for more options.
