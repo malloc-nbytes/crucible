@@ -1,10 +1,12 @@
 #include "parser.h"
 #include "lexer.h"
 #include "kwds.h"
+#include "mem.h"
 
 #include <forge/array.h>
 #include <forge/utils.h>
 #include <forge/err.h>
+#include <forge/str.h>
 
 #include <assert.h>
 #include <string.h>
@@ -14,6 +16,7 @@
 typedef struct {
         lexer *l;
         int in_global;
+        const char *module;
 } parser_context;
 
 static stmt *parse_stmt(parser_context *ctx);
@@ -26,6 +29,19 @@ expect(parser_context *ctx, token_type ty)
         if (t->ty != ty) {
                 forge_err_wargs("%sexpected token of type `%s` but got `%s`",
                                 loc_err(t->loc), token_type_to_cstr(ty), t->lx);
+        }
+        return t;
+}
+
+token *
+expect_or(parser_context *ctx,
+          token_type      t0,
+          token_type      t1)
+{
+        token *t = lexer_next(ctx->l);
+        if (t->ty != t0 && t->ty != t1) {
+                forge_err_wargs("%sexpected token of type `%s` or `%s` but got `%s`",
+                                loc_err(t->loc), token_type_to_cstr(t0), token_type_to_cstr(t1), t->lx);
         }
         return t;
 }
@@ -172,7 +188,14 @@ parse_primary_expr(parser_context *ctx)
                 switch (hd->ty) {
                 case TOKEN_TYPE_IDENTIFIER: {
                         const token *i = lexer_next(ctx->l);
-                        left = (expr *)expr_identifier_alloc(i);
+
+                        if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_DOUBLE_COLON) {
+                                lexer_discard(ctx->l); // ::
+                                expr *right = parse_primary_expr(ctx);
+                                left = (expr *)expr_namespace_alloc(i, right);
+                        } else {
+                                left = (expr *)expr_identifier_alloc(i);
+                        }
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_INTEGER_LITERAL: {
@@ -579,6 +602,47 @@ parse_stmt_struct(parser_context *ctx)
         return stmt_struct_alloc(id, members);
 }
 
+static stmt_module *
+parse_stmt_module(parser_context *ctx)
+{
+        (void)expectkw(ctx, KWD_MODULE);
+        const token *modname = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        ctx->module = strdup(modname->lx);
+        return stmt_module_alloc(modname);
+}
+
+static stmt_import *
+parse_stmt_import(parser_context *ctx)
+{
+        char *filepath = NULL;
+        int local = 0;
+
+        lexer_discard(ctx->l); // import
+
+        token *path = expect_or(ctx, TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_STRING_LITERAL);
+
+        if (path->ty == TOKEN_TYPE_IDENTIFIER) {
+                forge_str buf = forge_str_from(path->lx);
+
+                while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_SEMICOLON) {
+                        token *next = expect_or(ctx, TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_PERIOD);
+                        forge_str_concat(&buf, next->ty == TOKEN_TYPE_PERIOD ? "/" : next->lx);
+                }
+
+                forge_str_concat(&buf, ".cr");
+
+                filepath = buf.data;
+        } else {
+                local = 1;
+                filepath = strdup(path->lx);
+        }
+
+        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+
+        return stmt_import_alloc(filepath, local);
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -606,6 +670,10 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_continue(ctx);
         } else if (!strcmp(hd->lx, KWD_STRUCT)) {
                 return (stmt *)parse_stmt_struct(ctx);
+        } else if (!strcmp(hd->lx, KWD_MODULE)) {
+                return (stmt *)parse_stmt_module(ctx);
+        } else if (!strcmp(hd->lx, KWD_IMPORT)) {
+                return (stmt *)parse_stmt_import(ctx);
         }
 
         assert(0 && "todo");
@@ -633,211 +701,29 @@ parse_stmt(parser_context *ctx)
         return s;
 }
 
-program
+program *
 parser_create_program(lexer *l)
 {
         parser_context ctx = (parser_context) {
                 .l = l,
                 .in_global = 1,
+                .module = NULL,
         };
 
-        program p = (program) {
-                .stmts = dyn_array_empty(stmt_array),
-        };
+        program *p      = (program  *)alloc(sizeof(program));
+        p->stmts        = dyn_array_empty(stmt_array);
+        p->modname      = NULL;
+        p->src_filepath = l->src_filepath;
 
         while (LSP(ctx.l, 0)->ty != TOKEN_TYPE_EOF) {
-                dyn_array_append(p.stmts, parse_stmt(&ctx));
+                dyn_array_append(p->stmts, parse_stmt(&ctx));
         }
+
+        if (!ctx.module) {
+                forge_err("a module name is required in each file");
+        }
+
+        p->modname = ctx.module;
 
         return p;
 }
-
-static void dump_expr(const expr *e);
-static void dump_stmt(const stmt *s);
-
-static void
-dump_expr_integer_literal(const expr_integer_literal *e)
-{
-        printf("\"integer\": \"%s\"\n", e->i->lx);
-}
-
-static void
-dump_expr_binary(expr_bin *e)
-{
-        printf("\"binary\": {\n");
-        printf("\"lhs\": {\n");
-        dump_expr(e->lhs);
-        printf("},");
-        printf("\"op\": \"%s\",\n", e->op->lx);
-        printf("\"rhs\": {\n");
-        dump_expr(e->rhs);
-        printf("}\n");
-        printf("}\n");
-}
-
-static void
-dump_expr_identifier(expr_identifier *e)
-{
-        printf("\"id\": \"%s\"\n", e->id->lx);
-}
-
-static void
-dump_expr_string_literal(expr_string_literal *e)
-{
-        printf("\"string\": \"%s\"\n", e->s->lx);
-}
-
-static void
-dump_expr_proccall(expr_proccall *e)
-{
-        printf("\"proccall\": {\n");
-        printf("\"lhs\": {\n");
-        dump_expr(e->lhs);
-        printf("},\n");
-        printf("\"args\": [\n");
-        for (size_t i = 0; i < e->args.len; ++i) {
-                if (i != 0) putchar(',');
-                printf("{\n");
-                dump_expr(e->args.data[i]);
-                printf("}\n");
-        }
-        printf("]\n");
-        printf("}\n");
-}
-
-static void
-dump_expr(const expr *e)
-{
-        printf("\"expr\": {\n");
-        switch (e->kind) {
-        case EXPR_KIND_INTEGER_LITERAL: {
-                dump_expr_integer_literal((expr_integer_literal *)e);
-        } break;
-        case EXPR_KIND_STRING_LITERAL: {
-                dump_expr_string_literal((expr_string_literal *)e);
-        } break;
-        case EXPR_KIND_IDENTIFIER: {
-                dump_expr_identifier((expr_identifier *)e);
-        } break;
-        case EXPR_KIND_BINARY: {
-                dump_expr_binary((expr_bin *)e);
-        } break;
-        case EXPR_KIND_PROCCALL: {
-                dump_expr_proccall((expr_proccall *)e);
-        } break;
-        default: forge_err_wargs("dump_expr(): unknown expression `%d`", (int)e->kind);
-        }
-        printf("}\n");
-}
-
-static void
-dump_stmt_let(const stmt_let *s)
-{
-        printf("\"let\": {");
-        printf("\"id\": \"%s\",\n", s->id->lx);
-        printf("\"type\": \"%s\",\n", type_to_cstr(s->type));
-        dump_expr(s->e);
-        printf("}");
-}
-
-static void
-dump_stmt_proc(stmt_proc *s)
-{
-        printf("\"proc\": {\n");
-        printf("\"export\": \"%d\",", s->export);
-        printf("\"type\": \"%s\",", type_to_cstr(s->type));
-        printf("\"id\": \"%s\",\n", s->id->lx);
-        printf("\"parameters\": [\n");
-
-        for (size_t i = 0; i < s->params.len; ++i) {
-                printf("{\n");
-                printf("\"id\": \"%s\",\n", s->params.data[i].id->lx);
-                printf("\"type\": \"%s\"\n", type_to_cstr(s->params.data[i].type));
-                printf("}");
-                if (i != s->params.len - 1) {
-                        putchar(',');
-                }
-                printf("\n");
-        }
-
-        printf("],\n");
-        printf("\"body\": ");
-        dump_stmt(s->blk);
-        printf("}\n");
-}
-
-static void
-dump_stmt_block(stmt_block *s)
-{
-        printf("\"blk\": [\n");
-        for (size_t i = 0; i < s->stmts.len; ++i) {
-                if (i != 0) putchar(',');
-                dump_stmt(s->stmts.data[i]);
-        }
-        printf("]\n");
-}
-
-static void
-dump_stmt_return(stmt_return *s)
-{
-        printf("\"return\": {\n");
-        dump_expr(s->e);
-        printf("}\n");
-}
-
-static void
-dump_stmt_expr(stmt_expr *s)
-{
-        dump_expr(s->e);
-}
-
-static void
-dump_stmt_exit(stmt_expr *s)
-{
-        printf("\"exit\": {\n");
-        if (s->e) {
-                dump_expr(s->e);
-        }
-        printf("}\n");
-}
-
-static void
-dump_stmt(const stmt *s)
-{
-        printf("{\n");
-        switch (s->kind) {
-        case STMT_KIND_LET: {
-                dump_stmt_let((stmt_let *)s);
-        } break;
-        case STMT_KIND_PROC: {
-                dump_stmt_proc((stmt_proc *)s);
-        } break;
-        case STMT_KIND_BLOCK: {
-                dump_stmt_block((stmt_block *)s);
-        } break;
-        case STMT_KIND_RETURN: {
-                dump_stmt_return((stmt_return *)s);
-        } break;
-        case STMT_KIND_EXPR: {
-                dump_stmt_expr((stmt_expr *)s);
-        } break;
-        case STMT_KIND_EXIT: {
-                dump_stmt_exit((stmt_expr *)s);
-        } break;
-        default:
-                forge_err_wargs("dump_stmt(): unknown statement `%d`", (int)s->kind);
-        }
-        printf("}\n");
-}
-
-void
-parser_dump_program(const program *p)
-{
-        printf("{\n\"program\": [\n");
-        for (size_t i = 0; i < p->stmts.len; ++i) {
-                if (i != 0) printf(",");
-                dump_stmt(p->stmts.data[i]);
-        }
-        printf("]\n}");
-}
-

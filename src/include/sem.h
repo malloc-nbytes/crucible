@@ -4,6 +4,7 @@
 #include "types.h"
 #include "parser.h"
 #include "ds/smap.h"
+#include "visitor.h"
 
 #include <forge/array.h>
 
@@ -16,7 +17,11 @@ typedef struct sym {
 
 DYN_ARRAY_TYPE(sym *, sym_array);
 
-typedef struct {
+typedef struct symtbl {
+        const char *src_filepath;
+        const char *modname;
+        program *program;
+
         smap_array scope;
 
         struct {
@@ -29,8 +34,17 @@ typedef struct {
         int stack_offset;
 
         void *loop;
+
+        struct {
+                struct symtbl **data;
+                size_t len, cap;
+        } imports;
+
+        int context_switch;
+
+        str_array export_syms;
 } symtbl;
 
-symtbl sem_analysis(program *p);
+symtbl *sem_analysis(program *p);
 
 #endif // SEM_H_INCLUDED

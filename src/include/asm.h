@@ -4,6 +4,8 @@
 #include "parser.h"
 #include "sem.h"
 
-void asm_gen(program *p, symtbl *tbl);
+#include <forge/array.h>
+
+str_array asm_gen(program *p, symtbl *tbl);
 
 #endif // ASM_H_INCLUDED

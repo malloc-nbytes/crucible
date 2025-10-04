@@ -71,6 +71,7 @@ token_type_to_cstr(token_type ty)
         case TOKEN_TYPE_DOUBLE_AMPERSAND:    return "TOKEN_TYPE_DOUBLE_AMPERSAND";
         case TOKEN_TYPE_DOUBLE_PIPE:         return "TOKEN_TYPE_DOUBLE_PIPE";
         case TOKEN_TYPE_ELLIPSIS:            return "TOKEN_TYPE_ELLIPSIS";
+        case TOKEN_TYPE_DOUBLE_COLON:        return "TOKEN_TYPE_DOUBLE_COLON";
         default: forge_err_wargs("token_type_to_cstr(): unknown token type `%d`", (int)ty);
         }
         return NULL; // unreachable
@@ -125,6 +126,7 @@ init_syms(void)
         static token_type token_type_double_ampersand    = TOKEN_TYPE_DOUBLE_AMPERSAND;
         static token_type token_type_double_pipe         = TOKEN_TYPE_DOUBLE_PIPE;
         static token_type token_type_ellipsis            = TOKEN_TYPE_ELLIPSIS;
+        static token_type token_type_double_colon        = TOKEN_TYPE_DOUBLE_COLON;
 
         smap_insert(&g_syms, "(", (void*)&token_type_left_parenthesis);
         smap_insert(&g_syms, ")", (void*)&token_type_right_parenthesis);
@@ -170,6 +172,7 @@ init_syms(void)
         smap_insert(&g_syms, "&&", (void*)&token_type_double_ampersand);
         smap_insert(&g_syms, "||", (void*)&token_type_double_pipe);
         smap_insert(&g_syms, "...", (void*)&token_type_ellipsis);
+        smap_insert(&g_syms, "::", (void*)&token_type_double_colon);
 }
 
 static char *
@@ -298,7 +301,7 @@ lexer_peek(const lexer *l,
 {
         if (!l->hd) return NULL;
         token *it = l->hd;
-        for (size_t i = 0; it && i < peek; ++i);
+        for (size_t i = 0; it && i < peek; ++i, it = it->next);
         return it;
 }
 
@@ -333,6 +336,7 @@ lexer_create(const char *src,
         lexer l = (lexer) {
                 .hd = NULL,
                 .tl = NULL,
+                .src_filepath = fp,
         };
 
         int i = 0;
@@ -344,8 +348,8 @@ lexer_create(const char *src,
                 // TODO: comments
                 if (ch == '-' && src[i+1] == '-') {
                         size_t len = consume_while(src+i, not_eol);
-                        i += len+1;
-                        c += len+1;
+                        i += len;
+                        c += len;
                 } else if (ch == ' ') {
                         ++i, ++c;
                 } else if (ch == '\n') {

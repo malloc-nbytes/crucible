@@ -6,6 +6,7 @@
 #include <forge/array.h>
 #include <forge/utils.h>
 #include <forge/err.h>
+#include <forge/io.h>
 
 #include <assert.h>
 #include <string.h>
@@ -84,7 +85,7 @@ sym_alloc(symtbl     *tbl,
         sym *s          = (sym *)alloc(sizeof(sym));
         s->id           = id;
         s->ty           = ty;
-        s->stack_offset = tbl->stack_offset + type_to_int(ty);
+        s->stack_offset = tbl->stack_offset + ty->sz;
         s->extern_      = extern_;
 
         return s;
@@ -139,7 +140,6 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
                 e->resolved = sym;
         }
 
-
         return NULL;
 }
 
@@ -184,6 +184,16 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 
         type_proc *proc_ty = (type_proc *)lhs_ty;
 
+        if (tbl->context_switch && !proc_ty->export) {
+                pusherr(tbl, ((expr *)e)->loc,
+                        "procedure `%s::%s()` is not marked as export",
+                        tbl->modname, proc_ty->id);
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                tbl->context_switch = 0;
+                return NULL;
+        }
+        tbl->context_switch = 0;
+
         // Check number of arguments
         if (e->args.len != proc_ty->params->len) {
                 if (e->args.len >= proc_ty->params->len && proc_ty->variadic) {
@@ -192,7 +202,7 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 
                 pusherr(tbl, ((expr *)e)->loc,
                         "procedure requires %zu arguments but %zu were given",
-                        ((type_proc *)proc_ty)->params->len, e->args.len);
+                        proc_ty->params->len, e->args.len);
         }
  ok:
 
@@ -206,7 +216,7 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 arg->accept(arg, v);
 
                 // Type check argument list
-                if (i < proc_ty->params->len && proc_ty->variadic) {
+                if (i < proc_ty->params->len) {
                         type *expected = proc_ty->params->data[i].type;
                         type *got = arg->type;
 
@@ -297,6 +307,46 @@ visit_expr_brace_init(visitor *v, expr_brace_init *e)
 }
 
 static void *
+visit_expr_namespace(visitor *v, expr_namespace *e)
+{
+        symtbl *tbl = (symtbl *)v->context;
+        symtbl *other = NULL;
+
+        for (size_t i = 0; i < tbl->imports.len; ++i) {
+                symtbl *t = tbl->imports.data[i];
+                assert(t);
+                if (!strcmp(e->namespace->lx, t->modname)) {
+                        other = t;
+                        break;
+                }
+        }
+
+        if (!other) {
+                pusherr(tbl, ((expr *)e)->loc, "module `%s` was not found", e->namespace->lx);
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                return NULL;
+        }
+
+        other->context_switch = 1;
+        v->context = (void *)other;
+        e->e->accept(e->e, v);
+
+        other->context_switch = 0;
+        v->context = (void *)tbl;
+
+        if (other->errs.len > 0) {
+                for (size_t i = 0; i < other->errs.len; ++i) {
+                        fprintf(stderr, "%s\n", other->errs.data[i]);
+                }
+                exit(1);
+        }
+
+        ((expr *)e)->type = e->e->type;
+
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -343,11 +393,11 @@ visit_stmt_let(visitor *v, stmt_let *s)
         }
 
         insert_sym_into_scope(tbl, sym);
-        tbl->stack_offset += type_to_int(sym->ty);
+        tbl->stack_offset += sym->ty->sz;
 
         // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {
-                tbl->proc.rsp += type_to_int(sym->ty);
+                tbl->proc.rsp += sym->ty->sz;
         }
 
         // Typecheck the 'let' statement's given type
@@ -397,6 +447,12 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
+        // Add exported procedures to the export_syms table
+        // for ASM generation 'global' section.
+        if (s->export) {
+                dyn_array_append(tbl->export_syms, s->id->lx);
+        }
+
         // Check if this procedure already exists.
         if (sym_exists_in_scope(tbl, s->id->lx)) {
                 pusherr(tbl, s->id->loc, "procecure `%s` is already defined", s->id->lx);
@@ -404,7 +460,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         }
 
         // Add procedure to the scope.
-        type_proc *proc_ty = type_proc_alloc(s->type, &s->params, s->variadic);
+        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, s->export);
         insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 0));
 
         // We are pushing scope here so that when this current
@@ -421,8 +477,12 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 
                 sym *param = sym_alloc(tbl, s->params.data[i].id->lx, s->params.data[i].type, 0);
                 insert_sym_into_scope(tbl, param);
-                tbl->stack_offset += type_to_int(param->ty);
+                tbl->stack_offset += param->ty->sz;
                 s->params.data[i].resolved = param;
+
+                // Consider the procedures parameter type sizes
+                // to subtract from the RSP regsister in ASM generation.
+                tbl->proc.rsp += s->params.data[i].type->sz;
         }
 
         // We are currently inside of a procedure, keep track
@@ -500,7 +560,7 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
                 return NULL;
         }
 
-        type_proc *proc_ty = type_proc_alloc(s->type, &s->params, s->variadic);
+        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, 0/*TODO: allow exported extern procs*/);
         insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 1));
 
         return NULL;
@@ -605,7 +665,7 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
                         }
                 }
 
-                sz += type_to_int(p->type);
+                sz += p->type->sz;
                 s->members.data[i].resolved = sym_alloc(tbl, p->id->lx, p->type, 0);
                 p->resolved->stack_offset = sz;
 
@@ -625,6 +685,28 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
         return NULL;
 }
 
+static void *
+visit_stmt_module(visitor *v, stmt_module *s)
+{
+        NOOP(v, s);
+        return NULL;
+}
+
+static void *
+visit_stmt_import(visitor *v, stmt_import *s)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        char    *src        = forge_io_read_file_to_cstr(s->filepath);
+        lexer    l          = lexer_create(src, s->filepath);
+        program *p          = parser_create_program(&l);
+        symtbl  *import_tbl = sem_analysis(p);
+
+        dyn_array_append(tbl->imports, import_tbl);
+
+        return NULL;
+}
+
 static visitor *
 sem_visitor_alloc(symtbl *tbl)
 {
@@ -637,6 +719,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_proccall,
                 visit_expr_mut,
                 visit_expr_brace_init,
+                visit_expr_namespace,
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,
@@ -649,31 +732,45 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_for,
                 visit_stmt_break,
                 visit_stmt_continue,
-                visit_stmt_struct
+                visit_stmt_struct,
+                visit_stmt_module,
+                visit_stmt_import
         );
 }
 
-symtbl
+symtbl *
 sem_analysis(program *p)
 {
-        symtbl tbl = (symtbl) {
-                .scope = dyn_array_empty(smap_array),
-                .proc = {
-                        .type = NULL,
-                        .inproc = 0,
-                },
-                .errs = dyn_array_empty(str_array),
-                .stack_offset = 0,
-                .loop = NULL,
-        };
+        symtbl *tbl         = (symtbl *)alloc(sizeof(symtbl));
+        tbl->src_filepath   = p->src_filepath;
+        tbl->modname        = p->modname;
+        tbl->scope          = dyn_array_empty(smap_array);
+        tbl->program        = p;
+        tbl->proc.type      = NULL;
+        tbl->proc.inproc    = 0;
+        tbl->errs           = dyn_array_empty(str_array);
+        tbl->stack_offset   = 0;
+        tbl->loop           = NULL;
+        tbl->imports.data   = NULL;
+        tbl->imports.len    = 0;
+        tbl->imports.cap    = 0;
+        tbl->context_switch = 0;
+        tbl->export_syms    = dyn_array_empty(str_array);
 
         // Need to immediately add a scope for global scope.
-        dyn_array_append(tbl.scope, smap_create(NULL));
+        dyn_array_append(tbl->scope, smap_create(NULL));
 
-        visitor *v = sem_visitor_alloc(&tbl);
+        visitor *v = sem_visitor_alloc(tbl);
 
         for (size_t i = 0; i < p->stmts.len; ++i) {
                 p->stmts.data[i]->accept(p->stmts.data[i], v);
+        }
+
+        if (tbl->errs.len > 0) {
+                for (size_t i = 0; i < tbl->errs.len; ++i) {
+                        fprintf(stderr, "%s\n", tbl->errs.data[i]);
+                }
+                exit(1);
         }
 
         return tbl;

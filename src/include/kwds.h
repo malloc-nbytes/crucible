@@ -28,6 +28,9 @@
 
 #define KWD_STRUCT "struct"
 
+#define KWD_MODULE "module"
+#define KWD_IMPORT "import"
+
 #define KWDS {                                  \
                 KWD_I8,                         \
                 KWD_I16,                        \
@@ -51,6 +54,8 @@
                 KWD_BREAK,                      \
                 KWD_CONTINUE,                   \
                 KWD_STRUCT,                     \
+                KWD_MODULE,                     \
+                KWD_IMPORT,                     \
 }
 
 #define KWD_TYPES {                             \

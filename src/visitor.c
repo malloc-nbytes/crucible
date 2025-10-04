@@ -12,6 +12,7 @@ visitor_alloc(void                           *ctx,
               visit_expr_proccall_sig         visit_expr_proccall,
               visit_expr_mut_sig              visit_expr_mut,
               visit_expr_brace_init_sig       visit_expr_brace_init,
+              visit_expr_namespace_sig        visit_expr_namespace,
               visit_stmt_let_sig              visit_stmt_let,
               visit_stmt_expr_sig             visit_stmt_expr,
               visit_stmt_block_sig            visit_stmt_block,
@@ -24,7 +25,9 @@ visitor_alloc(void                           *ctx,
               visit_stmt_for_sig              visit_stmt_for,
               visit_stmt_break_sig            visit_stmt_break,
               visit_stmt_continue_sig         visit_stmt_continue,
-              visit_stmt_struct_sig           visit_stmt_struct) {
+              visit_stmt_struct_sig           visit_stmt_struct,
+              visit_stmt_module_sig           visit_stmt_module,
+              visit_stmt_import_sig           visit_stmt_import) {
 
         visitor *v = (visitor *)alloc(sizeof(visitor));
 
@@ -37,6 +40,7 @@ visitor_alloc(void                           *ctx,
         v->visit_expr_proccall        = visit_expr_proccall;
         v->visit_expr_mut             = visit_expr_mut;
         v->visit_expr_brace_init      = visit_expr_brace_init;
+        v->visit_expr_namespace       = visit_expr_namespace;
 
         v->visit_stmt_let             = visit_stmt_let;
         v->visit_stmt_expr            = visit_stmt_expr;
@@ -51,6 +55,8 @@ visitor_alloc(void                           *ctx,
         v->visit_stmt_break           = visit_stmt_break;
         v->visit_stmt_continue        = visit_stmt_continue;
         v->visit_stmt_struct          = visit_stmt_struct;
+        v->visit_stmt_module          = visit_stmt_module;
+        v->visit_stmt_import          = visit_stmt_import;
 
         return v;
 }
@@ -116,6 +122,15 @@ accept_expr_brace_init(expr *e, visitor *v)
 {
         if (v->visit_expr_brace_init) {
                 return v->visit_expr_brace_init(v, (expr_brace_init *)e);
+        }
+        return NULL;
+}
+
+void *
+accept_expr_namespace(expr *e, visitor *v)
+{
+        if (v->visit_expr_namespace) {
+                return v->visit_expr_namespace(v, (expr_namespace *)e);
         }
         return NULL;
 }
@@ -235,6 +250,24 @@ accept_stmt_struct(stmt *s, visitor *v)
 {
         if (v->visit_stmt_struct) {
                 return v->visit_stmt_struct(v, (stmt_struct *)s);
+        }
+        return NULL;
+}
+
+void *
+accept_stmt_module(stmt *s, visitor *v)
+{
+        if (v->visit_stmt_module) {
+                return v->visit_stmt_module(v, (stmt_module *)s);
+        }
+        return NULL;
+}
+
+void *
+accept_stmt_import(stmt *s, visitor *v)
+{
+        if (v->visit_stmt_import) {
+                return v->visit_stmt_import(v, (stmt_import *)s);
         }
         return NULL;
 }

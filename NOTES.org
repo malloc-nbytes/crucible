@@ -5,6 +5,7 @@
 - [X] for loops
 - [X] break statements
 - [X] continue statements
+- [ ] macros
 - [ ] structs
   - [ ] statement =struct P {}=
   - [ ] literals =(obj) {.x = 1, .y = 2}=

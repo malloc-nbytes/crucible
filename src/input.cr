@@ -1,18 +1,14 @@
+module test;
+
+import t.artifacts.strs;
+import t.artifacts.math;
+
+extern proc strcmp(s0: u8*, s1: u8*): i32;
 extern proc printf(fmt: u8*, ...): i32;
 
-struct Point {
-    x: i32,
-    s: u8*,
-    y: i32,
-}
-
 export proc _start(void): ! {
-
-    let p: Point = {
-        .x = 1,
-        .s = "foo",
-        .y = 2,
-    };
-
-    exit 0;
+    -- let s: i32 = strcmp("hello world", strs::get_hello_world());
+    let s: i32 = 5;
+    printf("%d\n", math::sum(1, 2) + s);
+    exit;
 }
