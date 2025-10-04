@@ -741,16 +741,22 @@ visit_stmt_return(visitor *v, stmt_return *s)
 {
         asm_context *ctx = (asm_context *)v->context;
 
-        char *value = s->e->accept(s->e, v);
-        int sz = s->e->type->sz;
-        const char *ret_reg = get_reg_from_size("rax", sz);
-        take_txt(ctx, forge_cstr_builder("mov ", szspec(sz), " ",
-                                         ret_reg, ", ",
-                                         value, NULL), 1);
-        free_reg_literal(value);
+        if (s->e) {
+                char *value = s->e->accept(s->e, v);
+                int sz = s->e->type->sz;
+                const char *ret_reg = get_reg_from_size("rax", sz);
+                take_txt(ctx, forge_cstr_builder("mov ", szspec(sz), " ",
+                                                 ret_reg, ", ",
+                                                 value, NULL), 1);
+                free_reg_literal(value);
+                write_txt(ctx, "leave", 1);
+                write_txt(ctx, "ret", 1);
+
+                return (void *)ret_reg;
+        }
         write_txt(ctx, "leave", 1);
         write_txt(ctx, "ret", 1);
-        return (void *)ret_reg;
+        return "rax";
 }
 
 static void *

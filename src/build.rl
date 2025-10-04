@@ -7,8 +7,9 @@ module Build
 
 set_flag("-xe");
 
-let debug = false;
+let debug, test = (false, false);
 try { debug = ("debug", "d", "g", "ggdb").contains(argv()[1]); }
+try { test = ("test", "t").contains(argv()[1]); }
 
 let cc, name, files, flags, libs = (
     "cc",
@@ -21,6 +22,9 @@ let cc, name, files, flags, libs = (
 if debug {
     $f"{cc} -o {name} {files} {flags} -ggdb -O0 {libs}";
     $f"gdb ./{name}";
+} else if test {
+    cd("t");
+    $"/bin/bash run.sh";
 } else {
     $f"{cc} -o {name} {files} {flags} -O2 {libs}";
 }
