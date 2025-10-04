@@ -71,6 +71,7 @@ typedef struct {
         const parameter_array *params;
         int variadic;
         int export;
+        int extern_;
 } type_proc;
 
 typedef struct {
@@ -96,15 +97,16 @@ type_struct *type_struct_alloc(const parameter_array *members, size_t sz);
 type_custom *type_custom_alloc(const token *struct_id);
 type_unknown *type_unknown_alloc(void);
 
-char *type_to_cstr(const type *t);
 type_proc *type_proc_alloc(
         const char *id,
         type *rettype,
         const parameter_array *params,
         int variadic,
-        int export
+        int export,
+        int extern_
 );
 
+char *type_to_cstr(const type *t);
 int type_is_compat(type **t1, type **t2);
 int type_to_int(const type *t);
 

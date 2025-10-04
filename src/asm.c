@@ -70,6 +70,7 @@ static int g_inuse_regs[g_regs_r * g_regs_c] = {
 typedef struct {
         FILE *out;
         symtbl *tbl;
+        const char *modname;
         str_array globals;
         str_array data_section;
         str_array externs;
@@ -498,7 +499,11 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
         char *reg = g_regs[regi];
 
         if (e->resolved->extern_ || ((expr *)e)->type->kind == TYPE_KIND_PROC) {
-                take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->id->lx, NULL), 1);
+                if (!e->resolved->extern_) {
+                        take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->resolved->modname, "_", e->id->lx, NULL), 1);
+                } else {
+                        take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->id->lx, NULL), 1);
+                }
         } else {
                 char *offset_s = int_to_cstr(e->resolved->stack_offset);
                 const char *spec = szspec(e->resolved->ty->sz);
@@ -713,7 +718,12 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                 dyn_array_append(ctx->globals, s->id->lx);
         }
 
-        take_txt(ctx, forge_cstr_builder(s->id->lx, ":", NULL), 1);
+        if (!strcmp(s->id->lx, "_start")) {
+                take_txt(ctx, forge_cstr_builder(s->id->lx, ":", NULL), 1);
+        } else {
+                const char *modname = ctx->tbl->modname;
+                take_txt(ctx, forge_cstr_builder(modname, "_", s->id->lx, ":", NULL), 1);
+        }
         prologue(ctx, s->rsp);
 
         const char *param_regs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
@@ -964,7 +974,8 @@ visit_stmt_import(visitor *v, stmt_import *s)
         }
 
         for (size_t i = 0; i < import_tbl->export_syms.len; ++i) {
-                dyn_array_append(ctx->externs, import_tbl->export_syms.data[i]);
+                char *exp = forge_cstr_builder(s->resolved_modname, "_", import_tbl->export_syms.data[i], NULL);
+                dyn_array_append(ctx->externs, exp);
         }
 
         return NULL;
@@ -1006,8 +1017,8 @@ init(asm_context *ctx, symtbl *tbl)
 {
         const char *basename = forge_io_basename(tbl->src_filepath);
         char *asm_fp = forge_cstr_builder(basename, ".asm", NULL);
+
         ctx->out = fopen(asm_fp, "w");
-        ctx->tbl = tbl;
         free(asm_fp);
 
         if (!ctx->out) {
@@ -1015,6 +1026,8 @@ init(asm_context *ctx, symtbl *tbl)
                 exit(1);
         }
 
+        ctx->tbl              = tbl;
+        ctx->modname          = tbl->modname;
         ctx->globals          = dyn_array_empty(str_array);
         ctx->data_section     = dyn_array_empty(str_array);
         ctx->externs          = dyn_array_empty(str_array);
@@ -1040,6 +1053,10 @@ write_globals(asm_context *ctx)
 {
         for (size_t i = 0; i < ctx->globals.len; ++i) {
                 write_txt(ctx, "global ", 0);
+                if (strcmp(ctx->globals.data[i], "_start")) {
+                        write_txt(ctx, ctx->tbl->modname, 0);
+                        write_txt(ctx, "_", 0);
+                }
                 write_txt(ctx, ctx->globals.data[i], 1);
         }
 }

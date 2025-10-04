@@ -87,6 +87,7 @@ sym_alloc(symtbl     *tbl,
         s->ty           = ty;
         s->stack_offset = tbl->stack_offset + ty->sz;
         s->extern_      = extern_;
+        s->modname      = tbl->modname;
 
         return s;
 }
@@ -462,7 +463,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         }
 
         // Add procedure to the scope.
-        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, s->export);
+        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, s->export, 0);
         insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 0));
 
         // We are pushing scope here so that when this current
@@ -562,7 +563,7 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
                 return NULL;
         }
 
-        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, 0/*TODO: allow exported extern procs*/);
+        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, 0/*TODO: allow exported extern procs*/, /*extern=*/1);
         insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 1));
 
         return NULL;
@@ -705,6 +706,8 @@ visit_stmt_import(visitor *v, stmt_import *s)
         symtbl  *import_tbl = sem_analysis(p);
 
         dyn_array_append(tbl->imports, import_tbl);
+
+        s->resolved_modname = import_tbl->modname;
 
         return NULL;
 }

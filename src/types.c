@@ -76,7 +76,8 @@ type_proc_alloc(const char            *id,
                 type                  *rettype,
                 const parameter_array *params,
                 int                    variadic,
-                int                    export)
+                int                    export,
+                int                    extern_)
 {
         type_proc *t = (type_proc *)alloc(sizeof(type_proc));
         t->base.kind = TYPE_KIND_PROC;
@@ -86,6 +87,7 @@ type_proc_alloc(const char            *id,
         t->params    = params;
         t->variadic  = variadic;
         t->export    = export;
+        t->extern_   = extern_;
         return t;
 }
 

@@ -255,6 +255,8 @@ typedef struct {
         stmt base;
         char *filepath;
         int local;
+
+        const char *resolved_modname; // resolved in semantic analysis
 } stmt_import;
 
 expr_identifier *expr_identifier_alloc(const token *id);
