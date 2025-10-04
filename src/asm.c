@@ -774,7 +774,7 @@ static void *
 visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
 {
         asm_context *ctx = (asm_context *)v->context;
-        dyn_array_append(ctx->externs, forge_cstr_builder("extern ", s->id->lx, NULL));
+        dyn_array_append(ctx->externs, s->id->lx);
         return NULL;
 }
 
@@ -946,6 +946,10 @@ visit_stmt_import(visitor *v, stmt_import *s)
                 dyn_array_append(ctx->obj_filepaths, obj_filepaths.data[i]);
         }
 
+        for (size_t i = 0; i < import_tbl->export_syms.len; ++i) {
+                dyn_array_append(ctx->externs, import_tbl->export_syms.data[i]);
+        }
+
         return NULL;
 }
 
@@ -1036,6 +1040,7 @@ static void
 write_externs(asm_context *ctx)
 {
         for (size_t i = 0; i < ctx->externs.len; ++i) {
+                write_txt(ctx, "extern ", 0);
                 take_txt(ctx, ctx->externs.data[i], 1);
         }
 }

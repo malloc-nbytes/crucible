@@ -41,6 +41,8 @@ typedef struct symtbl {
         } imports;
 
         int context_switch;
+
+        str_array export_syms;
 } symtbl;
 
 symtbl *sem_analysis(program *p);

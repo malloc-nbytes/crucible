@@ -51,10 +51,10 @@ link(str_array obj_filepaths)
                 forge_str_concat(&ld, obj);
         });
 
-        cmd(ld.data);
+        cmd_s(ld.data);
 
         FOREACH(obj, obj_filepaths.data, obj_filepaths.len, {
-                cmd(forge_cstr_builder("rm ", obj, NULL));
+                cmd_s(forge_cstr_builder("rm ", obj, NULL));
         });
 
         forge_str_destroy(&ld);

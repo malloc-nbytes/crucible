@@ -85,7 +85,7 @@ sym_alloc(symtbl     *tbl,
         sym *s          = (sym *)alloc(sizeof(sym));
         s->id           = id;
         s->ty           = ty;
-        s->stack_offset = tbl->stack_offset + type_to_int(ty);
+        s->stack_offset = tbl->stack_offset + ty->sz;
         s->extern_      = extern_;
 
         return s;
@@ -393,11 +393,11 @@ visit_stmt_let(visitor *v, stmt_let *s)
         }
 
         insert_sym_into_scope(tbl, sym);
-        tbl->stack_offset += type_to_int(sym->ty);
+        tbl->stack_offset += sym->ty->sz;
 
         // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {
-                tbl->proc.rsp += type_to_int(sym->ty);
+                tbl->proc.rsp += sym->ty->sz;
         }
 
         // Typecheck the 'let' statement's given type
@@ -447,6 +447,12 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
+        // Add exported procedures to the export_syms table
+        // for ASM generation 'global' section.
+        if (s->export) {
+                dyn_array_append(tbl->export_syms, s->id->lx);
+        }
+
         // Check if this procedure already exists.
         if (sym_exists_in_scope(tbl, s->id->lx)) {
                 pusherr(tbl, s->id->loc, "procecure `%s` is already defined", s->id->lx);
@@ -471,8 +477,12 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 
                 sym *param = sym_alloc(tbl, s->params.data[i].id->lx, s->params.data[i].type, 0);
                 insert_sym_into_scope(tbl, param);
-                tbl->stack_offset += type_to_int(param->ty);
+                tbl->stack_offset += param->ty->sz;
                 s->params.data[i].resolved = param;
+
+                // Consider the procedures parameter type sizes
+                // to subtract from the RSP regsister in ASM generation.
+                tbl->proc.rsp += s->params.data[i].type->sz;
         }
 
         // We are currently inside of a procedure, keep track
@@ -655,7 +665,7 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
                         }
                 }
 
-                sz += type_to_int(p->type);
+                sz += p->type->sz;
                 s->members.data[i].resolved = sym_alloc(tbl, p->id->lx, p->type, 0);
                 p->resolved->stack_offset = sz;
 
@@ -745,6 +755,7 @@ sem_analysis(program *p)
         tbl->imports.len    = 0;
         tbl->imports.cap    = 0;
         tbl->context_switch = 0;
+        tbl->export_syms    = dyn_array_empty(str_array);
 
         // Need to immediately add a scope for global scope.
         dyn_array_append(tbl->scope, smap_create(NULL));
