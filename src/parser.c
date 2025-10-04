@@ -191,7 +191,7 @@ parse_primary_expr(parser_context *ctx)
 
                         if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_DOUBLE_COLON) {
                                 lexer_discard(ctx->l); // ::
-                                expr *right = parse_expr(ctx);
+                                expr *right = parse_primary_expr(ctx);
                                 left = (expr *)expr_namespace_alloc(i, right);
                         } else {
                                 left = (expr *)expr_identifier_alloc(i);
