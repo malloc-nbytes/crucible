@@ -196,6 +196,7 @@ parse_primary_expr(parser_context *ctx)
                         } else {
                                 left = (expr *)expr_identifier_alloc(i);
                         }
+
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_INTEGER_LITERAL: {
@@ -229,6 +230,7 @@ parse_primary_expr(parser_context *ctx)
                 }
         }
 
+        assert(0 && "unreachable");
         return left; // unreachable
 }
 
@@ -265,6 +267,7 @@ parse_multiplicitate_expr(parser_context *ctx)
                 token *op = lexer_next(ctx->l);
                 expr *rhs = parse_unary_expr(ctx);
                 expr_bin *bin = expr_bin_alloc(lhs, op, rhs);
+                ((expr *)bin)->loc = lhs->loc;
                 lhs = (expr *)bin;
                 cur = lexer_peek(ctx->l, 0);
         }
@@ -281,6 +284,7 @@ parse_additive_expr(parser_context *ctx)
                 token *op = lexer_next(ctx->l);
                 expr *rhs = parse_multiplicitate_expr(ctx);
                 expr_bin *bin = expr_bin_alloc(lhs, op, rhs);
+                ((expr *)bin)->loc = lhs->loc;
                 lhs = (expr *)bin;
                 cur = lexer_peek(ctx->l, 0);
         }
@@ -301,6 +305,7 @@ parse_equalitative_expr(parser_context *ctx)
                 token *op = lexer_next(ctx->l);
                 expr *rhs = parse_additive_expr(ctx);
                 expr_bin *bin = expr_bin_alloc(lhs, op, rhs);
+                ((expr *)bin)->loc = lhs->loc;
                 lhs = (expr *)bin;
                 cur = lexer_peek(ctx->l, 0);
         }
@@ -317,6 +322,7 @@ parse_logical_expr(parser_context *ctx)
                 token *op = lexer_next(ctx->l);
                 expr *rhs = parse_equalitative_expr(ctx);
                 expr_bin *bin = expr_bin_alloc(lhs, op, rhs);
+                ((expr *)bin)->loc = lhs->loc;
                 lhs = (expr *)bin;
                 cur = lexer_peek(ctx->l, 0);
         }

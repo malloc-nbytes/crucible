@@ -1,4 +1,4 @@
-* TODO [41%]
+* TODO [47%]
 - [X] while loops
 - [X] mut statements
 - [X] convert =type_to_int(type)= to =type->sz=
@@ -6,9 +6,10 @@
 - [X] break statements
 - [X] continue statements
 - [X] fix procedures with the same name but different namespaces (multiple definition error in linker)
+- [X] imports
 - [ ] macros
-- [ ] structs
-  - [ ] statement =struct P {}=
+- [-] structs
+  - [X] statement =struct P {}=
   - [ ] literals =(obj) {.x = 1, .y = 2}=
 - [ ] more mutation operators (+=, -=, etc).
 - [ ] casting
@@ -19,7 +20,6 @@
   - [ ] literals ={1, 2, 3}=
   - [ ] pointer arithmetic =ar + i=
 - [ ] enums
-- [ ] imports
 - [ ] move build system to autotools
 
 * Bugs

@@ -12,6 +12,7 @@ init_expr_kind(expr_kind kind,
         e.kind = kind;
         e.accept = accept;
         e.type = NULL;
+        e.loc = (loc) {0};
         return e;
 }
 

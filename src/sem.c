@@ -101,6 +101,7 @@ binop(symtbl      *tbl,
         if (op->ty >= TOKEN_TYPE_BINOP_LEN || op->ty <= TOKEN_TYPE_OTHER_LEN) {
                 forge_err_wargs("%sunsupported binary operator `%s`",
                                 loc_err(op->loc), op->lx);
+                (type *)type_unknown_alloc();
         }
 
         if (!type_is_compat(&lhs->type, &rhs->type)) {
@@ -108,6 +109,7 @@ binop(symtbl      *tbl,
                         "cannot perform binary operator `%s` on %s and %s",
                         op->lx,
                         type_to_cstr(lhs->type), type_to_cstr(rhs->type));
+                return (type *)type_unknown_alloc();
         }
 
         return lhs->type;
