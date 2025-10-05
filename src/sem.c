@@ -246,9 +246,9 @@ visit_expr_mut(visitor *v, expr_mut *e)
         e->rhs->accept(e->rhs, v);
 
         // TODO: support other assignment operators
-        if (e->op->ty != TOKEN_TYPE_EQUALS) {
-                forge_err("only direct assignment is supported `=`");
-        }
+        /* if (e->op->ty != TOKEN_TYPE_EQUALS) { */
+        /*         forge_err("only direct assignment is supported `=`"); */
+        /* } */
 
         ((expr *)e)->type = e->lhs->type;
 

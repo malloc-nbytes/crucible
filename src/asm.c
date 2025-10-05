@@ -229,15 +229,14 @@ free_reg_literal(const char *reg)
 {
         if (!reg) return;
 
+        if (!is_register(reg)) return;
+
         for (size_t i = 0; i < g_regs_n; ++i) {
                 if (!strcmp(reg, g_regs[i])) {
-                        assert(g_inuse_regs[i]);
                         g_inuse_regs[i] = 0;
                         return;
                 }
         }
-
-        //forge_err_wargs("could not free register %s, was not alloc'd", reg);
 }
 
 static int
@@ -684,16 +683,58 @@ visit_expr_mut(visitor *v, expr_mut *e)
                 assert(sym);
 
                 const char *spec = szspec(sym->ty->sz);
-                const char *offset = int_to_cstr(sym->stack_offset);
-
+                char *offset = int_to_cstr(sym->stack_offset);
                 char *rvalue = e->rhs->accept(e->rhs, v);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", rvalue, NULL), 1);
 
+                int regi = alloc_reg(sym->ty->sz);
+                char *reg = g_regs[regi];
+
+                // Load lvalue into register
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", [rbp-", offset, "]", NULL), 1);
+
+                switch (e->op->ty) {
+                case TOKEN_TYPE_EQUALS: // Simple assignment
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", rvalue, NULL), 1);
+                        break;
+                case TOKEN_TYPE_PLUS_EQUALS:
+                        take_txt(ctx, forge_cstr_builder("add ", spec, " ", reg, ", ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", reg, NULL), 1);
+                        break;
+                case TOKEN_TYPE_MINUS_EQUALS:
+                        take_txt(ctx, forge_cstr_builder("sub ", spec, " ", reg, ", ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", reg, NULL), 1);
+                        break;
+                case TOKEN_TYPE_ASTERISK_EQUALS:
+                        take_txt(ctx, forge_cstr_builder("imul ", spec, " ", reg, ", ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", reg, NULL), 1);
+                        break;
+                case TOKEN_TYPE_FORWARDSLASH_EQUALS: {
+                        // Division requires rax and rdx
+                        write_txt(ctx, "xor rdx, rdx", 1); // Clear rdx for dividend
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, [rbp-", offset, "]", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rax", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", reg, NULL), 1);
+                } break;
+                case TOKEN_TYPE_PERCENT_EQUALS: {
+                        // Modulo requires rax and rdx
+                        write_txt(ctx, "xor rdx, rdx", 1); // Clear rdx for dividend
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, [rbp-", offset, "]", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rdx", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", reg, NULL), 1);
+                } break;
+                default:
+                        forge_err_wargs("visit_expr_mut(): unsupported operator `%s`", e->op->lx);
+                }
+
+                free(offset);
+                free_reg(regi);
+                //free_reg_literal(rvalue);
                 return rvalue;
         } break;
         default: {
-                forge_err_wargs("lvalue(): the lvalue of `%d` is unimplemented",
-                                (int)e->lhs->kind);
+                forge_err_wargs("visit_expr_mut(): lvalue of kind `%d` is unimplemented", (int)e->lhs->kind);
         } break;
         }
 
