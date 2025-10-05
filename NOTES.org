@@ -1,11 +1,11 @@
-* TODO [42%]
+* TODO [41%]
 - [X] while loops
 - [X] mut statements
 - [X] convert =type_to_int(type)= to =type->sz=
 - [X] for loops
 - [X] break statements
 - [X] continue statements
-- [ ] fix procedures with the same name but different namespaces (multiple definition error in linker)
+- [X] fix procedures with the same name but different namespaces (multiple definition error in linker)
 - [ ] macros
 - [ ] structs
   - [ ] statement =struct P {}=

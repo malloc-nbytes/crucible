@@ -214,7 +214,9 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         // Go through each argument in the procedure call.
         for (size_t i = 0; i < e->args.len; ++i) {
                 expr *arg = e->args.data[i];
-                arg->accept(arg, v);
+
+                /* arg->accept(arg, v); */
+                if (!arg->type) arg->accept(arg, v);
 
                 // Type check argument list
                 if (i < proc_ty->params->len) {
@@ -328,6 +330,14 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
                 pusherr(tbl, ((expr *)e)->loc, "module `%s` was not found", e->namespace->lx);
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
+        }
+
+        // Evaluate the arguments in *this* context!
+        if (e->e->kind == EXPR_KIND_PROCCALL) {
+                expr_proccall *pc = (expr_proccall *)e->e;
+                for (size_t i = 0; i < pc->args.len; ++i) {
+                        pc->args.data[i]->accept(pc->args.data[i], v);
+                }
         }
 
         other->context_switch = 1;

@@ -13,21 +13,28 @@ module main;
 import test.basic;
 import test.addition;
 import test.subtraction;
+import test.procs;
+import helpers.assert;
 
 extern proc printf(fmt: u8*, ...): i32;
 
-proc summary(p: i32, f: i32): void {
+proc ok(void): void { printf("ok\n"); }
+proc bad(void): void { printf("FAIL\n"); }
+
+proc badi32(got: i32, exp: i32): void
+{
+    printf("FAIL [expected=%d, got=%d]\n", exp, got);
+}
+
+proc summary(p: i32, f: i32): void
+{
     printf("===== Summary =====\n");
     printf("PASSED: %d\n", p);
     printf("FAILED: %d\n", f);
 }
-proc ok(void):  void { printf("ok\n"); }
-proc bad(void): void { printf("FAIL\n"); }
-proc badi32(got: i32, exp: i32): void {
-    printf("FAIL [expected=%d, got=%d]\n", exp, got);
-}
 
-export proc _start(void): ! {
+export proc _start(void): !
+{
     let p: i32 = 0;
     let f: i32 = 0;
 
@@ -96,6 +103,27 @@ export proc _start(void): ! {
             badi32(resi32, 2);
             f = f+1;
         }
+    }
+
+    { -- PROCS
+        let resi32: i32 = 0;
+
+        if ((resi32 = procs::call_other_proc_r10()) == 10) {
+            ok();
+            p = p+1;
+        } else {
+            badi32(resi32, 10);
+            f = f+1;
+        }
+
+        if ((resi32 = procs::call_multiple_other_procs_r10()) == 10) {
+            ok();
+            p = p+1;
+        } else {
+            badi32(resi32, 10);
+            f = f+1;
+        }
+
     }
 
     summary(p, f);

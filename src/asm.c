@@ -324,7 +324,7 @@ push_inuse_regs(asm_context *ctx)
 }
 
 static void
-pop_regs(asm_context *ctx)
+pop_inuse_regs(asm_context *ctx)
 {
         for (int i = ctx->pushed_regs.len-1; i >= 0; --i) {
                 take_txt(ctx, forge_cstr_builder("pop ", ctx->pushed_regs.data[i], NULL), 1);
@@ -593,19 +593,22 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 
         assert(e->lhs->type->kind == TYPE_KIND_PROC);
         type_proc *proc_ty = (type_proc *)e->lhs->type;
+
+        // Clear RAX for variadic procedures.
         if (proc_ty->variadic) {
                 write_txt(ctx, "xor rax, rax", 1);
         }
 
         char *callee = e->lhs->accept(e->lhs, v);
 
+        // Free all alloc'd parameter registers from procedure arguments
         for (size_t i = 0; i < pregs.len; ++i) {
                 free_reg(pregs.data[i]);
         } dyn_array_free(pregs);
 
         take_txt(ctx, forge_cstr_builder("call ", callee, NULL), 1);
         free_reg_literal(callee);
-        pop_regs(ctx);
+        pop_inuse_regs(ctx);
 
         // Void return type case.
         if (proc_ty->rettype->kind == TYPE_KIND_VOID
