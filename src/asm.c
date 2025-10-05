@@ -991,7 +991,17 @@ visit_stmt_import(visitor *v, stmt_import *s)
         }
 
         for (size_t i = 0; i < import_tbl->export_syms.len; ++i) {
-                char *exp = forge_cstr_builder(s->resolved_modname, "_", import_tbl->export_syms.data[i], NULL);
+                // TODO HERE
+                const sym *sym = import_tbl->export_syms.data[i];
+                const type *type = sym->ty;
+                char *exp = NULL;
+
+                if (type->kind == TYPE_KIND_PROC && ((type_proc *)type)->extern_) {
+                        // Case for importing a module with 'extern export proc...'.
+                        exp = forge_cstr_builder(sym->id, NULL);
+                } else {
+                        exp = forge_cstr_builder(s->resolved_modname, "_", sym->id, NULL);
+                }
                 dyn_array_append(ctx->externs, exp);
         }
 
