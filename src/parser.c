@@ -494,6 +494,11 @@ parse_stmt_proc(parser_context *ctx)
 static stmt_extern_proc *
 parse_stmt_extern(parser_context *ctx)
 {
+        int export = !strcmp(lexer_peek(ctx->l, 0)->lx, KWD_EXPORT);
+        if (export) {
+                lexer_discard(ctx->l); // export
+        }
+
         (void)expectkw(ctx, KWD_EXTERN);
         (void)expectkw(ctx, KWD_PROC);
         token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
@@ -502,7 +507,7 @@ parse_stmt_extern(parser_context *ctx)
         (void)expect(ctx, TOKEN_TYPE_COLON);
         type *ty = parse_type(ctx);
         (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
-        return stmt_extern_proc_alloc(id, params, variadic, ty);
+        return stmt_extern_proc_alloc(id, params, variadic, ty, export);
 }
 
 static stmt_return *
@@ -650,14 +655,31 @@ parse_stmt_import(parser_context *ctx)
 }
 
 static stmt *
+parse_stmt_export(parser_context *ctx)
+{
+        int ok = lexer_peek(ctx->l, 1) != NULL;
+
+        if (ok && !strcmp(lexer_peek(ctx->l, 1)->lx, KWD_PROC)) {
+                return (stmt *)parse_stmt_proc(ctx);
+        } else if (ok && !strcmp(lexer_peek(ctx->l, 1)->lx, KWD_EXTERN)) {
+                return (stmt *)parse_stmt_extern(ctx);
+        }
+
+        forge_err_wargs("%sinvalid use of keyword '%s'", loc_err(ctx->l->hd->loc), KWD_EXTERN);
+        return NULL;
+}
+
+static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
         token *hd = lexer_peek(ctx->l, 0);
 
         if (!strcmp(hd->lx, KWD_LET)) {
                 return (stmt *)parse_stmt_let(ctx);
-        } else if (!strcmp(hd->lx, KWD_PROC) || !strcmp(hd->lx, KWD_EXPORT)) {
+        } else if (!strcmp(hd->lx, KWD_PROC)) {
                 return (stmt *)parse_stmt_proc(ctx);
+        } else if (!strcmp(hd->lx, KWD_EXPORT)) {
+                return (stmt *)parse_stmt_export(ctx);
         } else if (!strcmp(hd->lx, KWD_RETURN)) {
                 return (stmt *)parse_stmt_return(ctx);
         } else if (!strcmp(hd->lx, KWD_EXIT)) {
@@ -711,9 +733,9 @@ program *
 parser_create_program(lexer *l)
 {
         parser_context ctx = (parser_context) {
-                .l = l,
+                .l         = l,
                 .in_global = 1,
-                .module = NULL,
+                .module    = NULL,
         };
 
         program *p      = (program  *)alloc(sizeof(program));
