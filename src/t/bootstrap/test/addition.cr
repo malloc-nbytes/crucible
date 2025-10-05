@@ -1,6 +1,6 @@
 -- This module tests various addition actions.
 
-module addition;
+module addition where
 
 import helpers.log;
 

@@ -68,9 +68,9 @@ link(str_array obj_filepaths)
 
         cmd_s(ld.data);
 
-        /* FOREACH(obj, obj_filepaths.data, obj_filepaths.len, { */
-        /*         cmd_s(forge_cstr_builder("rm ", obj, NULL)); */
-        /* }); */
+        FOREACH(obj, found.data, found.len, {
+                cmd_s(forge_cstr_builder("rm ", obj, NULL));
+        });
 
         forge_str_destroy(&ld);
 }

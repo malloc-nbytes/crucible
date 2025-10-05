@@ -1,4 +1,4 @@
-module test;
+module test where
 
 struct F {
     x: i32,

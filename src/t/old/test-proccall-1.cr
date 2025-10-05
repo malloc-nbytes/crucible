@@ -1,4 +1,4 @@
-module test;
+module test where
 
 proc f(void): i32 {
     return 0;

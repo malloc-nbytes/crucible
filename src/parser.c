@@ -51,12 +51,12 @@ expectkw(parser_context *ctx, const char *kw)
 {
         token *t = lexer_next(ctx->l);
         if (t->ty != TOKEN_TYPE_KEYWORD) {
-                forge_err_wargs("expected token of type `%s` but got `%s`",
-                                token_type_to_cstr(TOKEN_TYPE_KEYWORD), token_type_to_cstr(t->ty));
+                forge_err_wargs("%sexpected token of type `%s` but got `%s`",
+                                loc_err(t->loc), token_type_to_cstr(TOKEN_TYPE_KEYWORD), token_type_to_cstr(t->ty));
         }
         if (strcmp(t->lx, kw)) {
-                forge_err_wargs("expected keyword `%s` but got `%s`",
-                                kw, t->lx);
+                forge_err_wargs("%sexpected keyword `%s` but got `%s`",
+                                loc_err(t->loc), kw, t->lx);
         }
         return t;
 }
@@ -618,7 +618,7 @@ parse_stmt_module(parser_context *ctx)
 {
         (void)expectkw(ctx, KWD_MODULE);
         const token *modname = expect(ctx, TOKEN_TYPE_IDENTIFIER);
-        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        (void)expectkw(ctx, KWD_WHERE);
         ctx->module = strdup(modname->lx);
         return stmt_module_alloc(modname);
 }

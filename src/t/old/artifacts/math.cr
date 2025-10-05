@@ -1,4 +1,4 @@
-module math;
+module math where
 
 proc f1(void): void {}
 proc f2(x: i32): i32 {

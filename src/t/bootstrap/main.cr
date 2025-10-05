@@ -8,7 +8,7 @@
 
 -- Note: Maybe use macros once implemented.
 
-module main;
+module main where
 
 import test.basic;
 import test.addition;

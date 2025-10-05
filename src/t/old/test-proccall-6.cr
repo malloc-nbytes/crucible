@@ -1,4 +1,4 @@
-module test;
+module test where
 
 proc f(a: i32): i32 {
     let x: i32 = 5;

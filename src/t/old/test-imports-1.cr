@@ -1,4 +1,4 @@
-module test;
+module test where
 
 import artifacts.math;
 

@@ -104,13 +104,13 @@ assemble(asm_context *ctx)
 
         dyn_array_append(g_already_assembled, strdup(src_filepath));
 
-        /* char *rm_asm = forge_cstr_builder("rm ", g_config.filepath, ".asm", NULL); */
-        /* if ((g_config.flags & FLAG_TYPE_ASM) == 0) { */
-        /*         cmd_s(rm_asm); */
-        /* } */
+        char *rm_asm = forge_cstr_builder("rm ", basename, ".asm", NULL);
+        if ((g_config.flags & FLAG_TYPE_ASM) == 0) {
+                cmd_s(rm_asm);
+        }
 
-        /* free(nasm); */
-        /* free(rm_asm); */
+        free(nasm);
+        free(rm_asm);
 }
 
 static void

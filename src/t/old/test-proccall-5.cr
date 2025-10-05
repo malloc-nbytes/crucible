@@ -1,4 +1,4 @@
-module test;
+module test where
 
 proc f(a: i64): i64 {
     return a;

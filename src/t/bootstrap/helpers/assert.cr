@@ -1,4 +1,4 @@
-module assert;
+module assert where
 
 extern proc strcmp(s0: u8*, s1: u8*): i32;
 extern proc printf(fmt: u8*, ...): i32;

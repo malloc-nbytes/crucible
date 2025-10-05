@@ -1,4 +1,4 @@
-module subtraction;
+module subtraction where
 
 import helpers.log;
 

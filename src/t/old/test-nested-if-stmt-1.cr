@@ -1,4 +1,4 @@
-module test;
+module test where
 
 export proc _start(void): ! {
     if (1 == 1) {

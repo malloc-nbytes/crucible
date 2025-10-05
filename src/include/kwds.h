@@ -30,6 +30,7 @@
 
 #define KWD_MODULE "module"
 #define KWD_IMPORT "import"
+#define KWD_WHERE  "where"
 
 #define KWDS {                                  \
                 KWD_I8,                         \
@@ -56,6 +57,7 @@
                 KWD_STRUCT,                     \
                 KWD_MODULE,                     \
                 KWD_IMPORT,                     \
+                KWD_WHERE,                      \
 }
 
 #define KWD_TYPES {                             \

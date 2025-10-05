@@ -1,4 +1,4 @@
-module test;
+module test where
 
 export proc _start(void): ! {
     let y: i32 = 10;

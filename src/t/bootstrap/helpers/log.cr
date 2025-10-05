@@ -1,4 +1,4 @@
-module log;
+module log where
 
 extern proc printf(fmt: u8*, ...): i32;
 

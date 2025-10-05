@@ -1,6 +1,6 @@
 -- This module tests extremely basic actions.
 
-module basic;
+module basic where
 
 import helpers.log;
 

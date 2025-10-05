@@ -1,7 +1,7 @@
 -- This module tests various different
 -- procedure actions.
 
-module procs;
+module procs where
 
 import helpers.log;
 
