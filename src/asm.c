@@ -138,6 +138,22 @@ take_txt(asm_context *ctx,
         free(txt);
 }
 
+// Note: This function is used to fix any
+//       `cmp imm, imm` assembler errors.
+//       Use this function in conditionals
+//       to maybe convert `imm` to `reg`.
+static int
+is_register(const char *s)
+{
+        if (!s) return 0;
+        for (size_t i = 0; i < g_regs_n; ++i) {
+                if (!strcmp(s, g_regs[i])) {
+                        return 1;
+                }
+        }
+        return 0;
+}
+
 static const char *
 get_reg_from_size(const char *reg64, int sz)
 {
@@ -382,7 +398,7 @@ epilogue(asm_context *ctx)
 }
 
 static void *
-visit_expr_bin(visitor *v, expr_bin *e)
+visit_expr_binary(visitor *v, expr_bin *e)
 {
         asm_context *ctx = (asm_context *)v->context;
 
@@ -453,12 +469,21 @@ visit_expr_bin(visitor *v, expr_bin *e)
                 char *lbl_false = genlbl(NULL);
                 char *lbl_done = genlbl(NULL);
 
-                // lhs
+                // lhs (reg is already a register)
                 take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
 
                 // rhs
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", v2, ", 0", NULL), 1);
+                char *v2_reg = NULL;
+                int temp_reg_idx = -1;
+                if (!is_register(v2)) {
+                        temp_reg_idx = alloc_reg(e->rhs->type->sz);
+                        v2_reg = g_regs[temp_reg_idx];
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", v2_reg, ", ", v2, NULL), 1);
+                } else {
+                        v2_reg = v2;
+                }
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", v2_reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
 
                 // Both true
@@ -468,6 +493,9 @@ visit_expr_bin(visitor *v, expr_bin *e)
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
 
+                if (temp_reg_idx != -1) {
+                        free_reg(temp_reg_idx);
+                }
                 free(lbl_false);
                 free(lbl_done);
         } break;
@@ -480,7 +508,16 @@ visit_expr_bin(visitor *v, expr_bin *e)
                 take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
 
                 // rhs
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", v2, ", 0", NULL), 1);
+                char *v2_reg = NULL;
+                int temp_reg_idx = -1;
+                if (!is_register(v2)) {
+                        temp_reg_idx = alloc_reg(e->rhs->type->sz);
+                        v2_reg = g_regs[temp_reg_idx];
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", v2_reg, ", ", v2, NULL), 1);
+                } else {
+                        v2_reg = v2;
+                }
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", v2_reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
 
                 // Both false
@@ -490,6 +527,9 @@ visit_expr_bin(visitor *v, expr_bin *e)
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
                 take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
 
+                if (temp_reg_idx != -1) {
+                        free_reg(temp_reg_idx);
+                }
                 free(lbl_true);
                 free(lbl_done);
         } break;
@@ -829,11 +869,21 @@ visit_stmt_if(visitor *v, stmt_if *s)
         char *cond = s->e->accept(s->e, v);
         const char *spec = szspec(s->e->type->sz);
 
+        char *cond_reg = NULL;
+        int temp_reg_idx = -1;
+        if (!is_register(cond)) {
+                temp_reg_idx = alloc_reg(s->e->type->sz);
+                cond_reg = g_regs[temp_reg_idx];
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", cond_reg, ", ", cond, NULL), 1);
+        } else {
+                cond_reg = cond;
+        }
+
         char *lbl_else = s->else_ ? genlbl("else") : NULL;
         char *lbl_done = genlbl("done");
 
         // Compare condition to 0
-        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond, ", 0", NULL), 1);
+        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
 
         // Jump to `else` (if present) or done if `false`
         take_txt(ctx, forge_cstr_builder("je ", s->else_ ? lbl_else : lbl_done, NULL), 1);
@@ -850,6 +900,9 @@ visit_stmt_if(visitor *v, stmt_if *s)
         take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
         free(lbl_done);
 
+        if (temp_reg_idx != -1) {
+                free_reg(temp_reg_idx);
+        }
         free_reg_literal(cond);
 
         return NULL;
@@ -867,7 +920,18 @@ visit_stmt_while(visitor *v, stmt_while *s)
 
         take_txt(ctx, forge_cstr_builder(lbl_loop_begin, ":", NULL), 1);
         char *cond = s->e->accept(s->e, v);
-        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond, ", 0", NULL), 1);
+
+        char *cond_reg = NULL;
+        int temp_reg_idx = -1;
+        if (!is_register(cond)) {
+                temp_reg_idx = alloc_reg(s->e->type->sz);
+                cond_reg = g_regs[temp_reg_idx];
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", cond_reg, ", ", cond, NULL), 1);
+        } else {
+                cond_reg = cond;
+        }
+
+        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
 
         take_txt(ctx, forge_cstr_builder("je ", lbl_loop_end, NULL), 1);
 
@@ -875,6 +939,11 @@ visit_stmt_while(visitor *v, stmt_while *s)
         take_txt(ctx, forge_cstr_builder("jmp ", lbl_loop_begin, NULL), 1);
 
         take_txt(ctx, forge_cstr_builder(lbl_loop_end, ":", NULL), 1);
+
+        if (temp_reg_idx != -1) {
+                free_reg(temp_reg_idx);
+        }
+        free_reg_literal(cond);
 
         free(lbl_loop_begin);
         free(lbl_loop_end);
@@ -897,8 +966,23 @@ visit_stmt_for(visitor *v, stmt_for *s)
         take_txt(ctx, forge_cstr_builder(lbl_for_begin, ":", NULL), 1);
 
         char *cond = s->e->accept(s->e, v);
-        take_txt(ctx, forge_cstr_builder("cmp ", e_spec, " ", cond, ", 0", NULL), 1);
+
+        char *cond_reg = NULL;
+        int temp_reg_idx = -1;
+        if (!is_register(cond)) {
+                temp_reg_idx = alloc_reg(s->e->type->sz);
+                cond_reg = g_regs[temp_reg_idx];
+                take_txt(ctx, forge_cstr_builder("mov ", e_spec, " ", cond_reg, ", ", cond, NULL), 1);
+        } else {
+                cond_reg = cond;
+        }
+
+        take_txt(ctx, forge_cstr_builder("cmp ", e_spec, " ", cond_reg, ", 0", NULL), 1);
         take_txt(ctx, forge_cstr_builder("je ", lbl_for_end, NULL), 1);
+
+        if (temp_reg_idx != -1) {
+                free_reg(temp_reg_idx);
+        }
         free_reg_literal(cond);
 
         (void)s->body->accept(s->body, v);
@@ -1013,7 +1097,7 @@ asm_visitor_alloc(asm_context *ctx)
 {
         return visitor_alloc(
                 (void *)ctx,
-                visit_expr_bin,
+                visit_expr_binary,
                 visit_expr_identifier,
                 visit_expr_integer_literal,
                 visit_expr_string_literal,
