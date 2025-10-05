@@ -194,6 +194,7 @@ typedef struct {
         parameter_array params;
         int variadic;
         type *type;
+        int export;
 } stmt_extern_proc;
 
 typedef struct {
@@ -282,7 +283,8 @@ stmt_extern_proc *stmt_extern_proc_alloc(
         const token *id,
         parameter_array params,
         int variadic,
-        type *type
+        type *type,
+        int export
 );
 stmt_block *stmt_block_alloc(stmt_array stmts);
 stmt_return *stmt_return_alloc(expr *e);

@@ -7,6 +7,7 @@
 - [X] continue statements
 - [X] fix procedures with the same name but different namespaces (multiple definition error in linker)
 - [X] imports
+- [ ] allow search paths and a flag '--nostd'
 - [ ] macros
 - [-] structs
   - [X] statement =struct P {}=

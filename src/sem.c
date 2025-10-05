@@ -462,12 +462,6 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
-        // Add exported procedures to the export_syms table
-        // for ASM generation 'extern' section.
-        if (s->export) {
-                dyn_array_append(tbl->export_syms, s->id->lx);
-        }
-
         // Check if this procedure already exists.
         if (sym_exists_in_scope(tbl, s->id->lx)) {
                 pusherr(tbl, s->id->loc, "procecure `%s` is already defined", s->id->lx);
@@ -476,7 +470,14 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
 
         // Add procedure to the scope.
         type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, s->export, 0);
-        insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 0));
+        sym *proc_sym = sym_alloc(tbl, s->id->lx, (type *)proc_ty, 0);
+        insert_sym_into_scope(tbl, proc_sym);
+
+        // Add exported procedures to the export_syms table
+        // for ASM generation 'extern' section.
+        if (s->export) {
+                dyn_array_append(tbl->export_syms, proc_sym);
+        }
 
         // We are pushing scope here so that when this current
         // procedure is finished, the parameters are popped.
@@ -575,8 +576,13 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
                 return NULL;
         }
 
-        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, 0/*TODO: allow exported extern procs*/, /*extern=*/1);
-        insert_sym_into_scope(tbl, sym_alloc(tbl, s->id->lx, (type *)proc_ty, 1));
+        type_proc *proc_ty = type_proc_alloc(s->id->lx, s->type, &s->params, s->variadic, s->export, /*extern=*/1);
+        sym *proc_sym = sym_alloc(tbl, strdup(s->id->lx), (type *)proc_ty, 1);
+        insert_sym_into_scope(tbl, proc_sym);
+
+        if (s->export) {
+                dyn_array_append(tbl->export_syms, proc_sym);
+        }
 
         return NULL;
 }
@@ -772,7 +778,7 @@ sem_analysis(program *p)
         tbl->imports.len    = 0;
         tbl->imports.cap    = 0;
         tbl->context_switch = 0;
-        tbl->export_syms    = dyn_array_empty(str_array);
+        tbl->export_syms    = dyn_array_empty(sym_array);
 
         // Need to immediately add a scope for global scope.
         dyn_array_append(tbl->scope, smap_create(NULL));

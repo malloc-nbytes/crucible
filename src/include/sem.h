@@ -43,7 +43,7 @@ typedef struct symtbl {
 
         int context_switch;
 
-        str_array export_syms;
+        sym_array export_syms;
 } symtbl;
 
 symtbl *sem_analysis(program *p);

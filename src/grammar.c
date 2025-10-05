@@ -164,10 +164,11 @@ stmt_proc_alloc(int              export,
 }
 
 stmt_extern_proc *
-stmt_extern_proc_alloc(const token *id,
-                       parameter_array params,
-                       int variadic,
-                       type *type)
+stmt_extern_proc_alloc(const token     *id,
+                       parameter_array  params,
+                       int              variadic,
+                       type            *type,
+                       int              export)
 {
         stmt_extern_proc *proc = alloc(sizeof(stmt_extern_proc));
         proc->base.kind        = STMT_KIND_EXTERN_PROC;
@@ -176,6 +177,7 @@ stmt_extern_proc_alloc(const token *id,
         proc->params           = params;
         proc->variadic         = variadic;
         proc->type             = type;
+        proc->export           = export;
         return proc;
 }
 
