@@ -282,10 +282,10 @@ alloc_param_regs(int sz)
         for (size_t i = 0; i < param_reg_count; ++i) {
                 size_t base_idx = param_reg_indices[i];
                 int row = base_idx / g_regs_c;
-                if (!REGAT(row, col, g_inuse_regs)) {
+                if (REGAT(row, col, g_inuse_regs) <= 0) {
                         int reg_free = 1;
                         for (size_t j = 0; j < g_regs_c; ++j) {
-                                if (REGAT(row, j, g_inuse_regs)) {
+                                if (REGAT(row, j, g_inuse_regs) > 0) {
                                         reg_free = 0;
                                         break;
                                 }
@@ -309,10 +309,14 @@ free_reg(int reg)
 static void
 push_inuse_regs(asm_context *ctx)
 {
+        size_t old_len = ctx->pushed_regs_idxs.len;
+
         for (size_t i = 0; i < g_regs_r; ++i) {
                 for (size_t j = 0; j < g_regs_c; ++j) {
                         if (REGAT(i, j, g_inuse_regs)) {
                                 char *reg = REGAT(i, 0, g_regs);
+
+                                //REGAT(i, j, g_inuse_regs)--;
                                 REGAT(i, j, g_inuse_regs) = 0;
 
                                 take_txt(ctx, forge_cstr_builder("push ", reg, NULL), 1);
@@ -321,17 +325,27 @@ push_inuse_regs(asm_context *ctx)
                         }
                 }
         }
+
+        for (size_t i = 0; i < old_len; ++i) {
+                g_inuse_regs[ctx->pushed_regs_idxs.data[i]]--;
+        }
 }
 
 static void
 pop_inuse_regs(asm_context *ctx)
 {
+        assert(ctx->pushed_regs.len == ctx->pushed_regs_idxs.len);
+
         for (int i = ctx->pushed_regs.len-1; i >= 0; --i) {
-                take_txt(ctx, forge_cstr_builder("pop ", ctx->pushed_regs.data[i], NULL), 1);
-                g_inuse_regs[ctx->pushed_regs_idxs.data[i]] = 1;
+                if (g_inuse_regs[ctx->pushed_regs_idxs.data[i]] == 0) {
+                        take_txt(ctx, forge_cstr_builder("pop ", ctx->pushed_regs.data[i], NULL), 1);
+                        g_inuse_regs[ctx->pushed_regs_idxs.data[i]] = 1;
+                        dyn_array_rm_at(ctx->pushed_regs, i);
+                        dyn_array_rm_at(ctx->pushed_regs_idxs, i);
+                } else {
+                        g_inuse_regs[ctx->pushed_regs_idxs.data[i]]++;
+                }
         }
-        dyn_array_clear(ctx->pushed_regs);
-        dyn_array_clear(ctx->pushed_regs_idxs);
 }
 
 static const char *
