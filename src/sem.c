@@ -376,6 +376,10 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
                                 "type mismatch, expected `%s` but got `%s`",
                                 type_to_cstr(elemty), type_to_cstr(e->exprs.data[i]->type));
                 }
+
+                if (tbl->proc.inproc) {
+                        tbl->proc.rsp += e->exprs.data[i]->type->sz;
+                }
         }
 
         ((expr *)e)->type = (type *)type_array_alloc(elemty, (int)e->exprs.len);
@@ -443,6 +447,12 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {
+                // if (sym->ty->kind == TYPE_KIND_ARRAY) {
+                //         // Add the values of all type sizes for arrays.
+                //         tbl->proc.rsp += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
+                // } else {
+                //         tbl->proc.rsp += sym->ty->sz;
+                // }
                 tbl->proc.rsp += sym->ty->sz;
         }
 
