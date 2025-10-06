@@ -27,7 +27,8 @@ visitor_alloc(void                           *ctx,
               visit_stmt_continue_sig         visit_stmt_continue,
               visit_stmt_struct_sig           visit_stmt_struct,
               visit_stmt_module_sig           visit_stmt_module,
-              visit_stmt_import_sig           visit_stmt_import) {
+              visit_stmt_import_sig           visit_stmt_import,
+              visit_stmt_embed_sig            visit_stmt_embed) {
 
         visitor *v = (visitor *)alloc(sizeof(visitor));
 
@@ -57,6 +58,7 @@ visitor_alloc(void                           *ctx,
         v->visit_stmt_struct          = visit_stmt_struct;
         v->visit_stmt_module          = visit_stmt_module;
         v->visit_stmt_import          = visit_stmt_import;
+        v->visit_stmt_embed           = visit_stmt_embed;
 
         return v;
 }
@@ -268,6 +270,15 @@ accept_stmt_import(stmt *s, visitor *v)
 {
         if (v->visit_stmt_import) {
                 return v->visit_stmt_import(v, (stmt_import *)s);
+        }
+        return NULL;
+}
+
+void *
+accept_stmt_embed(stmt *s, visitor *v)
+{
+        if (v->visit_stmt_embed) {
+                return v->visit_stmt_embed(v, (stmt_embed *)s);
         }
         return NULL;
 }

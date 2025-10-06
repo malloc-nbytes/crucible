@@ -669,6 +669,25 @@ parse_stmt_export(parser_context *ctx)
         return NULL;
 }
 
+static stmt_embed *
+parse_stmt_embed(parser_context *ctx)
+{
+        (void)expectkw(ctx, KWD_EMBED);
+        (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
+
+        token_array lns = dyn_array_empty(token_array);
+        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
+                dyn_array_append(lns, expect(ctx, TOKEN_TYPE_STRING_LITERAL));
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                        lexer_discard(ctx->l); // ,
+                } else {
+                        break;
+                }
+        }
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
+        return stmt_embed_alloc(lns);
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -702,6 +721,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_module(ctx);
         } else if (!strcmp(hd->lx, KWD_IMPORT)) {
                 return (stmt *)parse_stmt_import(ctx);
+        } else if (!strcmp(hd->lx, KWD_EMBED)) {
+                return (stmt *)parse_stmt_embed(ctx);
         }
 
         assert(0 && "todo");

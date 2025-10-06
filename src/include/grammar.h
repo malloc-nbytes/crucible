@@ -40,6 +40,7 @@ typedef enum {
         STMT_KIND_STRUCT,
         STMT_KIND_MODULE,
         STMT_KIND_IMPORT,
+        STMT_KIND_EMBED,
 } stmt_kind;
 
 ///////////////////////////////////////////
@@ -259,6 +260,11 @@ typedef struct {
         const char *resolved_modname; // resolved in semantic analysis
 } stmt_import;
 
+typedef struct {
+        stmt base;
+        token_array lns;
+} stmt_embed;
+
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_integer_literal *expr_integer_literal_alloc(const token *i);
 expr_string_literal *expr_string_literal_alloc(const token *s);
@@ -297,5 +303,6 @@ stmt_continue *stmt_continue_alloc(void);
 stmt_struct *stmt_struct_alloc(const token *id, parameter_array members);
 stmt_module *stmt_module_alloc(const token *modname);
 stmt_import *stmt_import_alloc(char *filepath, int local);
+stmt_embed *stmt_embed_alloc(token_array lns);
 
 #endif // GRAMMAR_H_INCLUDED
