@@ -770,8 +770,28 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
 static void *
 visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+
+        for (size_t i = 0, szsum = 0; i < e->exprs.len; ++i) {
+                expr *eidx = e->exprs.data[i];
+                char *res = eidx->accept(eidx, v);
+                const char *spec = szspec(eidx->type->sz);
+                szsum += eidx->type->sz;
+                char *offset = int_to_cstr(e->stack_offset_base + szsum);
+
+                take_txt(ctx, forge_cstr_builder("mov ", spec,
+                                                 " [rbp-", offset, "], ",
+                                                 res, NULL), 1);
+
+                free(offset);
+                free_reg_literal(res);
+        }
+
+        char *ptr_reg = g_regs[alloc_reg(8)];
+        char *first_elem_offset = int_to_cstr(e->stack_offset_base + e->exprs.data[0]->type->sz);
+        take_txt(ctx, forge_cstr_builder("lea ", ptr_reg, ", [rbp-", first_elem_offset, "]", NULL), 1);
+        free(first_elem_offset);
+        return ptr_reg;
 }
 
 static void *

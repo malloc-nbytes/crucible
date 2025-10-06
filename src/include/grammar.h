@@ -132,6 +132,8 @@ typedef struct {
 typedef struct {
         expr base;
         expr_array exprs;
+
+        int stack_offset_base; // resolved in semantic analysis
 } expr_arrayinit;
 
 ///////////////////////////////////////////

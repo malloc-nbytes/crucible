@@ -377,9 +377,9 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
                                 type_to_cstr(elemty), type_to_cstr(e->exprs.data[i]->type));
                 }
 
-                if (tbl->proc.inproc) {
-                        tbl->proc.rsp += e->exprs.data[i]->type->sz;
-                }
+                /* if (tbl->proc.inproc) { */
+                /*         tbl->proc.rsp += e->exprs.data[i]->type->sz; */
+                /* } */
         }
 
         ((expr *)e)->type = (type *)type_array_alloc(elemty, (int)e->exprs.len);
@@ -433,6 +433,9 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 }
         }
 
+        insert_sym_into_scope(tbl, sym);
+        tbl->stack_offset += sym->ty->sz;
+
         if (s->type->kind == TYPE_KIND_ARRAY
             && s->e->type->kind == TYPE_KIND_ARRAY) {
                 type_array *t0 = (type_array *)s->type;
@@ -440,19 +443,16 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 if (t0->len == -1) {
                         t0->len = t1->len;
                 }
+                ((expr_arrayinit *)s->e)->stack_offset_base = sym->stack_offset;
         }
-
-        insert_sym_into_scope(tbl, sym);
-        tbl->stack_offset += sym->ty->sz;
 
         // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {
-                // if (sym->ty->kind == TYPE_KIND_ARRAY) {
-                //         // Add the values of all type sizes for arrays.
-                //         tbl->proc.rsp += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
-                // } else {
-                //         tbl->proc.rsp += sym->ty->sz;
-                // }
+                if (sym->ty->kind == TYPE_KIND_ARRAY) {
+                        // Add the values of all type sizes for arrays.
+                        tbl->stack_offset += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
+                        tbl->proc.rsp += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
+                }
                 tbl->proc.rsp += sym->ty->sz;
         }
 
