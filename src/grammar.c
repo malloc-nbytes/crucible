@@ -307,3 +307,13 @@ stmt_import_alloc(char *filepath, int local)
         s->resolved_modname = NULL;
         return s;
 }
+
+stmt_embed *
+stmt_embed_alloc(token_array lns)
+{
+        stmt_embed *s      = alloc(sizeof(stmt_embed));
+        s->base.kind       = STMT_KIND_EMBED;
+        s->base.accept     = accept_stmt_embed;
+        s->lns             = lns;
+        return s;
+}

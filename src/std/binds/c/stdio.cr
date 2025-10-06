@@ -4,4 +4,3 @@ module cstdio where
 -- for functions in stdio.h.
 
 export extern proc printf(fmt: u8*, ...): i32;
-export extern proc strcmp(s0: u8*, s1: u8*): i32;

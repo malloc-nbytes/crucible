@@ -1133,6 +1133,18 @@ visit_stmt_import(visitor *v, stmt_import *s)
         return NULL;
 }
 
+static void *
+visit_stmt_embed(visitor *v, stmt_embed *s)
+{
+        asm_context *ctx = (asm_context *)v->context;
+
+        for (size_t i = 0; i < s->lns.len; ++i) {
+                write_txt(ctx, s->lns.data[i]->lx, 1);
+        }
+
+        return NULL;
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -1160,7 +1172,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_continue,
                 visit_stmt_struct,
                 visit_stmt_module,
-                visit_stmt_import
+                visit_stmt_import,
+                visit_stmt_embed
         );
 }
 

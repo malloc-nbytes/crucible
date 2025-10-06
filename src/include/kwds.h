@@ -32,6 +32,8 @@
 #define KWD_IMPORT "import"
 #define KWD_WHERE  "where"
 
+#define KWD_EMBED  "embed"
+
 #define KWDS {                                  \
                 KWD_I8,                         \
                 KWD_I16,                        \
@@ -58,6 +60,7 @@
                 KWD_MODULE,                     \
                 KWD_IMPORT,                     \
                 KWD_WHERE,                      \
+                KWD_EMBED,                      \
 }
 
 #define KWD_TYPES {                             \
