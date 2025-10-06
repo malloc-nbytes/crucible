@@ -94,7 +94,7 @@ parse_type(parser_context *ctx)
 
         if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_LEFT_SQUARE) {
                 lexer_discard(ctx->l); // [
-                int len = 0;
+                int len = -1;
                 if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_INTEGER_LITERAL) {
                         len = atoi(expect(ctx, TOKEN_TYPE_INTEGER_LITERAL)->lx);
                 }

@@ -364,8 +364,23 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
 static void *
 visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        symtbl *tbl = (symtbl *)v->context;
+        type *elemty = NULL;
+
+        for (size_t i = 0; i < e->exprs.len; ++i) {
+                e->exprs.data[i]->accept(e->exprs.data[i], v);
+                if (!elemty) {
+                        elemty = e->exprs.data[i]->type;
+                } else if (!type_is_compat(&elemty, &e->exprs.data[i]->type)) {
+                        pusherr(tbl, e->exprs.data[i]->loc,
+                                "type mismatch, expected `%s` but got `%s`",
+                                type_to_cstr(elemty), type_to_cstr(e->exprs.data[i]->type));
+                }
+        }
+
+        ((expr *)e)->type = (type *)type_array_alloc(elemty, (int)e->exprs.len);
+
+        return NULL;
 }
 
 static void *
@@ -411,6 +426,15 @@ visit_stmt_let(visitor *v, stmt_let *s)
                         // just offsets from each other, but now we update it to align
                         // with the current global stack offset.
                         br->resolved_syms->data[i]->stack_offset += tbl->stack_offset;
+                }
+        }
+
+        if (s->type->kind == TYPE_KIND_ARRAY
+            && s->e->type->kind == TYPE_KIND_ARRAY) {
+                type_array *t0 = (type_array *)s->type;
+                type_array *t1 = (type_array *)s->e->type;
+                if (t0->len == -1) {
+                        t0->len = t1->len;
                 }
         }
 
