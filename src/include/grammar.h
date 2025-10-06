@@ -23,6 +23,7 @@ typedef enum {
         EXPR_KIND_PROCCALL,
         EXPR_KIND_BRACE_INIT,
         EXPR_KIND_NAMESPACE,
+        EXPR_KIND_ARRAYINIT,
 } expr_kind;
 
 typedef enum {
@@ -127,6 +128,11 @@ typedef struct {
         const token *namespace;
         expr *e;
 } expr_namespace;
+
+typedef struct {
+        expr base;
+        expr_array exprs;
+} expr_arrayinit;
 
 ///////////////////////////////////////////
 // STATEMENTS
@@ -275,6 +281,7 @@ expr_un *expr_un_alloc(expr *operand, const token *op);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
 expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
 expr_namespace *expr_namespace_alloc(const token *namespace, expr *e);
+expr_arrayinit *expr_arrayinit_alloc(expr_array exprs);
 
 stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);

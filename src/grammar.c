@@ -118,6 +118,15 @@ expr_namespace_alloc(const token *namespace,
         return e;
 }
 
+expr_arrayinit *
+expr_arrayinit_alloc(expr_array exprs)
+{
+        expr_arrayinit *e = (expr_arrayinit *)alloc(sizeof(expr_arrayinit));
+        e->base           = init_expr_kind(EXPR_KIND_ARRAYINIT, accept_expr_arrayinit);
+        e->exprs          = exprs;
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                type        *type,
