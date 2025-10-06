@@ -7,6 +7,7 @@
 
 #include <forge/array.h>
 
+// Resolve circular dependencies.
 typedef struct sym sym;
 typedef struct sym_array sym_array;
 typedef struct visitor visitor;

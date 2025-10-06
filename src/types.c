@@ -123,9 +123,21 @@ type_struct_alloc(const parameter_array *members, size_t sz)
 type_custom *
 type_custom_alloc(const token *struct_id)
 {
-        type_custom *t   = (type_custom *)alloc(sizeof(type_custom));
-        t->base.kind     = TYPE_KIND_CUSTOM;
-        t->struct_id     = struct_id;
+        type_custom *t = (type_custom *)alloc(sizeof(type_custom));
+        t->base.kind   = TYPE_KIND_CUSTOM;
+        t->base.sz     = 0;
+        t->struct_id   = struct_id;
+        return t;
+}
+
+type_array *
+type_array_alloc(type *elemty, int len)
+{
+        type_array *t = (type_array *)alloc(sizeof(type_array));
+        t->base.kind  = TYPE_KIND_ARRAY;
+        t->base.sz    = 8;
+        t->elemty     = elemty;
+        t->len        = len;
         return t;
 }
 

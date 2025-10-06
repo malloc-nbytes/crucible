@@ -1,10 +1,8 @@
 module main where
 
-import std.io;
-
 export proc _start(void): !
 {
-    io::echoln("Hello, World!");
+    let ar: i32[5] = {1,2,3,4,5};
 
     exit;
 }
