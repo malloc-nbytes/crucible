@@ -401,15 +401,16 @@ visit_expr_binary(visitor *v, expr_bin *e)
 {
         asm_context *ctx = (asm_context *)v->context;
 
-        char *v1 = e->lhs->accept(e->lhs, v);
-        char *v2 = e->rhs->accept(e->rhs, v);
-
         const char *spec = szspec(e->lhs->type->sz);
+        char *v1 = e->lhs->accept(e->lhs, v);
 
         int regi = alloc_reg(e->lhs->type->sz);
         char *reg = g_regs[regi];
 
         take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v1, NULL), 1);
+        free_reg_literal(v1);
+
+        char *v2 = e->rhs->accept(e->rhs, v);
 
         switch (e->op->ty) {
         case TOKEN_TYPE_PLUS:
@@ -535,7 +536,6 @@ visit_expr_binary(visitor *v, expr_bin *e)
         default: forge_err_wargs("unimplemented binop `%s`", e->op->lx);
         }
 
-        free_reg_literal(v1);
         free_reg_literal(v2);
 
         return reg;
