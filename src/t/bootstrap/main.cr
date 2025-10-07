@@ -10,11 +10,13 @@
 
 module main where
 
+import helpers.assert;
+
 import test.basic;
 import test.addition;
 import test.subtraction;
 import test.procs;
-import helpers.assert;
+import test.logical;
 
 extern proc printf(fmt: u8*, ...): i32;
 
@@ -121,6 +123,59 @@ export proc _start(void): !
             p = p+1;
         } else {
             badi32(resi32, 10);
+            f = f+1;
+        }
+
+    }
+
+    { -- LOGICAL
+        let resi32: i32 = 0;
+
+        if ((resi32 = logical::or1_r1()) == 1) {
+            ok();
+            p = p+1;
+        } else {
+            badi32(resi32, 1);
+            f = f+1;
+        }
+
+        if ((resi32 = logical::or2_r1()) == 1) {
+            ok();
+            p = p+1;
+        } else {
+            badi32(resi32, 1);
+            f = f+1;
+        }
+
+        if ((resi32 = logical::and1_r0()) == 0) {
+            ok();
+            p = p+1;
+        } else {
+            badi32(resi32, 0);
+            f = f+1;
+        }
+
+        if ((resi32 = logical::and2_r0()) == 0) {
+            ok();
+            p = p+1;
+        } else {
+            badi32(resi32, 0);
+            f = f+1;
+        }
+
+        if ((resi32 = logical::or_wprocs1_r1()) == 1) {
+            ok();
+            p = p+1;
+        } else {
+            badi32(resi32, 1);
+            f = f+1;
+        }
+
+        if ((resi32 = logical::or_wprocs2_r1()) == 1) {
+            ok();
+            p = p+1;
+        } else {
+            badi32(resi32, 1);
             f = f+1;
         }
 
