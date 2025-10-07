@@ -112,6 +112,8 @@ handle_args(int argc, char **argv)
                                 g_config.outname = strdup(it->s);
                         } else if (!strcmp(it->s, FLAG_2HY_ASM)) {
                                 g_config.flags |= FLAG_TYPE_ASM;
+                        } else if (!strcmp(it->s, FLAG_2HY_NOSTD)) {
+                                g_config.flags |= FLAG_TYPE_NOSTD;
                         } else {
                                 forge_err_wargs("unknown option `%s`", it->s);
                         }

@@ -2,7 +2,8 @@
 #define FLAGS_H_INCLUDED
 
 typedef enum {
-        FLAG_TYPE_ASM    = 1 << 0,
+        FLAG_TYPE_ASM   = 1 << 0,
+        FLAG_TYPE_NOSTD = 1 << 1,
 } flag_type;
 
 #define FLAG_1HY_HELP 'h'
@@ -14,5 +15,7 @@ typedef enum {
 #define FLAG_2HY_ASM "asm"
 
 #define FLAG_1HY_SEARCHPATH 'I'
+
+#define FLAG_2HY_NOSTD "nostd"
 
 #endif // FLAGS_H_INCLUDED

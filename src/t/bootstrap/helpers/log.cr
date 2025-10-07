@@ -1,9 +1,8 @@
 module log where
 
-extern proc printf(fmt: u8*, ...): i32;
+import std.binds.c.stdio;
 
-export proc
-id(test_id: u8*): void
+export proc id(test_id: u8*): void
 {
-    printf("[CRUCIBLE T] %s ... ", test_id);
+        cstdio::printf("[CRUCIBLE T] %s ... ", test_id);
 }
