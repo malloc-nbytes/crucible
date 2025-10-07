@@ -17,6 +17,7 @@ import test.addition;
 import test.subtraction;
 import test.procs;
 import test.logical;
+import test.arrays;
 
 extern proc printf(fmt: u8*, ...): i32;
 
@@ -126,6 +127,14 @@ export proc _start(void): !
                         f = f+1;
                 }
 
+                if ((resi32 = procs::sum_with_procs_r5()) == 5) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 5);
+                        f = f+1;
+                }
+
         }
 
         { -- LOGICAL
@@ -179,6 +188,42 @@ export proc _start(void): !
                         f = f+1;
                 }
 
+        }
+
+        { -- ARRAYS
+                let resi32: i32 = 0;
+
+                if ((resi32 = arrays::init1_r0()) == 0) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 0);
+                        f = f+1;
+                }
+
+                if ((resi32 = arrays::init2_r0()) == 0) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 0);
+                        f = f+1;
+                }
+
+                if ((resi32 = arrays::summation_r15()) == 15) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 15);
+                        f = f+1;
+                }
+
+                if ((resi32 = arrays::eqplus1_r1()) == 1) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 1);
+                        f = f+1;
+                }
         }
 
         summary(p, f);
