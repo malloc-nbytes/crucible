@@ -576,9 +576,7 @@ visit_expr_integer_literal(visitor *v, expr_integer_literal *e)
 static void *
 visit_expr_string_literal(visitor *v, expr_string_literal *e)
 {
-        // TODO: handle escape sequences
         asm_context *ctx = (asm_context *)v->context;
-
 
         char *lbl = genlbl(NULL);
         forge_str out = forge_str_create();
@@ -798,8 +796,44 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 static void *
 visit_expr_index(visitor *v, expr_index *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        asm_context *ctx = (asm_context *)v->context;
+
+        // TODO: Also allow for pointers.
+        size_t elemty_sz = ((type_array *)e->lhs->type)->elemty->sz;
+        char *elemty_sz_cstr = int_to_cstr(elemty_sz);
+        const char *spec = szspec(elemty_sz);
+        const char *idxspec = szspec(e->idx->type->sz);
+
+        char *lhs_value = e->lhs->accept(e->lhs, v);
+        char *ptr_load_reg = g_regs[alloc_reg(8)];
+
+        take_txt(ctx, forge_cstr_builder("mov QWORD ",
+                                         ptr_load_reg, ", ",
+                                         lhs_value, NULL), 1);
+
+        free_reg_literal(lhs_value);
+        char *idx_value = e->idx->accept(e->idx, v);
+        char *updated_idx_reg = g_regs[alloc_reg(e->idx->type->sz)];
+
+        take_txt(ctx, forge_cstr_builder("mov ", idxspec, " ", updated_idx_reg, ", ", idx_value, NULL), 1);
+        take_txt(ctx, forge_cstr_builder("imul ", updated_idx_reg, ", ", elemty_sz_cstr, NULL), 1);
+        take_txt(ctx, forge_cstr_builder("add ", ptr_load_reg,
+                                         ", ", updated_idx_reg, NULL), 1);
+
+        free(elemty_sz_cstr);
+        free_reg_literal(idx_value);
+        free_reg_literal(updated_idx_reg);
+
+        // TODO: Also allow for pointers.
+        char *res = g_regs[alloc_reg(elemty_sz)];
+
+        take_txt(ctx, forge_cstr_builder("mov ", spec, " ",
+                                         res, ", [", ptr_load_reg, "]",
+                                         NULL), 1);
+
+        free_reg_literal(ptr_load_reg);
+
+        return res;
 }
 
 static void *

@@ -2,6 +2,8 @@
 #include "visitor.h"
 #include "mem.h"
 #include "ds/smap.h"
+#include "grammar.h"
+#include "lexer.h"
 
 #include <forge/array.h>
 #include <forge/utils.h>
@@ -113,6 +115,21 @@ binop(symtbl      *tbl,
         }
 
         return lhs->type;
+}
+
+static void
+coerce_integer_literal(expr *e, type_kind to)
+{
+        assert(e);
+        assert(e->type);
+
+        if (e->type->kind == to) return;
+
+        if (e->type->kind == TYPE_KIND_NUMBER) {
+                // TODO: Write custom free() for each type
+                free(e->type);
+                e->type = (type *)type_i64_alloc();
+        }
 }
 
 static void *
@@ -414,6 +431,24 @@ visit_expr_index(visitor *v, expr_index *e)
                 pusherr(tbl, e->idx->loc,
                         "array indexs can only be numbers, not `%s`",
                         type_to_cstr(e->idx->type));
+        }
+
+        // Note: Creating a binary node for multiplication of the
+        //       index and the size of the type.
+        /* char buf[256] = {0}; */
+        /* sprintf(buf, "%d", ((type_array *)e->lhs->type)->elemty->sz); */
+
+        /* token                *mult_tok    = token_alloc("*", 1, TOKEN_TYPE_ASTERISK, 0, 0, NULL); */
+        /* token                *integer_tok = token_alloc(buf, strlen(buf), TOKEN_TYPE_INTEGER_LITERAL, 0, 0, NULL); */
+        /* expr_integer_literal *i           = expr_integer_literal_alloc(integer_tok); */
+        /* expr_bin             *updated_idx = expr_bin_alloc(e->idx, mult_tok, (expr *)i); */
+        /* ((expr *)updated_idx)->accept(((expr *)updated_idx), v); */
+        /* e->idx = (expr *)updated_idx; */
+
+        coerce_integer_literal(e->idx, TYPE_KIND_I64);
+
+        if (e->idx->type->sz != 8) {
+                pusherr(tbl, e->idx->loc, "array indices are allowed only for 64-bit numbers");
         }
 
         ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;

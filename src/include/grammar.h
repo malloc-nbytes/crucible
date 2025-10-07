@@ -61,13 +61,6 @@ DYN_ARRAY_TYPE(expr *, expr_array);
 
 typedef struct {
         expr base;
-        expr *lhs;
-        expr *rhs;
-        const token *op;
-} expr_binary;
-
-typedef struct {
-        expr base;
         const token *id;
 
         sym *resolved;

@@ -204,7 +204,7 @@ sanatize(char *s)
         return out.data;
 }
 
-static token *
+token *
 token_alloc(const char *st,
             size_t      st_n,
             token_type  ty,
