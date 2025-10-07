@@ -61,7 +61,7 @@
   (setq font-lock-defaults '(crucible-highlights))
   (setq-local comment-start "--")
   (setq-local indent-tabs-mode nil)
-  (setq-local tab-width 4)
+  (setq-local tab-width 8)
   (setq-local indent-line-function #'crucible-indent-line)
   (setq-local standard-indent 2))
 
