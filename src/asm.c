@@ -410,28 +410,31 @@ visit_expr_binary(visitor *v, expr_bin *e)
         take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v1, NULL), 1);
         free_reg_literal(v1);
 
-        char *v2 = e->rhs->accept(e->rhs, v);
+        char *v2 = NULL;
 
         switch (e->op->ty) {
         case TOKEN_TYPE_PLUS:
+                v2 = e->rhs->accept(e->rhs, v);
                 take_txt(ctx, forge_cstr_builder("add ", spec, " ", reg, ", ", v2, NULL), 1);
                 break;
         case TOKEN_TYPE_MINUS:
+                v2 = e->rhs->accept(e->rhs, v);
                 take_txt(ctx, forge_cstr_builder("sub ", spec, " ", reg, ", ", v2, NULL), 1);
                 break;
         case TOKEN_TYPE_ASTERISK:
+                v2 = e->rhs->accept(e->rhs, v);
                 take_txt(ctx, forge_cstr_builder("imul ", spec, " ", reg, ", ", v2, NULL), 1);
                 break;
         case TOKEN_TYPE_FORWARDSLASH: {
-                // Note: Division requires rax and rdx
-                write_txt(ctx, "xor rdx, rdx", 1); // Clear (for dividend)
+                v2 = e->rhs->accept(e->rhs, v);
+                write_txt(ctx, "xor rdx, rdx", 1);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
                 take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rax", NULL), 1);
         } break;
         case TOKEN_TYPE_PERCENT: {
-                // Note: Modulo requires rax and rdx
-                write_txt(ctx, "xor rdx, rdx", 1); // Clear (for dividend)
+                v2 = e->rhs->accept(e->rhs, v);
+                write_txt(ctx, "xor rdx, rdx", 1);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
                 take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rdx", NULL), 1);
@@ -442,6 +445,7 @@ visit_expr_binary(visitor *v, expr_bin *e)
         case TOKEN_TYPE_GREATERTHAN:
         case TOKEN_TYPE_LESSTHAN_EQUALS:
         case TOKEN_TYPE_GREATERTHAN_EQUALS: {
+                v2 = e->rhs->accept(e->rhs, v);
                 char *lbl_true = genlbl(NULL);
                 char *lbl_done = genlbl(NULL);
                 const char *cmp_op = NULL;
@@ -466,70 +470,74 @@ visit_expr_binary(visitor *v, expr_bin *e)
                 free(lbl_done);
         } break;
         case TOKEN_TYPE_DOUBLE_AMPERSAND: {
-                char *lbl_false = genlbl(NULL);
-                char *lbl_done = genlbl(NULL);
+                char *lbl_false = genlbl("false");
+                char *lbl_done = genlbl("done");
 
-                // lhs (reg is already a register)
+                // Evaluate LHS and check if false
                 take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
 
-                // rhs
-                char *v2_reg = NULL;
-                int temp_reg_idx = -1;
+                // Evaluate RHS only if LHS is true
+                free_reg(regi);
+                v2 = e->rhs->accept(e->rhs, v);
+                regi = alloc_reg(e->rhs->type->sz);
+                reg = g_regs[regi];
                 if (!is_register(v2)) {
-                        temp_reg_idx = alloc_reg(e->rhs->type->sz);
-                        v2_reg = g_regs[temp_reg_idx];
-                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", v2_reg, ", ", v2, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v2, NULL), 1);
                 } else {
-                        v2_reg = v2;
+                        if (strcmp(v2, reg)) {
+                                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v2, NULL), 1);
+                        }
                 }
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", v2_reg, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
 
                 // Both true
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+
+                // False case
                 take_txt(ctx, forge_cstr_builder(lbl_false, ":", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
+
                 take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
 
-                if (temp_reg_idx != -1) {
-                        free_reg(temp_reg_idx);
-                }
                 free(lbl_false);
                 free(lbl_done);
         } break;
         case TOKEN_TYPE_DOUBLE_PIPE: {
-                char *lbl_true = genlbl(NULL);
-                char *lbl_done = genlbl(NULL);
+                char *lbl_true = genlbl("true");
+                char *lbl_done = genlbl("done");
 
-                // lhs
+                // Evaluate LHS and check if true
                 take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
 
-                // rhs
-                char *v2_reg = NULL;
-                int temp_reg_idx = -1;
+                // Evaluate RHS only if LHS is false
+                free_reg(regi);
+                v2 = e->rhs->accept(e->rhs, v);
+                regi = alloc_reg(e->rhs->type->sz);
+                reg = g_regs[regi];
                 if (!is_register(v2)) {
-                        temp_reg_idx = alloc_reg(e->rhs->type->sz);
-                        v2_reg = g_regs[temp_reg_idx];
-                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", v2_reg, ", ", v2, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v2, NULL), 1);
                 } else {
-                        v2_reg = v2;
+                        if (strcmp(v2, reg)) {
+                                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v2, NULL), 1);
+                        }
                 }
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", v2_reg, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
 
                 // Both false
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+
+                // True case
                 take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
+
                 take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
 
-                if (temp_reg_idx != -1) {
-                        free_reg(temp_reg_idx);
-                }
                 free(lbl_true);
                 free(lbl_done);
         } break;
