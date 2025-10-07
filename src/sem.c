@@ -4,11 +4,11 @@
 #include "ds/smap.h"
 #include "grammar.h"
 #include "lexer.h"
+#include "io.h"
 
 #include <forge/array.h>
 #include <forge/utils.h>
 #include <forge/err.h>
-#include <forge/io.h>
 
 #include <assert.h>
 #include <string.h>
@@ -828,7 +828,7 @@ visit_stmt_import(visitor *v, stmt_import *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
-        char    *src        = forge_io_read_file_to_cstr(s->filepath);
+        char    *src        = read_file_from_searchpaths(&s->filepath, &((stmt *)s)->loc);
         lexer    l          = lexer_create(src, s->filepath);
         program *p          = parser_create_program(&l);
         symtbl  *import_tbl = sem_analysis(p);

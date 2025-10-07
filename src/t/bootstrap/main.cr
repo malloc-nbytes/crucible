@@ -1,6 +1,6 @@
 -- This is the main test driver for bootstrapped tests.
 -- Compilation:
---   ../../cruc ./main.cr -o TEST.bin --asm
+--   ../../cruc ./main.cr -o TEST.bin --asm --nostd -I ../../
 -- This file will change in the future as the language
 -- becomes more complex and adds more useful features
 -- so we don't have to use a bunch of if-else statements
@@ -9,6 +9,8 @@
 -- Note: Maybe use macros once implemented.
 
 module main where
+
+import std.binds.c.stdio;
 
 import helpers.assert;
 
@@ -19,21 +21,19 @@ import test.procs;
 import test.logical;
 import test.arrays;
 
-extern proc printf(fmt: u8*, ...): i32;
-
-proc ok(void): void { printf("ok\n"); }
-proc bad(void): void { printf("FAIL\n"); }
+proc ok(void): void { cstdio::printf("ok\n"); }
+proc bad(void): void { cstdio::printf("FAIL\n"); }
 
 proc badi32(got: i32, exp: i32): void
 {
-        printf("FAIL [expected=%d, got=%d]\n", exp, got);
+        cstdio::printf("FAIL [expected=%d, got=%d]\n", exp, got);
 }
 
 proc summary(p: i32, f: i32): void
 {
-        printf("===== Summary =====\n");
-        printf("PASSED: %d\n", p);
-        printf("FAILED: %d\n", f);
+        cstdio::printf("===== Summary =====\n");
+        cstdio::printf("PASSED: %d\n", p);
+        cstdio::printf("FAILED: %d\n", f);
 }
 
 export proc _start(void): !

@@ -39,7 +39,7 @@ function compile() {
 
 function run_tests() {
     info "Compiling Test Suite"
-    set -x; ../../cruc ./main.cr -o TEST.bin; set +x
+    set -x; ../../cruc ./main.cr -o TEST.bin --asm --nostd -I ../../; set +x
     info "Running tests"
     ./TEST.bin
 }

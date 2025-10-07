@@ -13,6 +13,7 @@
 #include <forge/str.h>
 #include <forge/cstr.h>
 #include <forge/cmd.h>
+#include <forge/array.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -24,10 +25,12 @@ struct {
         uint32_t flags;
         char *filepath;
         char *outname;
+        str_array search_paths;
 } g_config = {
         .flags = 0x0000,
         .filepath = NULL,
         .outname = NULL,
+        .search_paths = dyn_array_empty(str_array),
 };
 
 void
@@ -92,7 +95,12 @@ handle_args(int argc, char **argv)
                                 if (!it->n) { forge_err_wargs("option -%c requires an argument", FLAG_1HY_OUTPUT); }
                                 it = it->n;
                                 g_config.outname = strdup(it->s);
-                        } else {
+                        } else if (it->s[0] == FLAG_1HY_SEARCHPATH) {
+                                if (!it->n) { forge_err_wargs("option -%c requires an argument", FLAG_1HY_SEARCHPATH); }
+                                it = it->n;
+                                dyn_array_append(g_config.search_paths, strdup(it->s));
+                        }
+                        else {
                                 forge_err_wargs("unknown option `%s`", it->s);
                         }
                 } else {
@@ -104,6 +112,8 @@ handle_args(int argc, char **argv)
                                 g_config.outname = strdup(it->s);
                         } else if (!strcmp(it->s, FLAG_2HY_ASM)) {
                                 g_config.flags |= FLAG_TYPE_ASM;
+                        } else if (!strcmp(it->s, FLAG_2HY_NOSTD)) {
+                                g_config.flags |= FLAG_TYPE_NOSTD;
                         } else {
                                 forge_err_wargs("unknown option `%s`", it->s);
                         }
@@ -127,7 +137,11 @@ main(int argc, char **argv)
                 g_config.outname = "a.out";
         }
 
-        char    *src    = forge_io_read_file_to_cstr(g_config.filepath);
+        char *src = forge_io_read_file_to_cstr(g_config.filepath);
+        if (!src) {
+                forge_err_wargs("could not read filepath `%s`", g_config.filepath);
+        }
+
         lexer    l      = lexer_create(src, g_config.filepath);
         program  *p     = parser_create_program(&l);
         symtbl  *tbl    = sem_analysis(p);
