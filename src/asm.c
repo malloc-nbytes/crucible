@@ -796,6 +796,13 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 }
 
 static void *
+visit_expr_index(visitor *v, expr_index *e)
+{
+        NOOP(v, e);
+        forge_todo("");
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -1187,6 +1194,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_brace_init,
                 visit_expr_namespace,
                 visit_expr_arrayinit,
+                visit_expr_index,
 
                 visit_stmt_let,
                 visit_stmt_expr,

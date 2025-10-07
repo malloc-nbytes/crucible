@@ -241,6 +241,14 @@ parse_primary_expr(parser_context *ctx)
                         left = (expr *)expr_string_literal_alloc(s);
                         left->loc = hd->loc;
                 } break;
+                case TOKEN_TYPE_LEFT_SQUARE: {
+                        if (!left) forge_err_wargs("%sunexpected '['", loc_err(hd->loc));
+                        lexer_discard(ctx->l); // [
+                        expr *idx = parse_expr(ctx);
+                        (void)expect(ctx, TOKEN_TYPE_RIGHT_SQUARE);
+                        left = (expr *)expr_index_alloc(left, idx);
+                        left->loc = hd->loc;
+                } break;
                 case TOKEN_TYPE_LEFT_PARENTHESIS: {
                         // TODO: redo breace_initializer parsing
                         /* if (struct) {

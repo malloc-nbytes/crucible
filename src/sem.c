@@ -396,6 +396,32 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 }
 
 static void *
+visit_expr_index(visitor *v, expr_index *e)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        e->lhs->accept(e->lhs, v);
+
+        if (e->lhs->type->kind != TYPE_KIND_ARRAY) {
+                pusherr(tbl, e->lhs->loc, "index operations are only permitted for arrays");
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                return NULL;
+        }
+
+        e->idx->accept(e->idx, v);
+
+        if (e->idx->type->kind > TYPE_KIND_NUMBER) {
+                pusherr(tbl, e->idx->loc,
+                        "array indexs can only be numbers, not `%s`",
+                        type_to_cstr(e->idx->type));
+        }
+
+        ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;
+
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -800,6 +826,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_brace_init,
                 visit_expr_namespace,
                 visit_expr_arrayinit,
+                visit_expr_index,
 
                 visit_stmt_let,
                 visit_stmt_expr,

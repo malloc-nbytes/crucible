@@ -4,7 +4,9 @@ import std.binds.c.stdio;
 
 export proc _start(void): !
 {
-    let ar: [i32] = {1+2, 2+3*4, 99};
+    let arr: [i32] = {1, 2, 3};
+
+    let x: i32 = arr[0];
 
     exit;
 }

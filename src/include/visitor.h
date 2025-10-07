@@ -12,6 +12,7 @@ typedef void *(*visit_expr_mut_sig)(visitor *v, expr_mut *e);
 typedef void *(*visit_expr_brace_init_sig)(visitor *v, expr_brace_init *e);
 typedef void *(*visit_expr_namespace_sig)(visitor *v, expr_namespace *e);
 typedef void *(*visit_expr_arrayinit_sig)(visitor *v, expr_arrayinit *e);
+typedef void *(*visit_expr_index_sig)(visitor *v, expr_index *e);
 
 typedef void *(*visit_stmt_let_sig)(visitor *v, stmt_let *s);
 typedef void *(*visit_stmt_expr_sig)(visitor *v, stmt_expr *s);
@@ -42,6 +43,7 @@ typedef struct visitor {
         visit_expr_brace_init_sig      visit_expr_brace_init;
         visit_expr_namespace_sig       visit_expr_namespace;
         visit_expr_arrayinit_sig       visit_expr_arrayinit;
+        visit_expr_index_sig           visit_expr_index;
 
         visit_stmt_let_sig             visit_stmt_let;
         visit_stmt_expr_sig            visit_stmt_expr;
@@ -72,6 +74,7 @@ visitor *visitor_alloc(
         visit_expr_brace_init_sig      visit_expr_brace_init,
         visit_expr_namespace_sig       visit_expr_namespace,
         visit_expr_arrayinit_sig       visit_expr_arrayinit,
+        visit_expr_index_sig           visit_expr_index,
 
         visit_stmt_let_sig             visit_stmt_let,
         visit_stmt_expr_sig            visit_stmt_expr,
@@ -100,6 +103,7 @@ void *accept_expr_mut(expr *e, visitor *v);
 void *accept_expr_brace_init(expr *e, visitor *v);
 void *accept_expr_namespace(expr *e, visitor *v);
 void *accept_expr_arrayinit(expr *e, visitor *v);
+void *accept_expr_index(expr *e, visitor *v);
 
 void *accept_stmt_let(stmt *s, visitor *v);
 void *accept_stmt_expr(stmt *s, visitor *v);
