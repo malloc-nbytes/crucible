@@ -27,4 +27,33 @@
 
 ** Critical
 
+- The follow code does not execute the 'if' statement.
+
+#+begin_src
+import std.io;
+
+proc f2(void): i32
+{
+    io::echoln("in f2()");
+    return 0;
+}
+
+proc f(void): i32
+{
+    io::echoln("in f()");
+    return 1;
+}
+
+export proc _start(void): !
+{
+
+    if (f() || f2()) {
+        io::echoln("in if stmt");
+        cstdio::printf("HERE\n");
+    }
+
+    exit;
+}
+#+end_src
+
 ** Misc.

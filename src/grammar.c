@@ -132,7 +132,7 @@ expr_index *
 expr_index_alloc(expr *lhs, expr *idx)
 {
         expr_index *e        = (expr_index *)alloc(sizeof(expr_index));
-        e->base              = init_expr_kind(EXPR_KIND_ARRAYINIT, accept_expr_index);
+        e->base              = init_expr_kind(EXPR_KIND_INDEX, accept_expr_index);
         e->lhs               = lhs;
         e->idx               = idx;
         return e;

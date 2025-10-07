@@ -23,7 +23,7 @@ typedef enum {
         EXPR_KIND_PROCCALL,
         EXPR_KIND_BRACE_INIT,
         EXPR_KIND_NAMESPACE,
-        EXPR_KIND_ARRAYINIT,
+        EXPR_KIND_ARRAYINIT, // 10
         EXPR_KIND_INDEX,
 } expr_kind;
 
@@ -38,7 +38,7 @@ typedef enum {
         STMT_KIND_IF,
         STMT_KIND_WHILE,
         STMT_KIND_FOR,
-        STMT_KIND_BREAK,
+        STMT_KIND_BREAK, // 10
         STMT_KIND_CONTINUE,
         STMT_KIND_STRUCT,
         STMT_KIND_MODULE,

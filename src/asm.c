@@ -731,6 +731,87 @@ visit_expr_mut(visitor *v, expr_mut *e)
                 //free_reg_literal(rvalue);
                 return rvalue;
         } break;
+        case EXPR_KIND_INDEX: {
+                expr_index *idx_expr = (expr_index *)e->lhs;
+                size_t elemty_sz = ((type_array *)idx_expr->lhs->type)->elemty->sz;
+                const char *spec = szspec(elemty_sz);
+                const char *idxspec = szspec(idx_expr->idx->type->sz);
+                char *elemty_sz_cstr = int_to_cstr(elemty_sz);
+
+                // Get the base address of the array
+                char *lhs_value = idx_expr->lhs->accept(idx_expr->lhs, v);
+                char *ptr_load_reg = g_regs[alloc_reg(8)];
+
+                take_txt(ctx, forge_cstr_builder("mov QWORD ", ptr_load_reg, ", ", lhs_value, NULL), 1);
+                free_reg_literal(lhs_value);
+
+                // Compute the offset
+                char *idx_value = idx_expr->idx->accept(idx_expr->idx, v);
+                char *idx_reg = g_regs[alloc_reg(idx_expr->idx->type->sz)];
+
+                take_txt(ctx, forge_cstr_builder("mov ", idxspec, " ", idx_reg, ", ", idx_value, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("imul ", idx_reg, ", ", elemty_sz_cstr, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("add ", ptr_load_reg, ", ", idx_reg, NULL), 1);
+
+                free(elemty_sz_cstr);
+                free_reg_literal(idx_value);
+                free_reg_literal(idx_reg);
+
+                // Get the RHS value
+                char *rvalue = e->rhs->accept(e->rhs, v);
+
+                // Handle the mutation
+                switch (e->op->ty) {
+                case TOKEN_TYPE_EQUALS: {
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [", ptr_load_reg, "], ", rvalue, NULL), 1);
+                } break;
+                case TOKEN_TYPE_PLUS_EQUALS: {
+                        char *temp_reg = g_regs[alloc_reg(elemty_sz)];
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", temp_reg, ", [", ptr_load_reg, "]", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("add ", spec, " ", temp_reg, ", ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [", ptr_load_reg, "], ", temp_reg, NULL), 1);
+                        free_reg_literal(temp_reg);
+                } break;
+                case TOKEN_TYPE_MINUS_EQUALS: {
+                        char *temp_reg = g_regs[alloc_reg(elemty_sz)];
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", temp_reg, ", [", ptr_load_reg, "]", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("sub ", spec, " ", temp_reg, ", ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [", ptr_load_reg, "], ", temp_reg, NULL), 1);
+                        free_reg_literal(temp_reg);
+                } break;
+                case TOKEN_TYPE_ASTERISK_EQUALS: {
+                        char *temp_reg = g_regs[alloc_reg(elemty_sz)];
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", temp_reg, ", [", ptr_load_reg, "]", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("imul ", spec, " ", temp_reg, ", ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [", ptr_load_reg, "], ", temp_reg, NULL), 1);
+                        free_reg_literal(temp_reg);
+                } break;
+                case TOKEN_TYPE_FORWARDSLASH_EQUALS: {
+                        char *temp_reg = g_regs[alloc_reg(elemty_sz)];
+                        write_txt(ctx, "xor rdx, rdx", 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, [", ptr_load_reg, "]", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", temp_reg, ", rax", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [", ptr_load_reg, "], ", temp_reg, NULL), 1);
+                        free_reg_literal(temp_reg);
+                } break;
+                case TOKEN_TYPE_PERCENT_EQUALS: {
+                        char *temp_reg = g_regs[alloc_reg(elemty_sz)];
+                        write_txt(ctx, "xor rdx, rdx", 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, [", ptr_load_reg, "]", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", rvalue, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", temp_reg, ", rdx", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [", ptr_load_reg, "], ", temp_reg, NULL), 1);
+                        free_reg_literal(temp_reg);
+                } break;
+                default:
+                        forge_err_wargs("visit_expr_mut(): unsupported operator `%s` for array indexing", e->op->lx);
+                }
+
+                free_reg_literal(ptr_load_reg);
+                free_reg_literal(rvalue);
+                return rvalue;
+        } break;
         default: {
                 forge_err_wargs("visit_expr_mut(): lvalue of kind `%d` is unimplemented", (int)e->lhs->kind);
         } break;

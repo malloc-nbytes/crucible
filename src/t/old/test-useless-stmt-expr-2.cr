@@ -1,8 +1,8 @@
 module test where
 
 export proc _start(void): ! {
-    1+2;
-    1+2-3;
+        1+2;
+        1+2-3;
 
-    exit;
+        exit;
 }

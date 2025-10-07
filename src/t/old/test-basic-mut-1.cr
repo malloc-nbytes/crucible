@@ -1,9 +1,9 @@
 module test where
 
 export proc _start(void): ! {
-    let x: i32 = 10;
+        let x: i32 = 10;
 
-    x = 0;
+        x = 0;
 
-    exit x;
+        exit x;
 }

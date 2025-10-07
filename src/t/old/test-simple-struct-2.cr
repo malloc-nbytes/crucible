@@ -1,10 +1,10 @@
 module test where
 
 struct F {
-    x: i32,
-    y: i32,
+        x: i32,
+        y: i32,
 }
 
 export proc _start(void): ! {
-    exit 0;
+        exit 0;
 }

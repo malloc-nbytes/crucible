@@ -1,9 +1,9 @@
 module test where
 
 proc f(a: i32): i32 {
-    return a;
+        return a;
 }
 
 export proc _start(void): ! {
-    exit f(0);
+        exit f(0);
 }
