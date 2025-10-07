@@ -32,7 +32,8 @@ function compile() {
     info "Building Compiler"
     sleep 1
     pushd ../../
-    ./build.rl
+    make clean
+    make
     popd
 }
 
