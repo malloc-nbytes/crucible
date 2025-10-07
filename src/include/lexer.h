@@ -85,6 +85,12 @@ typedef struct {
 } lexer;
 
 lexer lexer_create(const char *src, const char *fp);
+token *token_alloc(const char *st,
+                   size_t      st_n,
+                   token_type  ty,
+                   size_t      r,
+                   size_t      c,
+                   const char *fp);
 void lexer_dump(const lexer *l);
 token *lexer_peek(const lexer *l, size_t peek);
 token *lexer_next(lexer *l);

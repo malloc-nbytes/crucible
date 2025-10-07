@@ -2,6 +2,8 @@
 #include "visitor.h"
 #include "mem.h"
 #include "ds/smap.h"
+#include "grammar.h"
+#include "lexer.h"
 
 #include <forge/array.h>
 #include <forge/utils.h>
@@ -113,6 +115,21 @@ binop(symtbl      *tbl,
         }
 
         return lhs->type;
+}
+
+static void
+coerce_integer_literal(expr *e, type_kind to)
+{
+        assert(e);
+        assert(e->type);
+
+        if (e->type->kind == to) return;
+
+        if (e->type->kind == TYPE_KIND_NUMBER) {
+                // TODO: Write custom free() for each type
+                free(e->type);
+                e->type = (type *)type_i64_alloc();
+        }
 }
 
 static void *
@@ -362,6 +379,84 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
 }
 
 static void *
+visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
+{
+        symtbl *tbl = (symtbl *)v->context;
+        type *elemty = NULL;
+
+        // Reverse the order of the expressions for ASM generation.
+        for (size_t i = 0; i < e->exprs.len/2; ++i) {
+                expr *tmp = e->exprs.data[i];
+                e->exprs.data[i] = e->exprs.data[e->exprs.len-i-1];
+                e->exprs.data[e->exprs.len-i-1] = tmp;
+        }
+
+        // Evaluate all expressions and make sure all types are the same.
+        for (size_t i = 0; i < e->exprs.len; ++i) {
+                e->exprs.data[i]->accept(e->exprs.data[i], v);
+                if (!elemty) {
+                        elemty = e->exprs.data[i]->type;
+                } else if (!type_is_compat(&elemty, &e->exprs.data[i]->type)) {
+                        pusherr(tbl, e->exprs.data[i]->loc,
+                                "type mismatch, expected `%s` but got `%s`",
+                                type_to_cstr(elemty), type_to_cstr(e->exprs.data[i]->type));
+                }
+
+                /* if (tbl->proc.inproc) { */
+                /*         tbl->proc.rsp += e->exprs.data[i]->type->sz; */
+                /* } */
+        }
+
+        ((expr *)e)->type = (type *)type_array_alloc(elemty, (int)e->exprs.len);
+
+        return NULL;
+}
+
+static void *
+visit_expr_index(visitor *v, expr_index *e)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        e->lhs->accept(e->lhs, v);
+
+        if (e->lhs->type->kind != TYPE_KIND_ARRAY) {
+                pusherr(tbl, e->lhs->loc, "index operations are only permitted for arrays");
+                ((expr *)e)->type = (type *)type_unknown_alloc();
+                return NULL;
+        }
+
+        e->idx->accept(e->idx, v);
+
+        if (e->idx->type->kind > TYPE_KIND_NUMBER) {
+                pusherr(tbl, e->idx->loc,
+                        "array indexs can only be numbers, not `%s`",
+                        type_to_cstr(e->idx->type));
+        }
+
+        // Note: Creating a binary node for multiplication of the
+        //       index and the size of the type.
+        /* char buf[256] = {0}; */
+        /* sprintf(buf, "%d", ((type_array *)e->lhs->type)->elemty->sz); */
+
+        /* token                *mult_tok    = token_alloc("*", 1, TOKEN_TYPE_ASTERISK, 0, 0, NULL); */
+        /* token                *integer_tok = token_alloc(buf, strlen(buf), TOKEN_TYPE_INTEGER_LITERAL, 0, 0, NULL); */
+        /* expr_integer_literal *i           = expr_integer_literal_alloc(integer_tok); */
+        /* expr_bin             *updated_idx = expr_bin_alloc(e->idx, mult_tok, (expr *)i); */
+        /* ((expr *)updated_idx)->accept(((expr *)updated_idx), v); */
+        /* e->idx = (expr *)updated_idx; */
+
+        coerce_integer_literal(e->idx, TYPE_KIND_I64);
+
+        if (e->idx->type->sz != 8) {
+                pusherr(tbl, e->idx->loc, "array indices are allowed only for 64-bit numbers");
+        }
+
+        ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;
+
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -410,8 +505,23 @@ visit_stmt_let(visitor *v, stmt_let *s)
         insert_sym_into_scope(tbl, sym);
         tbl->stack_offset += sym->ty->sz;
 
+        if (s->type->kind == TYPE_KIND_ARRAY
+            && s->e->type->kind == TYPE_KIND_ARRAY) {
+                type_array *t0 = (type_array *)s->type;
+                type_array *t1 = (type_array *)s->e->type;
+                if (t0->len == -1) {
+                        t0->len = t1->len;
+                }
+                ((expr_arrayinit *)s->e)->stack_offset_base = sym->stack_offset;
+        }
+
         // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {
+                if (sym->ty->kind == TYPE_KIND_ARRAY) {
+                        // Add the values of all type sizes for arrays.
+                        tbl->stack_offset += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
+                        tbl->proc.rsp += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
+                }
                 tbl->proc.rsp += sym->ty->sz;
         }
 
@@ -750,6 +860,9 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_mut,
                 visit_expr_brace_init,
                 visit_expr_namespace,
+                visit_expr_arrayinit,
+                visit_expr_index,
+
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,

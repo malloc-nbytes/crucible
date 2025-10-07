@@ -7,6 +7,7 @@
 
 #include <forge/array.h>
 
+// Resolve circular dependencies.
 typedef struct sym sym;
 typedef struct sym_array sym_array;
 typedef struct visitor visitor;
@@ -22,6 +23,8 @@ typedef enum {
         EXPR_KIND_PROCCALL,
         EXPR_KIND_BRACE_INIT,
         EXPR_KIND_NAMESPACE,
+        EXPR_KIND_ARRAYINIT,
+        EXPR_KIND_INDEX,
 } expr_kind;
 
 typedef enum {
@@ -55,13 +58,6 @@ typedef struct expr {
 } expr;
 
 DYN_ARRAY_TYPE(expr *, expr_array);
-
-typedef struct {
-        expr base;
-        expr *lhs;
-        expr *rhs;
-        const token *op;
-} expr_binary;
 
 typedef struct {
         expr base;
@@ -126,6 +122,19 @@ typedef struct {
         const token *namespace;
         expr *e;
 } expr_namespace;
+
+typedef struct {
+        expr base;
+        expr_array exprs;
+
+        int stack_offset_base; // resolved in semantic analysis
+} expr_arrayinit;
+
+typedef struct {
+        expr base;
+        expr *lhs;
+        expr *idx;
+} expr_index;
 
 ///////////////////////////////////////////
 // STATEMENTS
@@ -274,6 +283,8 @@ expr_un *expr_un_alloc(expr *operand, const token *op);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
 expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
 expr_namespace *expr_namespace_alloc(const token *namespace, expr *e);
+expr_arrayinit *expr_arrayinit_alloc(expr_array exprs);
+expr_index *expr_index_alloc(expr *lhs, expr *idx);
 
 stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);

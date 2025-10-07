@@ -576,9 +576,7 @@ visit_expr_integer_literal(visitor *v, expr_integer_literal *e)
 static void *
 visit_expr_string_literal(visitor *v, expr_string_literal *e)
 {
-        // TODO: handle escape sequences
         asm_context *ctx = (asm_context *)v->context;
-
 
         char *lbl = genlbl(NULL);
         forge_str out = forge_str_create();
@@ -765,6 +763,77 @@ static void *
 visit_expr_namespace(visitor *v, expr_namespace *e)
 {
         return e->e->accept(e->e, v);
+}
+
+static void *
+visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
+{
+        asm_context *ctx = (asm_context *)v->context;
+
+        size_t szsum = 0;
+        for (size_t i = 0; i < e->exprs.len; ++i) {
+                expr *eidx = e->exprs.data[i];
+                char *res = eidx->accept(eidx, v);
+                const char *spec = szspec(eidx->type->sz);
+                szsum += eidx->type->sz;
+                char *offset = int_to_cstr(e->stack_offset_base + szsum);
+
+                take_txt(ctx, forge_cstr_builder("mov ", spec,
+                                                 " [rbp-", offset, "], ",
+                                                 res, NULL), 1);
+
+                free(offset);
+                free_reg_literal(res);
+        }
+
+        char *ptr_reg = g_regs[alloc_reg(8)];
+        char *last_elem_offset = int_to_cstr(e->stack_offset_base + szsum);
+        take_txt(ctx, forge_cstr_builder("lea ", ptr_reg, ", [rbp-", last_elem_offset, "]", NULL), 1);
+        free(last_elem_offset);
+        return ptr_reg;
+}
+
+static void *
+visit_expr_index(visitor *v, expr_index *e)
+{
+        asm_context *ctx = (asm_context *)v->context;
+
+        // TODO: Also allow for pointers.
+        size_t elemty_sz = ((type_array *)e->lhs->type)->elemty->sz;
+        char *elemty_sz_cstr = int_to_cstr(elemty_sz);
+        const char *spec = szspec(elemty_sz);
+        const char *idxspec = szspec(e->idx->type->sz);
+
+        char *lhs_value = e->lhs->accept(e->lhs, v);
+        char *ptr_load_reg = g_regs[alloc_reg(8)];
+
+        take_txt(ctx, forge_cstr_builder("mov QWORD ",
+                                         ptr_load_reg, ", ",
+                                         lhs_value, NULL), 1);
+
+        free_reg_literal(lhs_value);
+        char *idx_value = e->idx->accept(e->idx, v);
+        char *updated_idx_reg = g_regs[alloc_reg(e->idx->type->sz)];
+
+        take_txt(ctx, forge_cstr_builder("mov ", idxspec, " ", updated_idx_reg, ", ", idx_value, NULL), 1);
+        take_txt(ctx, forge_cstr_builder("imul ", updated_idx_reg, ", ", elemty_sz_cstr, NULL), 1);
+        take_txt(ctx, forge_cstr_builder("add ", ptr_load_reg,
+                                         ", ", updated_idx_reg, NULL), 1);
+
+        free(elemty_sz_cstr);
+        free_reg_literal(idx_value);
+        free_reg_literal(updated_idx_reg);
+
+        // TODO: Also allow for pointers.
+        char *res = g_regs[alloc_reg(elemty_sz)];
+
+        take_txt(ctx, forge_cstr_builder("mov ", spec, " ",
+                                         res, ", [", ptr_load_reg, "]",
+                                         NULL), 1);
+
+        free_reg_literal(ptr_load_reg);
+
+        return res;
 }
 
 static void *
@@ -1158,6 +1227,9 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_mut,
                 visit_expr_brace_init,
                 visit_expr_namespace,
+                visit_expr_arrayinit,
+                visit_expr_index,
+
                 visit_stmt_let,
                 visit_stmt_expr,
                 visit_stmt_block,

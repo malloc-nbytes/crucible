@@ -118,6 +118,26 @@ expr_namespace_alloc(const token *namespace,
         return e;
 }
 
+expr_arrayinit *
+expr_arrayinit_alloc(expr_array exprs)
+{
+        expr_arrayinit *e    = (expr_arrayinit *)alloc(sizeof(expr_arrayinit));
+        e->base              = init_expr_kind(EXPR_KIND_ARRAYINIT, accept_expr_arrayinit);
+        e->exprs             = exprs;
+        e->stack_offset_base = 0;
+        return e;
+}
+
+expr_index *
+expr_index_alloc(expr *lhs, expr *idx)
+{
+        expr_index *e        = (expr_index *)alloc(sizeof(expr_index));
+        e->base              = init_expr_kind(EXPR_KIND_ARRAYINIT, accept_expr_index);
+        e->lhs               = lhs;
+        e->idx               = idx;
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                type        *type,

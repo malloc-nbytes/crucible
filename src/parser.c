@@ -68,14 +68,27 @@ parse_type(parser_context *ctx)
         const char *lx = hd->lx;
         type *ty = NULL;
 
+        if (hd->ty == TOKEN_TYPE_LEFT_SQUARE) {
+                type *inner = parse_type(ctx);
+                int len = -1;
+
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_SEMICOLON) {
+                        lexer_discard(ctx->l); // ;
+                        len = atoi(expect(ctx, TOKEN_TYPE_INTEGER_LITERAL)->lx);
+                }
+                ty = (type *)type_array_alloc(inner, len);
+                (void)expect(ctx, TOKEN_TYPE_RIGHT_SQUARE);
+                return ty;
+        }
+
         if (!strcmp(lx, KWD_I8)) {
                 forge_todo("i8");
         } else if (!strcmp(lx, KWD_I16)) {
                 forge_todo("i16");
         } else if (!strcmp(lx, KWD_I32)) {
-                return (type *)type_i32_alloc();
+                ty = (type *)type_i32_alloc();
         } else if (!strcmp(lx, KWD_I64)) {
-                return (type *)type_i64_alloc();
+                ty = (type *)type_i64_alloc();
         } else if (!strcmp(lx, KWD_U8)) {
                 ty = (type *)type_u8_alloc();
         } else if (!strcmp(lx, KWD_U16)) {
@@ -176,6 +189,25 @@ parse_brace_initializer(parser_context *ctx)
         return expr_brace_init_alloc(ids, exprs);
 }
 
+static expr_arrayinit *
+parse_arrayinit(parser_context *ctx)
+{
+        expr_array exprs = dyn_array_empty(expr_array);
+
+        (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
+        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
+                dyn_array_append(exprs, parse_expr(ctx));
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                        lexer_discard(ctx->l); // ,
+                } else {
+                        break;
+                }
+        }
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
+
+        return expr_arrayinit_alloc(exprs);
+}
+
 expr *
 parse_primary_expr(parser_context *ctx)
 {
@@ -209,7 +241,21 @@ parse_primary_expr(parser_context *ctx)
                         left = (expr *)expr_string_literal_alloc(s);
                         left->loc = hd->loc;
                 } break;
+                case TOKEN_TYPE_LEFT_SQUARE: {
+                        if (!left) forge_err_wargs("%sunexpected '['", loc_err(hd->loc));
+                        lexer_discard(ctx->l); // [
+                        expr *idx = parse_expr(ctx);
+                        (void)expect(ctx, TOKEN_TYPE_RIGHT_SQUARE);
+                        left = (expr *)expr_index_alloc(left, idx);
+                        left->loc = hd->loc;
+                } break;
                 case TOKEN_TYPE_LEFT_PARENTHESIS: {
+                        // TODO: redo breace_initializer parsing
+                        /* if (struct) {
+                           left = (expr *)parse_brace_initializer(ctx);
+                           left->loc = hd->loc;
+                           }
+                         */
                         if (left) {
                                 // function call
                                 expr_array args = parse_comma_sep_exprs(ctx);
@@ -223,7 +269,7 @@ parse_primary_expr(parser_context *ctx)
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_LEFT_CURLY: {
-                        left = (expr *)parse_brace_initializer(ctx);
+                        left = (expr *)parse_arrayinit(ctx);
                         left->loc = hd->loc;
                 } break;
                 default: return left;
@@ -753,6 +799,8 @@ parse_stmt(parser_context *ctx)
 program *
 parser_create_program(lexer *l)
 {
+        NOOP(parse_brace_initializer);
+
         parser_context ctx = (parser_context) {
                 .l         = l,
                 .in_global = 1,

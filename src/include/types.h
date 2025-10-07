@@ -29,6 +29,8 @@ typedef enum {
         TYPE_KIND_PTR,
         TYPE_KIND_PROC,
 
+        TYPE_KIND_ARRAY,
+
         TYPE_KIND_STRUCT,
 
         // For use in lexing when the struct
@@ -76,6 +78,12 @@ typedef struct {
 
 typedef struct {
         type base;
+        type *elemty;
+        int len;
+} type_array;
+
+typedef struct {
+        type base;
         const parameter_array *members;
 } type_struct;
 
@@ -96,6 +104,7 @@ type_void *type_void_alloc(void);
 type_struct *type_struct_alloc(const parameter_array *members, size_t sz);
 type_custom *type_custom_alloc(const token *struct_id);
 type_unknown *type_unknown_alloc(void);
+type_array *type_array_alloc(type *elemty, int len);
 
 type_proc *type_proc_alloc(
         const char *id,

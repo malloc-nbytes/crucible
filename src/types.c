@@ -123,9 +123,21 @@ type_struct_alloc(const parameter_array *members, size_t sz)
 type_custom *
 type_custom_alloc(const token *struct_id)
 {
-        type_custom *t   = (type_custom *)alloc(sizeof(type_custom));
-        t->base.kind     = TYPE_KIND_CUSTOM;
-        t->struct_id     = struct_id;
+        type_custom *t = (type_custom *)alloc(sizeof(type_custom));
+        t->base.kind   = TYPE_KIND_CUSTOM;
+        t->base.sz     = 0;
+        t->struct_id   = struct_id;
+        return t;
+}
+
+type_array *
+type_array_alloc(type *elemty, int len)
+{
+        type_array *t = (type_array *)alloc(sizeof(type_array));
+        t->base.kind  = TYPE_KIND_ARRAY;
+        t->base.sz    = 8;
+        t->elemty     = elemty;
+        t->len        = len;
         return t;
 }
 
@@ -150,6 +162,15 @@ type_to_cstr(const type *t)
         case TYPE_KIND_UNKNOWN:  return "<unknown>";
         case TYPE_KIND_STRUCT:   return "<struct>";
         case TYPE_KIND_CUSTOM:   return "<struct>";
+        case TYPE_KIND_ARRAY: {
+                const type_array *ar = (const type_array *)t;
+                char sz[32] = {0};
+                sprintf(sz, "%d", ar->len);
+                return forge_cstr_builder("<array [elemty=",
+                                          type_to_cstr(ar->elemty),
+                                          ", len=", sz,
+                                          "]>", NULL);
+        } break;
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
         } break;
@@ -174,6 +195,14 @@ type_is_compat(type **t1, type **t2)
         if ((*t1)->kind == TYPE_KIND_PTR
             && (*t2)->kind == TYPE_KIND_PTR) {
                 return type_is_compat(&((type_ptr *)(*t1))->to, &((type_ptr *)(*t2))->to);
+        }
+
+        if ((*t1)->kind == TYPE_KIND_ARRAY
+            && (*t2)->kind == TYPE_KIND_ARRAY) {
+                type_array *ar1 = (type_array *)(*t1);
+                type_array *ar2 = (type_array *)(*t2);
+                return type_is_compat(&ar1->elemty, &ar2->elemty)
+                        && ar1->len == ar2->len;
         }
 
         if ((*t1)->kind == TYPE_KIND_NUMBER
