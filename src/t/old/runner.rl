@@ -106,7 +106,8 @@ fn setup_compiler() {
     info("=== BUILDING COMPILER ===", 1);
     $"pwd" |> let cwd;
     cd("../../");
-    $"earl build.rl";
+    $"make clean";
+    $"make";
     cd(cwd);
 }
 
