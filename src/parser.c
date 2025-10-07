@@ -105,16 +105,6 @@ parse_type(parser_context *ctx)
                 ty = (type *)type_custom_alloc(hd);
         }
 
-        /* if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_LEFT_SQUARE) { */
-        /*         lexer_discard(ctx->l); // [ */
-        /*         int len = -1; */
-        /*         if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_INTEGER_LITERAL) { */
-        /*                 len = atoi(expect(ctx, TOKEN_TYPE_INTEGER_LITERAL)->lx); */
-        /*         } */
-        /*         (void)expect(ctx, TOKEN_TYPE_RIGHT_SQUARE); */
-        /*         ty = (type *)type_array_alloc(ty, len); */
-        /* } */
-
         // Handles all pointer types (ex: u8**).
         while (LSP(ctx->l, 0)->ty == TOKEN_TYPE_ASTERISK) {
                 lexer_discard(ctx->l);

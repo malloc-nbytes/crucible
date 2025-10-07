@@ -367,6 +367,14 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
         symtbl *tbl = (symtbl *)v->context;
         type *elemty = NULL;
 
+        // Reverse the order of the expressions for ASM generation.
+        for (size_t i = 0; i < e->exprs.len/2; ++i) {
+                expr *tmp = e->exprs.data[i];
+                e->exprs.data[i] = e->exprs.data[e->exprs.len-i-1];
+                e->exprs.data[e->exprs.len-i-1] = tmp;
+        }
+
+        // Evaluate all expressions and make sure all types are the same.
         for (size_t i = 0; i < e->exprs.len; ++i) {
                 e->exprs.data[i]->accept(e->exprs.data[i], v);
                 if (!elemty) {

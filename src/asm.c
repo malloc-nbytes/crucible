@@ -772,7 +772,8 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 {
         asm_context *ctx = (asm_context *)v->context;
 
-        for (size_t i = 0, szsum = 0; i < e->exprs.len; ++i) {
+        size_t szsum = 0;
+        for (size_t i = 0; i < e->exprs.len; ++i) {
                 expr *eidx = e->exprs.data[i];
                 char *res = eidx->accept(eidx, v);
                 const char *spec = szspec(eidx->type->sz);
@@ -788,9 +789,9 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
         }
 
         char *ptr_reg = g_regs[alloc_reg(8)];
-        char *first_elem_offset = int_to_cstr(e->stack_offset_base + e->exprs.data[0]->type->sz);
-        take_txt(ctx, forge_cstr_builder("lea ", ptr_reg, ", [rbp-", first_elem_offset, "]", NULL), 1);
-        free(first_elem_offset);
+        char *last_elem_offset = int_to_cstr(e->stack_offset_base + szsum);
+        take_txt(ctx, forge_cstr_builder("lea ", ptr_reg, ", [rbp-", last_elem_offset, "]", NULL), 1);
+        free(last_elem_offset);
         return ptr_reg;
 }
 
