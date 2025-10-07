@@ -4,9 +4,7 @@ import std.binds.c.stdio;
 
 export proc _start(void): !
 {
-    let ar: i32[] = {1,2,3};
-
-    cstdio::printf("%d\n", ar);
+    let ar: [i32; 5] = {1,2,3,4,5};
 
     exit;
 }
