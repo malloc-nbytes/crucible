@@ -13,4 +13,6 @@ typedef enum {
 
 #define FLAG_2HY_ASM "asm"
 
+#define FLAG_1HY_SEARCHPATH 'I'
+
 #endif // FLAGS_H_INCLUDED
