@@ -248,13 +248,46 @@ export proc _start(void): !
                         f = f+1;
                 }
 
-                if ((resi32 = ptrs::sum_array_t12345_t5_r15(&t2[0], 5)) == 15) {
+                if ((resi32 = ptrs::sum_array1_t12345_t5_r15(&t2[0], 5)) == 15) {
                         ok();
                         p = p+1;
                 } else {
                         badi32(resi32, 15);
                         f = f+1;
                 }
+
+                if ((resi32 = ptrs::sum_array2_t12345_t5_r15(&t2[0], 5)) == 15) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 15);
+                        f = f+1;
+                }
+
+                if ((resi32 = ptrs::ptr_arith1_t_12345_r2(&t2[2], 5)) == 2) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 2);
+                        f = f+1;
+                }
+
+                if ((resi32 = ptrs::ptr_arith2_t_12345_r2(&t2[2], 5)) == 2) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 2);
+                        f = f+1;
+                }
+
+                if ((resi32 = ptrs::ptr_arith3_t_12345_r2(&t2[2], 5)) == 2) {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi32(resi32, 2);
+                        f = f+1;
+                }
+
         }
 
         summary(p, f);
