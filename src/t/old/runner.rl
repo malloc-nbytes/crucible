@@ -107,7 +107,7 @@ fn setup_compiler() {
     $"pwd" |> let cwd;
     cd("../../");
     $"make clean";
-    $"make";
+    $"make -j$(nproc)";
     cd(cwd);
 }
 
