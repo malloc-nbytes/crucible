@@ -289,16 +289,16 @@ parse_member_expr(parser_context *ctx)
 expr *
 parse_unary_expr(parser_context *ctx)
 {
-        /* token *cur = lexer_peek(ctx->l, 0); */
-        /* if (cur && (cur->ty == TOKEN_TYPE_MINUS */
-        /*             || cur->ty == TOKEN_TYPE_PLUS */
-        /*             || cur->ty == TOKEN_TYPE_BANG */
-        /*             || cur->ty == TOKEN_TYPE_ASTERISK */
-        /*             || cur->ty == TOKEN_TYPE_AMPERSAND)) { */
-        /*         token *op = lexer_next(ctx->l); */
-        /*         expr *operand = parse_unary_expr(ctx); */
-        /*         return (expr *)expr_un_alloc(operand, op); */
-        /* } */
+        token *cur = lexer_peek(ctx->l, 0);
+        if (cur && (cur->ty == TOKEN_TYPE_MINUS
+                    || cur->ty == TOKEN_TYPE_PLUS
+                    || cur->ty == TOKEN_TYPE_BANG
+                    || cur->ty == TOKEN_TYPE_ASTERISK
+                    || cur->ty == TOKEN_TYPE_AMPERSAND)) {
+                token *op = lexer_next(ctx->l);
+                expr *lhs = (expr *)parse_unary_expr(ctx);
+                return (expr *)expr_un_alloc(op, lhs);
+        }
         return parse_member_expr(ctx);
 }
 
