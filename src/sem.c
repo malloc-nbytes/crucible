@@ -94,6 +94,27 @@ sym_alloc(symtbl     *tbl,
         return s;
 }
 
+static void
+coerce_integer_literal(symtbl    *tbl,
+                       expr      *e,
+                       type_kind  to)
+{
+        assert(e);
+        assert(e->type);
+
+        if (e->type->kind == to) return;
+
+        if (e->type->kind == TYPE_KIND_NUMBER) {
+                // TODO: Write custom free() for each type
+                free(e->type);
+                e->type = (type *)type_i64_alloc();
+                return;
+        }
+
+        pusherr(tbl, e->loc, "could not coerce type `%s` to type `%s`",
+                type_to_cstr(e->type), type_kind_to_cstr(to));
+}
+
 static type *
 binop(symtbl      *tbl,
       expr        *lhs,
@@ -106,6 +127,16 @@ binop(symtbl      *tbl,
                 (type *)type_unknown_alloc();
         }
 
+        if (lhs->type->kind == TYPE_KIND_PTR && rhs->type->kind <= TYPE_KIND_NUMBER) {
+                coerce_integer_literal(tbl, rhs, TYPE_KIND_I64);
+                return lhs->type;
+        }
+
+        if (rhs->type->kind == TYPE_KIND_PTR && lhs->type->kind <= TYPE_KIND_NUMBER) {
+                coerce_integer_literal(tbl, lhs, TYPE_KIND_I64);
+                return rhs->type;
+        }
+
         if (!type_is_compat(&lhs->type, &rhs->type)) {
                 pusherr(tbl, lhs->loc,
                         "cannot perform binary operator `%s` on %s and %s",
@@ -115,21 +146,6 @@ binop(symtbl      *tbl,
         }
 
         return lhs->type;
-}
-
-static void
-coerce_integer_literal(expr *e, type_kind to)
-{
-        assert(e);
-        assert(e->type);
-
-        if (e->type->kind == to) return;
-
-        if (e->type->kind == TYPE_KIND_NUMBER) {
-                // TODO: Write custom free() for each type
-                free(e->type);
-                e->type = (type *)type_i64_alloc();
-        }
 }
 
 static void *
@@ -259,13 +275,26 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 static void *
 visit_expr_mut(visitor *v, expr_mut *e)
 {
+        symtbl *tbl = (symtbl *)v->context;
+
         e->lhs->accept(e->lhs, v);
         e->rhs->accept(e->rhs, v);
 
-        // TODO: support other assignment operators
-        /* if (e->op->ty != TOKEN_TYPE_EQUALS) { */
-        /*         forge_err("only direct assignment is supported `=`"); */
-        /* } */
+        if (e->op->ty == TOKEN_TYPE_PLUS_EQUALS
+            || e->op->ty == TOKEN_TYPE_MINUS_EQUALS
+            || e->op->ty == TOKEN_TYPE_ASTERISK_EQUALS
+            || e->op->ty == TOKEN_TYPE_FORWARDSLASH_EQUALS) {
+                if ((e->lhs->type->kind == TYPE_KIND_ARRAY
+                     || e->lhs->type->kind == TYPE_KIND_PTR)
+                    && e->rhs->type->kind <= TYPE_KIND_NUMBER) {
+                        coerce_integer_literal(tbl, e->rhs, TYPE_KIND_I64);
+                } else if ((e->rhs->type->kind == TYPE_KIND_ARRAY
+                            || e->rhs->type->kind == TYPE_KIND_PTR)
+                           && e->lhs->type->kind <= TYPE_KIND_NUMBER) {
+                        coerce_integer_literal(tbl, e->lhs, TYPE_KIND_I64);
+                }
+
+        }
 
         ((expr *)e)->type = e->lhs->type;
 
@@ -419,8 +448,9 @@ visit_expr_index(visitor *v, expr_index *e)
 
         e->lhs->accept(e->lhs, v);
 
-        if (e->lhs->type->kind != TYPE_KIND_ARRAY) {
-                pusherr(tbl, e->lhs->loc, "index operations are only permitted for arrays");
+        if (e->lhs->type->kind != TYPE_KIND_ARRAY
+            && e->lhs->type->kind != TYPE_KIND_PTR) {
+                pusherr(tbl, e->lhs->loc, "index operations are only permitted for arrays and pointers");
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
@@ -433,25 +463,17 @@ visit_expr_index(visitor *v, expr_index *e)
                         type_to_cstr(e->idx->type));
         }
 
-        // Note: Creating a binary node for multiplication of the
-        //       index and the size of the type.
-        /* char buf[256] = {0}; */
-        /* sprintf(buf, "%d", ((type_array *)e->lhs->type)->elemty->sz); */
-
-        /* token                *mult_tok    = token_alloc("*", 1, TOKEN_TYPE_ASTERISK, 0, 0, NULL); */
-        /* token                *integer_tok = token_alloc(buf, strlen(buf), TOKEN_TYPE_INTEGER_LITERAL, 0, 0, NULL); */
-        /* expr_integer_literal *i           = expr_integer_literal_alloc(integer_tok); */
-        /* expr_bin             *updated_idx = expr_bin_alloc(e->idx, mult_tok, (expr *)i); */
-        /* ((expr *)updated_idx)->accept(((expr *)updated_idx), v); */
-        /* e->idx = (expr *)updated_idx; */
-
-        coerce_integer_literal(e->idx, TYPE_KIND_I64);
+        coerce_integer_literal(tbl, e->idx, TYPE_KIND_I64);
 
         if (e->idx->type->sz != 8) {
                 pusherr(tbl, e->idx->loc, "array indices are allowed only for 64-bit numbers");
         }
 
-        ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;
+        if (e->lhs->type->kind == TYPE_KIND_ARRAY) {
+                ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;
+        } else {
+                ((expr *)e)->type = ((type_ptr *)e->lhs->type)->to;
+        }
 
         return NULL;
 }
@@ -462,7 +484,27 @@ visit_expr_un(visitor *v, expr_un *e)
         // TODO: check op with rhs
         symtbl *tbl = (symtbl *)v->context;
         e->rhs->accept(e->rhs, v);
-        ((expr *)e)->type = e->rhs->type;
+
+        // Check for address operator, assign to array type.
+        if (e->op->ty == TOKEN_TYPE_AMPERSAND) {
+                ((expr *)e)->type = (type *)type_ptr_alloc(e->rhs->type);
+        } else if (e->op->ty == TOKEN_TYPE_ASTERISK) {
+                if (e->rhs->type->kind == TYPE_KIND_PTR) {
+                        ((expr *)e)->type = ((type_ptr *)e->rhs->type)->to;
+                } else if (e->rhs->type->kind == TYPE_KIND_ARRAY) {
+                        ((expr *)e)->type = ((type_array *)e->rhs->type)->elemty;
+                } else {
+                        pusherr(tbl, e->op->loc, "cannot dereference type of `%s`",
+                                type_to_cstr(e->rhs->type));
+                        goto bad;
+                }
+        } else {
+                ((expr *)e)->type = e->rhs->type;
+        }
+        return NULL;
+
+ bad:
+        ((expr *)(e))->type = (type *)type_unknown_alloc();
         return NULL;
 }
 

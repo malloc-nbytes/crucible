@@ -179,6 +179,34 @@ type_to_cstr(const type *t)
         return NULL; // unreachable
 }
 
+const char *
+type_kind_to_cstr(type_kind t)
+{
+        switch (t) {
+        case TYPE_KIND_I8:       return "i8";
+        case TYPE_KIND_I16:      return "i16";
+        case TYPE_KIND_I32:      return "i32";
+        case TYPE_KIND_I64:      return "i64";
+        case TYPE_KIND_U8:       return "u8";
+        case TYPE_KIND_U16:      return "u16";
+        case TYPE_KIND_U32:      return "u32";
+        case TYPE_KIND_U64:      return "u64";
+        case TYPE_KIND_NUMBER:   return "number";
+        case TYPE_KIND_PTR:      return "ptr";
+        case TYPE_KIND_VOID:     return "void";
+        case TYPE_KIND_NORETURN: return "!";
+        case TYPE_KIND_UNKNOWN:  return "<unknown>";
+        case TYPE_KIND_STRUCT:   return "<struct>";
+        case TYPE_KIND_CUSTOM:   return "<struct>";
+        case TYPE_KIND_ARRAY:    return "<array>";
+        default: {
+                forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t);
+        } break;
+        }
+
+        return NULL; // unreachable
+}
+
 int
 type_is_compat(type **t1, type **t2)
 {
@@ -188,28 +216,37 @@ type_is_compat(type **t1, type **t2)
         assert(*t1);
         assert(*t2);
 
-        assert((*t1)->kind != TYPE_KIND_PROC
-               && (*t2)->kind != TYPE_KIND_PROC
-               && "proc type checking unimplemented");
+        type_kind t1kind = (*t1)->kind;
+        type_kind t2kind = (*t2)->kind;
 
-        if ((*t1)->kind == TYPE_KIND_PTR
-            && (*t2)->kind == TYPE_KIND_PTR) {
+        assert(t1kind != TYPE_KIND_PROC
+               && t2kind != TYPE_KIND_PROC
+               && "proc type checking is unimplemented");
+
+        if (t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_PTR) {
                 return type_is_compat(&((type_ptr *)(*t1))->to, &((type_ptr *)(*t2))->to);
         }
 
-        if ((*t1)->kind == TYPE_KIND_ARRAY
-            && (*t2)->kind == TYPE_KIND_ARRAY) {
+        if (t1kind == TYPE_KIND_ARRAY && t2kind == TYPE_KIND_ARRAY) {
                 type_array *ar1 = (type_array *)(*t1);
                 type_array *ar2 = (type_array *)(*t2);
                 return type_is_compat(&ar1->elemty, &ar2->elemty)
                         && ar1->len == ar2->len;
         }
 
-        if ((*t1)->kind == TYPE_KIND_NUMBER
-            && (*t2)->kind < TYPE_KIND_NUMBER) {
+        if ((t1kind == TYPE_KIND_ARRAY && t2kind == TYPE_KIND_PTR)) {
+                return type_is_compat(&((type_array *)t1)->elemty, &((type_ptr *)t2)->to);
+        }
+
+        if ((t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_ARRAY)) {
+                return type_is_compat(&((type_ptr *)t1)->to, &((type_array *)t2)->elemty);
+        }
+
+        if (t1kind == TYPE_KIND_NUMBER
+            && t2kind < TYPE_KIND_NUMBER) {
                 (*t1) = (*t2);
-        } else if ((*t1)->kind < TYPE_KIND_NUMBER
-                   && (*t2)->kind == TYPE_KIND_NUMBER) {
+        } else if (t1kind < TYPE_KIND_NUMBER
+                   && t2kind == TYPE_KIND_NUMBER) {
                 (*t2) = (*t1);
         }
 

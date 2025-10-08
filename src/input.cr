@@ -1,12 +1,9 @@
 module main where
 
 import std.binds.c.stdio;
+import std.binds.c.string;
 
 export proc _start(void): !
 {
-        let x: i32 = 0;
-
-        cstdio::printf("HERE: %d\n", !x);
-
         exit;
 }
