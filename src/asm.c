@@ -926,6 +926,59 @@ visit_expr_index(visitor *v, expr_index *e)
 }
 
 static void *
+visit_expr_un(visitor *v, expr_un *e)
+{
+        asm_context *ctx = (asm_context *)v->context;
+        const char *spec = szspec(e->rhs->type->sz);
+
+        char *rhs_value = e->rhs->accept(e->rhs, v);
+
+        int regi = alloc_reg(e->rhs->type->sz);
+        char *reg = g_regs[regi];
+
+        // Move the operand into the allocated register if it's not in one.
+        if (!is_register(rhs_value) || strcmp(rhs_value, reg)) {
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", rhs_value, NULL), 1);
+        }
+        free_reg_literal(rhs_value);
+
+        switch (e->op->ty) {
+        case TOKEN_TYPE_MINUS:
+                take_txt(ctx, forge_cstr_builder("neg ", spec, " ", reg, NULL), 1);
+                break;
+
+        case TOKEN_TYPE_BANG: {
+                char *lbl_true = genlbl("true");
+                char *lbl_done = genlbl("done");
+
+                // Compare operand to 0
+                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
+                // If zero, set result to 1
+                take_txt(ctx, forge_cstr_builder("je ", lbl_true, NULL), 1);
+                // Otherwise, set result to 0
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
+                take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
+
+                free(lbl_true);
+                free(lbl_done);
+                break;
+        }
+
+        case TOKEN_TYPE_TILDE:
+                take_txt(ctx, forge_cstr_builder("not ", spec, " ", reg, NULL), 1);
+                break;
+
+        default:
+                forge_err_wargs("visit_expr_un(): unsupported unary operator `%s`", e->op->lx);
+        }
+
+        return reg;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -1318,6 +1371,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_namespace,
                 visit_expr_arrayinit,
                 visit_expr_index,
+                visit_expr_un,
 
                 visit_stmt_let,
                 visit_stmt_expr,
