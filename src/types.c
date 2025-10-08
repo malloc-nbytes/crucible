@@ -188,12 +188,12 @@ type_is_compat(type **t1, type **t2)
         assert(*t1);
         assert(*t2);
 
-        assert((*t1)->kind != TYPE_KIND_PROC
-               && (*t2)->kind != TYPE_KIND_PROC
-               && "proc type checking is unimplemented");
-
         type_kind t1kind = (*t1)->kind;
         type_kind t2kind = (*t2)->kind;
+
+        assert(t1kind != TYPE_KIND_PROC
+               && t2kind != TYPE_KIND_PROC
+               && "proc type checking is unimplemented");
 
         if (t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_PTR) {
                 return type_is_compat(&((type_ptr *)(*t1))->to, &((type_ptr *)(*t2))->to);
@@ -222,7 +222,7 @@ type_is_compat(type **t1, type **t2)
                 (*t2) = (*t1);
         }
 
-        return t1kind == t2kind;
+        return (*t1)->kind == (*t2)->kind;
 }
 
 int

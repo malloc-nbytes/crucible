@@ -455,7 +455,13 @@ visit_expr_un(visitor *v, expr_un *e)
         // TODO: check op with rhs
         symtbl *tbl = (symtbl *)v->context;
         e->rhs->accept(e->rhs, v);
-        ((expr *)e)->type = e->rhs->type;
+
+        // Check for address operator, assign to array type.
+        if (e->op->ty == TOKEN_TYPE_AMPERSAND) {
+                ((expr *)e)->type = (type *)type_ptr_alloc(e->rhs->type);
+        } else {
+                ((expr *)e)->type = e->rhs->type;
+        }
         return NULL;
 }
 

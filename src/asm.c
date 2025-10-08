@@ -929,33 +929,92 @@ static void *
 visit_expr_un(visitor *v, expr_un *e)
 {
         asm_context *ctx = (asm_context *)v->context;
-        const char *spec = szspec(e->rhs->type->sz);
+        const char *spec = szspec(e->rhs->type->sz); // Size specifier for operand
 
+        // Handle address-of operator
+        if (e->op->ty == TOKEN_TYPE_AMPERSAND) {
+                // Allocate a 64-bit register for the pointer (addresses are 8 bytes)
+                int regi = alloc_reg(8);
+                char *reg = g_regs[regi];
+
+                switch (e->rhs->kind) {
+                case EXPR_KIND_IDENTIFIER: {
+                        expr_identifier *id = (expr_identifier *)e->rhs;
+                        assert(id->resolved);
+
+                        // Address of the variable [rbp - offset].
+                        char *offset = int_to_cstr(id->resolved->stack_offset);
+                        take_txt(ctx, forge_cstr_builder("lea ", reg, ", [rbp-", offset, "]", NULL), 1);
+                        free(offset);
+                        break;
+                }
+                case EXPR_KIND_INDEX: {
+                        expr_index *idx = (expr_index *)e->rhs;
+                        size_t elemty_sz = ((type_array *)idx->lhs->type)->elemty->sz;
+                        char *elemty_sz_cstr = int_to_cstr(elemty_sz);
+                        const char *idxspec = szspec(idx->idx->type->sz);
+
+                        // Get the base address of the array
+                        char *lhs_value = idx->lhs->accept(idx->lhs, v);
+                        char *ptr_load_reg = g_regs[alloc_reg(8)];
+                        take_txt(ctx, forge_cstr_builder("mov QWORD ", ptr_load_reg, ", ", lhs_value, NULL), 1);
+                        free_reg_literal(lhs_value);
+
+                        // Get offset
+                        char *idx_value = idx->idx->accept(idx->idx, v);
+                        char *idx_reg = g_regs[alloc_reg(idx->idx->type->sz)];
+                        take_txt(ctx, forge_cstr_builder("mov ", idxspec, " ", idx_reg, ", ", idx_value, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("imul ", idx_reg, ", ", elemty_sz_cstr, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("add ", ptr_load_reg, ", ", idx_reg, NULL), 1);
+
+                        // LEA of the indexed element
+                        take_txt(ctx, forge_cstr_builder("lea ", reg, ", [", ptr_load_reg, "]", NULL), 1);
+
+                        free(elemty_sz_cstr);
+                        free_reg_literal(idx_value);
+                        free_reg_literal(idx_reg);
+                        free_reg_literal(ptr_load_reg);
+                        break;
+                }
+                default:
+                        forge_err_wargs("visit_expr_un(): address-of operator not supported for operand kind `%d`", (int)e->rhs->kind);
+                }
+
+                return reg;
+        }
+
+        // Evaluate the operand for other unary operators
         char *rhs_value = e->rhs->accept(e->rhs, v);
 
+        // Allocate a register for the result
         int regi = alloc_reg(e->rhs->type->sz);
         char *reg = g_regs[regi];
 
-        // Move the operand into the allocated register if it's not in one.
-        if (!is_register(rhs_value) || strcmp(rhs_value, reg)) {
+        // Move the operand into the allocated register if it's not already in one
+        if (!is_register(rhs_value)) {
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", rhs_value, NULL), 1);
+        } else if (strcmp(rhs_value, reg)) {
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", rhs_value, NULL), 1);
         }
+
+        // Free the operand's register if it was one
         free_reg_literal(rhs_value);
 
+        // Handle other unary operators
         switch (e->op->ty) {
-        case TOKEN_TYPE_MINUS:
+        case TOKEN_TYPE_MINUS: // Arithmetic negation
                 take_txt(ctx, forge_cstr_builder("neg ", spec, " ", reg, NULL), 1);
                 break;
 
-        case TOKEN_TYPE_BANG: {
+        case TOKEN_TYPE_BANG: { // Logical NOT
                 char *lbl_true = genlbl("true");
                 char *lbl_done = genlbl("done");
 
                 // Compare operand to 0
                 take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
-                // If zero, set result to 1
+                // If zero, set result to 1 (true)
                 take_txt(ctx, forge_cstr_builder("je ", lbl_true, NULL), 1);
-                // Otherwise, set result to 0
+                // Otherwise, set result to 0 (false)
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
                 take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
                 take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
@@ -967,7 +1026,7 @@ visit_expr_un(visitor *v, expr_un *e)
                 break;
         }
 
-        case TOKEN_TYPE_TILDE:
+        case TOKEN_TYPE_TILDE: // Bitwise NOT
                 take_txt(ctx, forge_cstr_builder("not ", spec, " ", reg, NULL), 1);
                 break;
 
