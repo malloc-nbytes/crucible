@@ -9,6 +9,7 @@ src/program
 *.bin
 *.out
 *.o
+src/run.sh
 
 Makefile
 Makefile.in

@@ -275,13 +275,26 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
 static void *
 visit_expr_mut(visitor *v, expr_mut *e)
 {
+        symtbl *tbl = (symtbl *)v->context;
+
         e->lhs->accept(e->lhs, v);
         e->rhs->accept(e->rhs, v);
 
-        // TODO: support other assignment operators
-        /* if (e->op->ty != TOKEN_TYPE_EQUALS) { */
-        /*         forge_err("only direct assignment is supported `=`"); */
-        /* } */
+        if (e->op->ty == TOKEN_TYPE_PLUS_EQUALS
+            || e->op->ty == TOKEN_TYPE_MINUS_EQUALS
+            || e->op->ty == TOKEN_TYPE_ASTERISK_EQUALS
+            || e->op->ty == TOKEN_TYPE_FORWARDSLASH_EQUALS) {
+                if ((e->lhs->type->kind == TYPE_KIND_ARRAY
+                     || e->lhs->type->kind == TYPE_KIND_PTR)
+                    && e->rhs->type->kind <= TYPE_KIND_NUMBER) {
+                        coerce_integer_literal(tbl, e->rhs, TYPE_KIND_I64);
+                } else if ((e->rhs->type->kind == TYPE_KIND_ARRAY
+                            || e->rhs->type->kind == TYPE_KIND_PTR)
+                           && e->lhs->type->kind <= TYPE_KIND_NUMBER) {
+                        coerce_integer_literal(tbl, e->lhs, TYPE_KIND_I64);
+                }
+
+        }
 
         ((expr *)e)->type = e->lhs->type;
 
