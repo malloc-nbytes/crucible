@@ -33,7 +33,7 @@ function compile() {
     sleep 1
     pushd ../../
     make clean
-    make
+    make -j$(nproc)
     popd
 }
 

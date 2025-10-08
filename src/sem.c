@@ -450,6 +450,16 @@ visit_expr_index(visitor *v, expr_index *e)
 }
 
 static void *
+visit_expr_un(visitor *v, expr_un *e)
+{
+        // TODO: check op with rhs
+        symtbl *tbl = (symtbl *)v->context;
+        e->rhs->accept(e->rhs, v);
+        ((expr *)e)->type = e->rhs->type;
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -855,6 +865,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_namespace,
                 visit_expr_arrayinit,
                 visit_expr_index,
+                visit_expr_un,
 
                 visit_stmt_let,
                 visit_stmt_expr,

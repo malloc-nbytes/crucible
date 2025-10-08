@@ -60,6 +60,16 @@ expr_mut_alloc(expr        *lhs,
         return e;
 }
 
+expr_un *
+expr_un_alloc(const token *op, expr *rhs)
+{
+        expr_un *e     = (expr_un *)alloc(sizeof(expr_un));
+        e->base        = init_expr_kind(EXPR_KIND_UNARY, accept_expr_un);
+        e->op          = op;
+        e->rhs         = rhs;
+        return e;
+}
+
 expr_bin *
 expr_bin_alloc(expr        *lhs,
                const token *op,
@@ -70,17 +80,6 @@ expr_bin_alloc(expr        *lhs,
         e->lhs         = lhs;
         e->op          = op;
         e->rhs         = rhs;
-        return e;
-}
-
-expr_un *
-expr_un_alloc(expr        *operand,
-              const token *op)
-{
-        expr_un *e     = (expr_un *)alloc(sizeof(expr_un));
-        e->base        = init_expr_kind(EXPR_KIND_UNARY, NULL);
-        e->operand     = operand;
-        e->op          = op;
         return e;
 }
 
