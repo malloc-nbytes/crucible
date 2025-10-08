@@ -118,5 +118,6 @@ type_proc *type_proc_alloc(
 char *type_to_cstr(const type *t);
 int type_is_compat(type **t1, type **t2);
 int type_to_int(const type *t);
+const char *type_kind_to_cstr(type_kind t);
 
 #endif // TYPES_H_INCLUDED

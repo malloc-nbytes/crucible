@@ -94,6 +94,27 @@ sym_alloc(symtbl     *tbl,
         return s;
 }
 
+static void
+coerce_integer_literal(symtbl    *tbl,
+                       expr      *e,
+                       type_kind  to)
+{
+        assert(e);
+        assert(e->type);
+
+        if (e->type->kind == to) return;
+
+        if (e->type->kind == TYPE_KIND_NUMBER) {
+                // TODO: Write custom free() for each type
+                free(e->type);
+                e->type = (type *)type_i64_alloc();
+                return;
+        }
+
+        pusherr(tbl, e->loc, "could not coerce type `%s` to type `%s`",
+                type_to_cstr(e->type), type_kind_to_cstr(to));
+}
+
 static type *
 binop(symtbl      *tbl,
       expr        *lhs,
@@ -106,6 +127,16 @@ binop(symtbl      *tbl,
                 (type *)type_unknown_alloc();
         }
 
+        if (lhs->type->kind == TYPE_KIND_PTR && rhs->type->kind <= TYPE_KIND_NUMBER) {
+                coerce_integer_literal(tbl, rhs, TYPE_KIND_I64);
+                return lhs->type;
+        }
+
+        if (rhs->type->kind == TYPE_KIND_PTR && lhs->type->kind <= TYPE_KIND_NUMBER) {
+                coerce_integer_literal(tbl, lhs, TYPE_KIND_I64);
+                return rhs->type;
+        }
+
         if (!type_is_compat(&lhs->type, &rhs->type)) {
                 pusherr(tbl, lhs->loc,
                         "cannot perform binary operator `%s` on %s and %s",
@@ -115,21 +146,6 @@ binop(symtbl      *tbl,
         }
 
         return lhs->type;
-}
-
-static void
-coerce_integer_literal(expr *e, type_kind to)
-{
-        assert(e);
-        assert(e->type);
-
-        if (e->type->kind == to) return;
-
-        if (e->type->kind == TYPE_KIND_NUMBER) {
-                // TODO: Write custom free() for each type
-                free(e->type);
-                e->type = (type *)type_i64_alloc();
-        }
 }
 
 static void *
@@ -434,7 +450,7 @@ visit_expr_index(visitor *v, expr_index *e)
                         type_to_cstr(e->idx->type));
         }
 
-        coerce_integer_literal(e->idx, TYPE_KIND_I64);
+        coerce_integer_literal(tbl, e->idx, TYPE_KIND_I64);
 
         if (e->idx->type->sz != 8) {
                 pusherr(tbl, e->idx->loc, "array indices are allowed only for 64-bit numbers");
@@ -459,9 +475,23 @@ visit_expr_un(visitor *v, expr_un *e)
         // Check for address operator, assign to array type.
         if (e->op->ty == TOKEN_TYPE_AMPERSAND) {
                 ((expr *)e)->type = (type *)type_ptr_alloc(e->rhs->type);
+        } else if (e->op->ty == TOKEN_TYPE_ASTERISK) {
+                if (e->rhs->type->kind == TYPE_KIND_PTR) {
+                        ((expr *)e)->type = ((type_ptr *)e->rhs->type)->to;
+                } else if (e->rhs->type->kind == TYPE_KIND_ARRAY) {
+                        ((expr *)e)->type = ((type_array *)e->rhs->type)->elemty;
+                } else {
+                        pusherr(tbl, e->op->loc, "cannot dereference type of `%s`",
+                                type_to_cstr(e->rhs->type));
+                        goto bad;
+                }
         } else {
                 ((expr *)e)->type = e->rhs->type;
         }
+        return NULL;
+
+ bad:
+        ((expr *)(e))->type = (type *)type_unknown_alloc();
         return NULL;
 }
 
