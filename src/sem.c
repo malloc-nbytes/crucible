@@ -419,8 +419,9 @@ visit_expr_index(visitor *v, expr_index *e)
 
         e->lhs->accept(e->lhs, v);
 
-        if (e->lhs->type->kind != TYPE_KIND_ARRAY) {
-                pusherr(tbl, e->lhs->loc, "index operations are only permitted for arrays");
+        if (e->lhs->type->kind != TYPE_KIND_ARRAY
+            && e->lhs->type->kind != TYPE_KIND_PTR) {
+                pusherr(tbl, e->lhs->loc, "index operations are only permitted for arrays and pointers");
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
@@ -433,25 +434,17 @@ visit_expr_index(visitor *v, expr_index *e)
                         type_to_cstr(e->idx->type));
         }
 
-        // Note: Creating a binary node for multiplication of the
-        //       index and the size of the type.
-        /* char buf[256] = {0}; */
-        /* sprintf(buf, "%d", ((type_array *)e->lhs->type)->elemty->sz); */
-
-        /* token                *mult_tok    = token_alloc("*", 1, TOKEN_TYPE_ASTERISK, 0, 0, NULL); */
-        /* token                *integer_tok = token_alloc(buf, strlen(buf), TOKEN_TYPE_INTEGER_LITERAL, 0, 0, NULL); */
-        /* expr_integer_literal *i           = expr_integer_literal_alloc(integer_tok); */
-        /* expr_bin             *updated_idx = expr_bin_alloc(e->idx, mult_tok, (expr *)i); */
-        /* ((expr *)updated_idx)->accept(((expr *)updated_idx), v); */
-        /* e->idx = (expr *)updated_idx; */
-
         coerce_integer_literal(e->idx, TYPE_KIND_I64);
 
         if (e->idx->type->sz != 8) {
                 pusherr(tbl, e->idx->loc, "array indices are allowed only for 64-bit numbers");
         }
 
-        ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;
+        if (e->lhs->type->kind == TYPE_KIND_ARRAY) {
+                ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;
+        } else {
+                ((expr *)e)->type = ((type_ptr *)e->lhs->type)->to;
+        }
 
         return NULL;
 }
