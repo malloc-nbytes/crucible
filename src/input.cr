@@ -1,11 +1,9 @@
 module main where
 
-import std.binds.c.stdio;
 import std.io;
+import std.binds.c.stdio;
 
 export proc _start(void): !
 {
-        let c: u8 = 'a';
-
         exit;
 }
