@@ -12,13 +12,13 @@ export proc u8_from_array_r97(void): u8
 export proc basic2_i8_r97(void): i8
 {
         log::id("chars::basic2_i8_r97");
-        return 'a';
+        return (i8)'a';
 }
 
 export proc basic1_i8_r97(void): i8
 {
         log::id("chars::basic1_i8_r97");
-        let c: i8 = 'a';
+        let c: i8 = (i8)'a';
         return c;
 }
 

@@ -24,19 +24,8 @@ import test.ptrs;
 import test.chars;
 
 proc ok(void): void { cstdio::printf("ok\n"); }
-proc bad(void): void { cstdio::printf("FAIL\n"); }
 
-proc badi32(got: i32, exp: i32): void
-{
-        cstdio::printf("FAIL [expected=%d, got=%d]\n", exp, got);
-}
-
-proc badu8(got: u8, exp: u8): void
-{
-        cstdio::printf("FAIL [expected=%d, got=%d]\n", exp, got);
-}
-
-proc badi8(got: i8, exp: i8): void
+proc bad(got: i32, exp: i32): void
 {
         cstdio::printf("FAIL [expected=%d, got=%d]\n", exp, got);
 }
@@ -63,7 +52,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, resi32);
+                        bad(resi32, resi32);
                         f = f+1;
                 }
 
@@ -71,7 +60,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 10);
+                        bad(resi32, 10);
                         f = f+1;
                 }
         }
@@ -83,7 +72,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 3);
+                        bad(resi32, 3);
                         f = f+1;
                 }
 
@@ -91,7 +80,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 5);
+                        bad(resi32, 5);
                         f = f+1;
                 }
 
@@ -99,7 +88,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 120);
+                        bad(resi32, 120);
                         f = f+1;
                 }
 
@@ -107,7 +96,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 120);
+                        bad(resi32, 120);
                         f = f+1;
                 }
 
@@ -115,7 +104,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 2);
+                        bad(resi32, 2);
                         f = f+1;
                 }
         }
@@ -127,7 +116,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 10);
+                        bad(resi32, 10);
                         f = f+1;
                 }
 
@@ -135,7 +124,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 10);
+                        bad(resi32, 10);
                         f = f+1;
                 }
 
@@ -143,7 +132,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 5);
+                        bad(resi32, 5);
                         f = f+1;
                 }
 
@@ -156,7 +145,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 1);
+                        bad(resi32, 1);
                         f = f+1;
                 }
 
@@ -164,7 +153,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 1);
+                        bad(resi32, 1);
                         f = f+1;
                 }
 
@@ -172,7 +161,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 0);
+                        bad(resi32, 0);
                         f = f+1;
                 }
 
@@ -180,7 +169,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 0);
+                        bad(resi32, 0);
                         f = f+1;
                 }
 
@@ -188,7 +177,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 1);
+                        bad(resi32, 1);
                         f = f+1;
                 }
 
@@ -196,7 +185,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 1);
+                        bad(resi32, 1);
                         f = f+1;
                 }
 
@@ -209,7 +198,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 0);
+                        bad(resi32, 0);
                         f = f+1;
                 }
 
@@ -217,7 +206,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 0);
+                        bad(resi32, 0);
                         f = f+1;
                 }
 
@@ -225,7 +214,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 15);
+                        bad(resi32, 15);
                         f = f+1;
                 }
 
@@ -233,7 +222,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 1);
+                        bad(resi32, 1);
                         f = f+1;
                 }
         }
@@ -247,7 +236,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 1);
+                        bad(resi32, 1);
                         f = f+1;
                 }
 
@@ -255,7 +244,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 1);
+                        bad(resi32, 1);
                         f = f+1;
                 }
 
@@ -263,7 +252,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 15);
+                        bad(resi32, 15);
                         f = f+1;
                 }
 
@@ -271,7 +260,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 15);
+                        bad(resi32, 15);
                         f = f+1;
                 }
 
@@ -279,7 +268,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 2);
+                        bad(resi32, 2);
                         f = f+1;
                 }
 
@@ -287,7 +276,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 2);
+                        bad(resi32, 2);
                         f = f+1;
                 }
 
@@ -295,7 +284,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badi32(resi32, 2);
+                        bad(resi32, 2);
                         f = f+1;
                 }
 
@@ -309,7 +298,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badu8(resu8, 97);
+                        bad((i32)resu8, 97);
                         f = f+1;
                 }
 
@@ -317,23 +306,23 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badu8(resu8, 97);
+                        bad((i32)resu8, 97);
                         f = f+1;
                 }
 
-                if ((resi8 = chars::basic1_i8_r97()) == 'a') {
+                if ((resi8 = chars::basic1_i8_r97()) == (i8)'a') {
                         ok();
                         p = p+1;
                 } else {
-                        badi8(resi8, 97);
+                        bad((i32)resi8, 97);
                         f = f+1;
                 }
 
-                if ((resi8 = chars::basic2_i8_r97()) == 'a') {
+                if ((resi8 = chars::basic2_i8_r97()) == (i8)'a') {
                         ok();
                         p = p+1;
                 } else {
-                        badi8(resi8, 97);
+                        bad((i32)resi8, 97);
                         f = f+1;
                 }
 
@@ -341,7 +330,7 @@ export proc _start(void): !
                         ok();
                         p = p+1;
                 } else {
-                        badu8(resu8, 97);
+                        bad((i32)resu8, 97);
                         f = f+1;
                 }
 

@@ -261,9 +261,9 @@ type_is_compat(type **t1, type **t2)
                 (*t2) = (*t1);
         }
 
-        if (t1kind <= TYPE_KIND_NUMBER && t2kind <= TYPE_KIND_NUMBER) {
-                return 1;
-        }
+        /* if (t1kind <= TYPE_KIND_NUMBER && t2kind <= TYPE_KIND_NUMBER) { */
+        /*         return 1; */
+        /* } */
 
         return (*t1)->kind == (*t2)->kind;
 }
