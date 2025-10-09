@@ -6,7 +6,12 @@ enum Test {
         Item3,
 }
 
+proc f(Test t): void
+{
+}
+
 export proc _start(void): !
 {
+        f(1);
         exit;
 }

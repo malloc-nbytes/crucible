@@ -32,6 +32,7 @@ typedef enum {
         TYPE_KIND_ARRAY,
 
         TYPE_KIND_STRUCT,
+        TYPE_KIND_ENUM,
 
         // For use in lexing when the struct
         // that is being referenced has not
@@ -89,8 +90,14 @@ typedef struct {
 
 typedef struct {
         type base;
+        const char *id;
+} type_enum;
+
+typedef struct {
+        type base;
         const token *struct_id;
 } type_custom;
+
 typedef struct { type base; } type_unknown;
 
 type_i32 *type_i32_alloc(void);
