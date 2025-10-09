@@ -5,10 +5,12 @@
 #include "grammar.h"
 #include "lexer.h"
 #include "io.h"
+#include "utils.h"
 
 #include <forge/array.h>
 #include <forge/utils.h>
 #include <forge/err.h>
+#include <forge/str.h>
 
 #include <assert.h>
 #include <string.h>
@@ -929,7 +931,42 @@ visit_stmt_import(visitor *v, stmt_import *s)
 static void *
 visit_stmt_embed(visitor *v, stmt_embed *s)
 {
-        NOOP(v, s);
+        symtbl *tbl = (symtbl *)v->context;
+
+        for (size_t i = 0; i < s->lns.len; ++i) {
+                const char *ln = s->lns.data[i]->lx;
+                size_t ln_n = strlen(ln);
+                forge_str name_buf = forge_str_create();
+
+                for (size_t j = 0; ln[j]; ++j) {
+                        size_t len = 0;
+                        if (ln[j] == '{') {
+                                ++len;
+                                while (ln[j + len] != '}') {
+                                        forge_str_append(&name_buf, ln[j+len]);
+                                        ++len;
+                                }
+
+                                if (!sym_exists_in_scope(tbl, name_buf.data)) {
+                                        pusherr(tbl, s->lns.data[i]->loc,
+                                                "identifier `%s` is not defined",
+                                                name_buf);
+                                }
+
+                                sym *sym = get_sym_from_scope(tbl, name_buf.data);
+
+                                forge_str newln = forge_str_create();
+                                for (size_t k = 0; k < ln_n-len-1; ++k) forge_str_append(&newln, ln[k]);
+                                forge_str_concat(&newln, "[rbp-");
+                                forge_str_concat(&newln, int_to_cstr(sym->stack_offset));
+                                forge_str_concat(&newln, "]\n");
+                                free(s->lns.data[i]->lx);
+                                forge_str_destroy(&name_buf);
+                                s->lns.data[i]->lx = newln.data;
+                        }
+                }
+        }
+
         return NULL;
 }
 
