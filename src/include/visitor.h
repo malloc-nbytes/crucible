@@ -14,6 +14,7 @@ typedef void *(*visit_expr_namespace_sig)(visitor *v, expr_namespace *e);
 typedef void *(*visit_expr_arrayinit_sig)(visitor *v, expr_arrayinit *e);
 typedef void *(*visit_expr_index_sig)(visitor *v, expr_index *e);
 typedef void *(*visit_expr_un_sig)(visitor *v, expr_un *e);
+typedef void *(*visit_expr_character_literal_sig)(visitor *v, expr_character_literal *e);
 
 typedef void *(*visit_stmt_let_sig)(visitor *v, stmt_let *s);
 typedef void *(*visit_stmt_expr_sig)(visitor *v, stmt_expr *s);
@@ -35,49 +36,51 @@ typedef void *(*visit_stmt_embed_sig)(visitor *v, stmt_embed *s);
 typedef struct visitor {
         void *context;
 
-        visit_expr_bin_sig             visit_expr_bin;
-        visit_expr_identifier_sig      visit_expr_identifier;
-        visit_expr_integer_literal_sig visit_expr_integer_literal;
-        visit_expr_string_literal_sig  visit_expr_string_literal;
-        visit_expr_proccall_sig        visit_expr_proccall;
-        visit_expr_mut_sig             visit_expr_mut;
-        visit_expr_brace_init_sig      visit_expr_brace_init;
-        visit_expr_namespace_sig       visit_expr_namespace;
-        visit_expr_arrayinit_sig       visit_expr_arrayinit;
-        visit_expr_index_sig           visit_expr_index;
-        visit_expr_un_sig              visit_expr_un;
+        visit_expr_bin_sig               visit_expr_bin;
+        visit_expr_identifier_sig        visit_expr_identifier;
+        visit_expr_integer_literal_sig   visit_expr_integer_literal;
+        visit_expr_string_literal_sig    visit_expr_string_literal;
+        visit_expr_proccall_sig          visit_expr_proccall;
+        visit_expr_mut_sig               visit_expr_mut;
+        visit_expr_brace_init_sig        visit_expr_brace_init;
+        visit_expr_namespace_sig         visit_expr_namespace;
+        visit_expr_arrayinit_sig         visit_expr_arrayinit;
+        visit_expr_index_sig             visit_expr_index;
+        visit_expr_un_sig                visit_expr_un;
+        visit_expr_character_literal_sig visit_expr_character_literal;
 
-        visit_stmt_let_sig             visit_stmt_let;
-        visit_stmt_expr_sig            visit_stmt_expr;
-        visit_stmt_block_sig           visit_stmt_block;
-        visit_stmt_proc_sig            visit_stmt_proc;
-        visit_stmt_return_sig          visit_stmt_return;
-        visit_stmt_exit_sig            visit_stmt_exit;
-        visit_stmt_extern_proc_sig     visit_stmt_extern_proc;
-        visit_stmt_if_sig              visit_stmt_if;
-        visit_stmt_while_sig           visit_stmt_while;
-        visit_stmt_for_sig             visit_stmt_for;
-        visit_stmt_break_sig           visit_stmt_break;
-        visit_stmt_continue_sig        visit_stmt_continue;
-        visit_stmt_struct_sig          visit_stmt_struct;
-        visit_stmt_module_sig          visit_stmt_module;
-        visit_stmt_import_sig          visit_stmt_import;
-        visit_stmt_embed_sig           visit_stmt_embed;
+        visit_stmt_let_sig         visit_stmt_let;
+        visit_stmt_expr_sig        visit_stmt_expr;
+        visit_stmt_block_sig       visit_stmt_block;
+        visit_stmt_proc_sig        visit_stmt_proc;
+        visit_stmt_return_sig      visit_stmt_return;
+        visit_stmt_exit_sig        visit_stmt_exit;
+        visit_stmt_extern_proc_sig visit_stmt_extern_proc;
+        visit_stmt_if_sig          visit_stmt_if;
+        visit_stmt_while_sig       visit_stmt_while;
+        visit_stmt_for_sig         visit_stmt_for;
+        visit_stmt_break_sig       visit_stmt_break;
+        visit_stmt_continue_sig    visit_stmt_continue;
+        visit_stmt_struct_sig      visit_stmt_struct;
+        visit_stmt_module_sig      visit_stmt_module;
+        visit_stmt_import_sig      visit_stmt_import;
+        visit_stmt_embed_sig       visit_stmt_embed;
 } visitor;
 
 visitor *visitor_alloc(
         void *ctx,
-        visit_expr_bin_sig             visit_expr_bin,
-        visit_expr_identifier_sig      visit_expr_identifier,
-        visit_expr_integer_literal_sig visit_expr_integer_literal,
-        visit_expr_string_literal_sig  visit_expr_string_literal,
-        visit_expr_proccall_sig        visit_expr_proccall,
-        visit_expr_mut_sig             visit_expr_mut,
-        visit_expr_brace_init_sig      visit_expr_brace_init,
-        visit_expr_namespace_sig       visit_expr_namespace,
-        visit_expr_arrayinit_sig       visit_expr_arrayinit,
-        visit_expr_index_sig           visit_expr_index,
-        visit_expr_un_sig              visit_expr_un,
+        visit_expr_bin_sig               visit_expr_bin,
+        visit_expr_identifier_sig        visit_expr_identifier,
+        visit_expr_integer_literal_sig   visit_expr_integer_literal,
+        visit_expr_string_literal_sig    visit_expr_string_literal,
+        visit_expr_proccall_sig          visit_expr_proccall,
+        visit_expr_mut_sig               visit_expr_mut,
+        visit_expr_brace_init_sig        visit_expr_brace_init,
+        visit_expr_namespace_sig         visit_expr_namespace,
+        visit_expr_arrayinit_sig         visit_expr_arrayinit,
+        visit_expr_index_sig             visit_expr_index,
+        visit_expr_un_sig                visit_expr_un,
+        visit_expr_character_literal_sig visit_expr_character_literal,
 
         visit_stmt_let_sig             visit_stmt_let,
         visit_stmt_expr_sig            visit_stmt_expr,
@@ -108,6 +111,9 @@ void *accept_expr_namespace(expr *e, visitor *v);
 void *accept_expr_arrayinit(expr *e, visitor *v);
 void *accept_expr_index(expr *e, visitor *v);
 void *accept_expr_un(expr *e, visitor *v);
+void *accept_expr_character_literal(expr *e, visitor *v);
+
+void *accept_expr_unimplemented(expr *e, visitor *v);
 
 void *accept_stmt_let(stmt *s, visitor *v);
 void *accept_stmt_expr(stmt *s, visitor *v);

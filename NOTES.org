@@ -27,32 +27,13 @@
 
 ** Critical
 
-- The follow code does not execute the 'if' statement.
+- The follow code skips 8 bytes when it should be 1 byte.
 
 #+begin_src
-import std.io;
-
-proc f2(void): i32
-{
-    io::echoln("in f2()");
-    return 0;
-}
-
-proc f(void): i32
-{
-    io::echoln("in f()");
-    return 1;
-}
-
 export proc _start(void): !
 {
-
-    if (f() || f2()) {
-        io::echoln("in if stmt");
-        cstdio::printf("HERE\n");
-    }
-
-    exit;
+  let s: u8* = "hello";
+  print("%s\n", *(s+1));
 }
 #+end_src
 

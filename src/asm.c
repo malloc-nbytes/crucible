@@ -1263,6 +1263,17 @@ visit_expr_un(visitor *v, expr_un *e)
 }
 
 static void *
+visit_expr_character_literal(visitor                *v,
+                             expr_character_literal *e)
+{
+        NOOP(v);
+        static char buf[256] = {0};
+        memset(buf, 0, sizeof(buf));
+        sprintf(buf, "%d", e->c->lx[0]);
+        return buf;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -1656,6 +1667,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_arrayinit,
                 visit_expr_index,
                 visit_expr_un,
+                visit_expr_character_literal,
 
                 visit_stmt_let,
                 visit_stmt_expr,
