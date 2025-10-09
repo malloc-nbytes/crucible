@@ -1,4 +1,4 @@
-* TODO [47%]
+* TODO [72%]
 - [X] while loops
 - [X] mut statements
 - [X] convert =type_to_int(type)= to =type->sz=
@@ -7,19 +7,19 @@
 - [X] continue statements
 - [X] fix procedures with the same name but different namespaces (multiple definition error in linker)
 - [X] imports
-- [ ] allow search paths and a flag '--nostd'
+- [X] allow search paths and a flag '--nostd'
 - [ ] macros
 - [-] structs
   - [X] statement =struct P {}=
   - [ ] literals =(obj) {.x = 1, .y = 2}=
-- [ ] more mutation operators (+=, -=, etc).
+- [X] more mutation operators (+=, -=, etc).
 - [ ] casting
-- [ ] 'address of' operator =&var=
-- [ ] 'dereference operator =*var=
-- [ ] arrays
-  - [ ] indexing operator =[i]=
-  - [ ] literals ={1, 2, 3}=
-  - [ ] pointer arithmetic =ar + i=
+- [X] 'address of' operator =&var=
+- [X] 'dereference operator =*var=
+- [X] arrays
+  - [X] indexing operator =[i]=
+  - [X] literals ={1, 2, 3}=
+  - [X] pointer arithmetic =ar + i=
 - [ ] enums
 - [ ] move build system to autotools
 

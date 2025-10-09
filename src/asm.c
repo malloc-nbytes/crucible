@@ -1630,6 +1630,13 @@ visit_stmt_embed(visitor *v, stmt_embed *s)
         return NULL;
 }
 
+static void *
+visit_stmt_enum(visitor *v, stmt_enum *s)
+{
+        NOOP(v, s);
+        forge_todo("");
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -1663,7 +1670,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_struct,
                 visit_stmt_module,
                 visit_stmt_import,
-                visit_stmt_embed
+                visit_stmt_embed,
+                visit_stmt_enum
         );
 }
 

@@ -345,3 +345,19 @@ stmt_embed_alloc(token_array lns)
         s->lns             = lns;
         return s;
 }
+
+stmt_enum *
+stmt_enum_alloc(int          export,
+                const token *id,
+                token_array  members,
+                expr_array   exprs)
+{
+        stmt_enum *s       = alloc(sizeof(stmt_enum));
+        s->base.kind       = STMT_KIND_ENUM;
+        s->base.accept     = accept_stmt_enum;
+        s->export          = export;
+        s->id              = id;
+        s->members         = members;
+        s->exprs           = exprs;
+        return s;
+}

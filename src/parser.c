@@ -706,6 +706,48 @@ parse_stmt_import(parser_context *ctx)
 }
 
 static stmt *
+parse_stmt_enum(parser_context *ctx)
+{
+        int export = !strcmp(lexer_peek(ctx->l, 0)->lx, KWD_EXPORT);
+        if (export) {
+                lexer_discard(ctx->l); // export
+        }
+        lexer_discard(ctx->l); // enum
+
+        const token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+        (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
+
+        token_array members = dyn_array_empty(token_array);
+        expr_array exprs = dyn_array_empty(expr_array);
+
+        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
+                token *member = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+                expr *expr = NULL;
+
+                // Parse expression if there is one present.
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_EQUALS) {
+                        lexer_discard(ctx->l); // =
+                        expr = parse_expr(ctx);
+                }
+
+                dyn_array_append(members, member);
+                dyn_array_append(exprs, expr);
+
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                        lexer_discard(ctx->l); // ,
+                } else {
+                        break;
+                }
+        }
+
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
+
+        assert(members.len == exprs.len);
+
+        return (stmt *)stmt_enum_alloc(export, id, members, exprs);
+}
+
+static stmt *
 parse_stmt_export(parser_context *ctx)
 {
         int ok = lexer_peek(ctx->l, 1) != NULL;
@@ -714,6 +756,8 @@ parse_stmt_export(parser_context *ctx)
                 return (stmt *)parse_stmt_proc(ctx);
         } else if (ok && !strcmp(lexer_peek(ctx->l, 1)->lx, KWD_EXTERN)) {
                 return (stmt *)parse_stmt_extern(ctx);
+        } else if (ok && !strcmp(lexer_peek(ctx->l, 1)->lx, KWD_ENUM)) {
+                return (stmt *)parse_stmt_enum(ctx);
         }
 
         forge_err_wargs("%sinvalid use of keyword '%s'", loc_err(ctx->l->hd->loc), KWD_EXTERN);
@@ -748,6 +792,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_let(ctx);
         } else if (!strcmp(hd->lx, KWD_PROC)) {
                 return (stmt *)parse_stmt_proc(ctx);
+        } else if (!strcmp(hd->lx, KWD_ENUM)) {
+                return (stmt *)parse_stmt_enum(ctx);
         } else if (!strcmp(hd->lx, KWD_EXPORT)) {
                 return (stmt *)parse_stmt_export(ctx);
         } else if (!strcmp(hd->lx, KWD_RETURN)) {

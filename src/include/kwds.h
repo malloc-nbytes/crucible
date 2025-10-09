@@ -27,6 +27,7 @@
 #define KWD_CONTINUE "continue"
 
 #define KWD_STRUCT "struct"
+#define KWD_ENUM "enum"
 
 #define KWD_MODULE "module"
 #define KWD_IMPORT "import"
@@ -57,6 +58,7 @@
                 KWD_BREAK,                      \
                 KWD_CONTINUE,                   \
                 KWD_STRUCT,                     \
+                KWD_ENUM,                       \
                 KWD_MODULE,                     \
                 KWD_IMPORT,                     \
                 KWD_WHERE,                      \

@@ -34,7 +34,8 @@ visitor_alloc(void                           *ctx,
               visit_stmt_struct_sig           visit_stmt_struct,
               visit_stmt_module_sig           visit_stmt_module,
               visit_stmt_import_sig           visit_stmt_import,
-              visit_stmt_embed_sig            visit_stmt_embed) {
+              visit_stmt_embed_sig            visit_stmt_embed,
+              visit_stmt_enum_sig             visit_stmt_enum) {
 
         visitor *v = (visitor *)alloc(sizeof(visitor));
 
@@ -69,6 +70,7 @@ visitor_alloc(void                           *ctx,
         v->visit_stmt_module          = visit_stmt_module;
         v->visit_stmt_import          = visit_stmt_import;
         v->visit_stmt_embed           = visit_stmt_embed;
+        v->visit_stmt_enum            = visit_stmt_enum;
 
         return v;
 }
@@ -186,7 +188,7 @@ accept_expr_character_literal(expr *e, visitor *v)
 void *
 accept_expr_unimplemented(expr *e, visitor *v)
 {
-        forge_err_wargs("visitor accept function for %d is unimplemented", (int)e->kind);
+        forge_err_wargs("visitor accept function for expresion %d is unimplemented", (int)e->kind);
         return NULL; // unreachable
 }
 
@@ -334,4 +336,20 @@ accept_stmt_embed(stmt *s, visitor *v)
                 return v->visit_stmt_embed(v, (stmt_embed *)s);
         }
         return NULL;
+}
+
+void *
+accept_stmt_enum(stmt *s, visitor *v)
+{
+        if (v->visit_stmt_enum) {
+                return v->visit_stmt_enum(v, (stmt_enum *)s);
+        }
+        return NULL;
+}
+
+void *
+accept_stmt_unimplemented(stmt *s, visitor *v)
+{
+        forge_err_wargs("visitor accept function for statement %d is unimplemented", (int)s->kind);
+        return NULL; // unreachable
 }

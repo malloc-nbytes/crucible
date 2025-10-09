@@ -1,7 +1,10 @@
 module main where
 
-import std.io;
-import std.binds.c.stdio;
+enum Test {
+        Item1 = 1+2,
+        Item2,
+        Item3,
+}
 
 export proc _start(void): !
 {
