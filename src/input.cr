@@ -1,18 +1,16 @@
 module main where
 
 import std.binds.c.stdio;
-import std.io;
+import std.binds.c.stdlib;
 
 export proc _start(void): !
 {
-        -- let a: u8 = 1;
-        -- let b: i32 = (i32)a;
+        let s: u8* = "hello";
 
-        -- let x: i8 = 1;
-        -- let y: u32 = (u32)x;
+        let c1: u8 = *s;
+        let c2: u8 = s[1];
 
-        let t1: i32 = 1;
-        let t2: u8 = (u8)t1;
+        cstdio::printf("%d\n", c1 == c2);
 
         exit;
 }
