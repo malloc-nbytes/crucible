@@ -14,3 +14,12 @@ kwds_iskw(const char *s)
         }
         return 0;
 }
+
+int
+kwds_isty(const char *s)
+{
+        for (size_t i = 0; i < sizeof(g_types)/sizeof(*g_types); ++i) {
+                if (!strcmp(s, g_types[i])) return 1;
+        }
+        return 0;
+}

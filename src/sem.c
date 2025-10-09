@@ -534,6 +534,15 @@ visit_expr_character_literal(visitor *v, expr_character_literal *e)
 }
 
 static void *
+visit_expr_cast(visitor *v, expr_cast *e)
+{
+        // TODO: make sure the types can be casted.
+        e->rhs->accept(e->rhs, v);
+        ((expr *)e)->type = e->to;
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -978,6 +987,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_index,
                 visit_expr_un,
                 visit_expr_character_literal,
+                visit_expr_cast,
 
                 visit_stmt_let,
                 visit_stmt_expr,

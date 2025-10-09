@@ -297,3 +297,13 @@ type_to_int(const type *t)
 
         return 0; // unreachable
 }
+
+int
+type_is_unsigned(const type *t)
+{
+        type_kind k = t->kind;
+        return k == TYPE_KIND_U8
+                || k == TYPE_KIND_U16
+                || k == TYPE_KIND_U32
+                || k == TYPE_KIND_U64;
+}

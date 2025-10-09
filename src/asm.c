@@ -156,11 +156,11 @@ is_register(const char *s)
 }
 
 static const char *
-get_reg_from_size(const char *reg64, int sz)
+get_reg_from_size(const char *reg, int sz)
 {
         char *err = NULL;
 
-        if (!strcmp(reg64, "rax")) {
+        if (!strcmp(reg, "rax") || !strcmp(reg, "eax") || !strcmp(reg, "ax") || !strcmp(reg, "al")) {
                 switch (sz) {
                 case 8: return "rax";
                 case 4: return "eax";
@@ -170,22 +170,26 @@ get_reg_from_size(const char *reg64, int sz)
                 }
         }
 
+        // Find the register family by checking all registers in g_regs
         for (size_t i = 0; i < g_regs_r; ++i) {
-                if (!strcmp(REGAT(i, 0, g_regs), reg64)) {
-                        switch (sz) {
-                        case 8: return REGAT(i, 0, g_regs);
-                        case 4: return REGAT(i, 1, g_regs);
-                        case 2: return REGAT(i, 2, g_regs);
-                        case 1: return REGAT(i, 3, g_regs);
-                        default: err = "invalid size"; goto bad;
+                for (size_t j = 0; j < g_regs_c; ++j) {
+                        if (!strcmp(REGAT(i, j, g_regs), reg)) {
+                                // Found the register; return the register of the requested size in the same family
+                                switch (sz) {
+                                case 8: return REGAT(i, 0, g_regs); // 64-bit (e.g., rax, rcx)
+                                case 4: return REGAT(i, 1, g_regs); // 32-bit (e.g., eax, ecx)
+                                case 2: return REGAT(i, 2, g_regs); // 16-bit (e.g., ax, cx)
+                                case 1: return REGAT(i, 3, g_regs); // 8-bit (e.g., al, cl)
+                                default: err = "invalid size"; goto bad;
+                                }
                         }
                 }
         }
 
-        err = "no available registers";
+        err = "no matching register found";
  bad:
-        forge_err_wargs("get_reg_from_size(): could not get (%s) register of size %d: %s",
-                        reg64, sz, err);
+        forge_err_wargs("get_reg_from_size(): could not get register (%s) of size %d: %s",
+                        reg, sz, err);
         return NULL; // unreachable
 }
 
@@ -1253,6 +1257,47 @@ visit_expr_character_literal(visitor                *v,
 }
 
 static void *
+visit_expr_cast(visitor *v, expr_cast *e)
+{
+        asm_context *ctx         = (asm_context *)v->context;
+        int          is_unsigned = type_is_unsigned(e->rhs->type);
+        int          rhs_sz      = e->rhs->type->sz;
+        int          cast_sz     = ((expr *)e)->type->sz;
+        const char  *cast_spec   = szspec(cast_sz);
+        const char  *rhs_spec    = szspec(rhs_sz);
+        char        *rhs_val     = (char *)e->rhs->accept(e->rhs, v);
+        int          regi        = alloc_reg(cast_sz);
+        char        *reg         = g_regs[regi];
+
+        if (rhs_sz < cast_sz) {
+                // Cast up
+                if (is_unsigned) {
+                        take_txt(ctx, forge_cstr_builder("movzx ", reg, ", ", rhs_spec, " ", rhs_val, NULL), 1);
+                } else {
+                        take_txt(ctx, forge_cstr_builder("movsx ", reg, ", ", rhs_spec, " ", rhs_val, NULL), 1);
+                }
+        } else if (cast_sz < rhs_sz) {
+                // Cast down
+                if (is_register(rhs_val)) {
+                        const char *rhs_reg_sub = get_reg_from_size(rhs_val, cast_sz);
+                        // If rhs_val is a register, use its sub-register
+                        take_txt(ctx, forge_cstr_builder("mov ", cast_spec, " ", reg, ", ", rhs_reg_sub, NULL), 1);
+                } else {
+                        // If rhs_val is a memory location or imm, just move with truncation
+                        take_txt(ctx, forge_cstr_builder("mov ", cast_spec, " ", reg, ", ", rhs_val, NULL), 1);
+                }
+        } else {
+                // Same size
+                if (!is_register(rhs_val) || strcmp(rhs_val, reg)) {
+                        take_txt(ctx, forge_cstr_builder("mov ", cast_spec, " ", reg, ", ", rhs_val, NULL), 1);
+                }
+        }
+
+        free_reg_literal(rhs_val);
+        return reg;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -1647,6 +1692,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_index,
                 visit_expr_un,
                 visit_expr_character_literal,
+                visit_expr_cast,
 
                 visit_stmt_let,
                 visit_stmt_expr,
