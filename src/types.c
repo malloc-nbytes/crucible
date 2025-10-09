@@ -39,7 +39,16 @@ type_u8_alloc(void)
 {
         type_u8 *t = (type_u8 *)alloc(sizeof(type_u8));
         t->base.kind = TYPE_KIND_U8;
-        t->base.sz   = 8;
+        t->base.sz   = 1;
+        return t;
+}
+
+type_i8 *
+type_i8_alloc(void)
+{
+        type_i8 *t = (type_i8 *)alloc(sizeof(type_i8));
+        t->base.kind = TYPE_KIND_I8;
+        t->base.sz   = 1;
         return t;
 }
 
@@ -213,8 +222,10 @@ type_is_compat(type **t1, type **t2)
         assert(t1);
         assert(t2);
 
+        *t2;
         assert(*t1);
         assert(*t2);
+
 
         type_kind t1kind = (*t1)->kind;
         type_kind t2kind = (*t2)->kind;
@@ -248,6 +259,10 @@ type_is_compat(type **t1, type **t2)
         } else if (t1kind < TYPE_KIND_NUMBER
                    && t2kind == TYPE_KIND_NUMBER) {
                 (*t2) = (*t1);
+        }
+
+        if (t1kind <= TYPE_KIND_NUMBER && t2kind <= TYPE_KIND_NUMBER) {
+                return 1;
         }
 
         return (*t1)->kind == (*t2)->kind;

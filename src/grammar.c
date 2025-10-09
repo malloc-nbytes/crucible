@@ -137,6 +137,15 @@ expr_index_alloc(expr *lhs, expr *idx)
         return e;
 }
 
+expr_character_literal *
+expr_character_literal_alloc(const token *c)
+{
+        expr_character_literal *e = (expr_character_literal *)alloc(sizeof(expr_character_literal));
+        e->base                   = init_expr_kind(EXPR_KIND_INDEX, accept_expr_character_literal);
+        e->c                      = c;
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                type        *type,

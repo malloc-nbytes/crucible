@@ -2,20 +2,22 @@
 #include "mem.h"
 
 #include <forge/utils.h>
+#include <forge/err.h>
 
 visitor *
 visitor_alloc(void                           *ctx,
-              visit_expr_bin_sig              visit_expr_bin,
-              visit_expr_identifier_sig       visit_expr_identifier,
-              visit_expr_integer_literal_sig  visit_expr_integer_literal,
-              visit_expr_string_literal_sig   visit_expr_string_literal,
-              visit_expr_proccall_sig         visit_expr_proccall,
-              visit_expr_mut_sig              visit_expr_mut,
-              visit_expr_brace_init_sig       visit_expr_brace_init,
-              visit_expr_namespace_sig        visit_expr_namespace,
-              visit_expr_arrayinit_sig        visit_expr_arrayinit,
-              visit_expr_index_sig            visit_expr_index,
-              visit_expr_un_sig               visit_expr_un,
+              visit_expr_bin_sig               visit_expr_bin,
+              visit_expr_identifier_sig        visit_expr_identifier,
+              visit_expr_integer_literal_sig   visit_expr_integer_literal,
+              visit_expr_string_literal_sig    visit_expr_string_literal,
+              visit_expr_proccall_sig          visit_expr_proccall,
+              visit_expr_mut_sig               visit_expr_mut,
+              visit_expr_brace_init_sig        visit_expr_brace_init,
+              visit_expr_namespace_sig         visit_expr_namespace,
+              visit_expr_arrayinit_sig         visit_expr_arrayinit,
+              visit_expr_index_sig             visit_expr_index,
+              visit_expr_un_sig                visit_expr_un,
+              visit_expr_character_literal_sig visit_expr_character_literal,
 
               visit_stmt_let_sig              visit_stmt_let,
               visit_stmt_expr_sig             visit_stmt_expr,
@@ -38,17 +40,18 @@ visitor_alloc(void                           *ctx,
 
         v->context = ctx;
 
-        v->visit_expr_bin             = visit_expr_bin;
-        v->visit_expr_identifier      = visit_expr_identifier;
-        v->visit_expr_integer_literal = visit_expr_integer_literal;
-        v->visit_expr_string_literal  = visit_expr_string_literal;
-        v->visit_expr_proccall        = visit_expr_proccall;
-        v->visit_expr_mut             = visit_expr_mut;
-        v->visit_expr_brace_init      = visit_expr_brace_init;
-        v->visit_expr_namespace       = visit_expr_namespace;
-        v->visit_expr_arrayinit       = visit_expr_arrayinit;
-        v->visit_expr_index           = visit_expr_index;
-        v->visit_expr_un              = visit_expr_un;
+        v->visit_expr_bin               = visit_expr_bin;
+        v->visit_expr_identifier        = visit_expr_identifier;
+        v->visit_expr_integer_literal   = visit_expr_integer_literal;
+        v->visit_expr_string_literal    = visit_expr_string_literal;
+        v->visit_expr_proccall          = visit_expr_proccall;
+        v->visit_expr_mut               = visit_expr_mut;
+        v->visit_expr_brace_init        = visit_expr_brace_init;
+        v->visit_expr_namespace         = visit_expr_namespace;
+        v->visit_expr_arrayinit         = visit_expr_arrayinit;
+        v->visit_expr_index             = visit_expr_index;
+        v->visit_expr_un                = visit_expr_un;
+        v->visit_expr_character_literal = visit_expr_character_literal;
 
         v->visit_stmt_let             = visit_stmt_let;
         v->visit_stmt_expr            = visit_stmt_expr;
@@ -169,6 +172,22 @@ accept_expr_un(expr *e, visitor *v)
                 return v->visit_expr_un(v, (expr_un *)e);
         }
         return NULL;
+}
+
+void *
+accept_expr_character_literal(expr *e, visitor *v)
+{
+        if (v->visit_expr_character_literal) {
+                return v->visit_expr_character_literal(v, (expr_character_literal *)e);
+        }
+        return NULL;
+}
+
+void *
+accept_expr_unimplemented(expr *e, visitor *v)
+{
+        forge_err_wargs("visitor accept function for %d is unimplemented", (int)e->kind);
+        return NULL; // unreachable
 }
 
 // STATEMENT ACCEPTORS

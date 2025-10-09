@@ -82,7 +82,7 @@ parse_type(parser_context *ctx)
         }
 
         if (!strcmp(lx, KWD_I8)) {
-                forge_todo("i8");
+                ty = (type *)type_i8_alloc();
         } else if (!strcmp(lx, KWD_I16)) {
                 forge_todo("i16");
         } else if (!strcmp(lx, KWD_I32)) {
@@ -239,6 +239,11 @@ parse_primary_expr(parser_context *ctx)
                 case TOKEN_TYPE_STRING_LITERAL: {
                         const token *s = lexer_next(ctx->l);
                         left = (expr *)expr_string_literal_alloc(s);
+                        left->loc = hd->loc;
+                } break;
+                case TOKEN_TYPE_CHARACTER_LITERAL: {
+                        const token *c = lexer_next(ctx->l);
+                        left = (expr *)expr_character_literal_alloc(c);
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_LEFT_SQUARE: {

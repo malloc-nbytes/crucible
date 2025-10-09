@@ -97,6 +97,7 @@ type_i32 *type_i32_alloc(void);
 type_i64 *type_i64_alloc(void);
 type_u32 *type_u32_alloc(void);
 type_u8 *type_u8_alloc(void);
+type_i8 *type_i8_alloc(void);
 type_number *type_number_alloc(void);
 type_noreturn *type_noreturn_alloc(void);
 type_ptr *type_ptr_alloc(type *to);

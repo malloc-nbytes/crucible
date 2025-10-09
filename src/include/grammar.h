@@ -285,6 +285,7 @@ expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
 expr_namespace *expr_namespace_alloc(const token *namespace, expr *e);
 expr_arrayinit *expr_arrayinit_alloc(expr_array exprs);
 expr_index *expr_index_alloc(expr *lhs, expr *idx);
+expr_character_literal *expr_character_literal_alloc(const token *c);
 
 stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);

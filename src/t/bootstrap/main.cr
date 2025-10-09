@@ -21,11 +21,22 @@ import test.procs;
 import test.logical;
 import test.arrays;
 import test.ptrs;
+import test.chars;
 
 proc ok(void): void { cstdio::printf("ok\n"); }
 proc bad(void): void { cstdio::printf("FAIL\n"); }
 
 proc badi32(got: i32, exp: i32): void
+{
+        cstdio::printf("FAIL [expected=%d, got=%d]\n", exp, got);
+}
+
+proc badu8(got: u8, exp: u8): void
+{
+        cstdio::printf("FAIL [expected=%d, got=%d]\n", exp, got);
+}
+
+proc badi8(got: i8, exp: i8): void
 {
         cstdio::printf("FAIL [expected=%d, got=%d]\n", exp, got);
 }
@@ -285,6 +296,52 @@ export proc _start(void): !
                         p = p+1;
                 } else {
                         badi32(resi32, 2);
+                        f = f+1;
+                }
+
+        }
+
+        { -- CHARS
+                let resu8: u8 = 0;
+                let resi8: i8 = 0;
+
+                if ((resu8 = chars::basic1_u8_r97()) == 'a') {
+                        ok();
+                        p = p+1;
+                } else {
+                        badu8(resu8, 97);
+                        f = f+1;
+                }
+
+                if ((resu8 = chars::basic2_u8_r97()) == 'a') {
+                        ok();
+                        p = p+1;
+                } else {
+                        badu8(resu8, 97);
+                        f = f+1;
+                }
+
+                if ((resi8 = chars::basic1_i8_r97()) == 'a') {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi8(resi8, 97);
+                        f = f+1;
+                }
+
+                if ((resi8 = chars::basic2_i8_r97()) == 'a') {
+                        ok();
+                        p = p+1;
+                } else {
+                        badi8(resi8, 97);
+                        f = f+1;
+                }
+
+                if ((resu8 = chars::u8_from_array_r97()) == 'a') {
+                        ok();
+                        p = p+1;
+                } else {
+                        badu8(resu8, 97);
                         f = f+1;
                 }
 
