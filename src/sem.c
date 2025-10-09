@@ -115,6 +115,21 @@ coerce_integer_literal(symtbl    *tbl,
                 type_to_cstr(e->type), type_kind_to_cstr(to));
 }
 
+/* static void */
+/* coerce(type **decl, type **actual) */
+/* { */
+/*         if ((*decl)->kind == TYPE_KIND_I8 && (*actual)->kind == TYPE_KIND_U8) { */
+/*                 free(*actual); */
+/*                 *actual = *decl; */
+/*         } */
+
+/*         if ((*decl)->kind == TYPE_KIND_U8 && (*actual)->kind == TYPE_KIND_I8) { */
+/*                 free(*actual); */
+/*                 *actual = *decl; */
+/*         } */
+
+/* } */
+
 static type *
 binop(symtbl      *tbl,
       expr        *lhs,
@@ -584,6 +599,8 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 }
                 tbl->proc.rsp += sym->ty->sz;
         }
+
+        //coerce(&s->type, &s->e->type);
 
         // Typecheck the 'let' statement's given type
         // with the expression's type.
