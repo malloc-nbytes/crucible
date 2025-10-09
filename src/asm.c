@@ -1276,8 +1276,37 @@ visit_expr_character_literal(visitor                *v,
 static void *
 visit_expr_cast(visitor *v, expr_cast *e)
 {
-        NOOP(v, e);
-        forge_todo("");
+        asm_context *ctx         = (asm_context *)v->context;
+        int          is_unsigned = type_is_unsigned(e->rhs->type);
+        int          rhs_sz      = e->rhs->type->sz;
+        int          cast_sz     = ((expr *)e)->type->sz;
+        const char  *cast_spec   = szspec(cast_sz);
+        const char  *rhs_spec    = szspec(rhs_sz);
+        char        *rhs_val     = (char *)e->rhs->accept(e->rhs, v);
+        int          regi        = alloc_reg(cast_sz);
+        char        *reg         = g_regs[regi];
+
+        if (rhs_sz < cast_sz) {
+                // Cast up
+                if (is_unsigned) {
+                        take_txt(ctx, forge_cstr_builder("movzx ", reg, ", ", rhs_spec, " ", rhs_val, NULL), 1);
+                } else {
+                        take_txt(ctx, forge_cstr_builder("movsx ", reg, ", ", rhs_spec, " ", rhs_val, NULL), 1);
+                }
+        } else if (cast_sz < rhs_sz) {
+                // Cast down
+                if (is_unsigned) {
+                        assert(0);
+                } else {
+                        take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", rhs_spec, " ", rhs_val, NULL), 1);
+                }
+        } else {
+                // Same size
+                assert(0);
+        }
+
+        free_reg_literal(rhs_val);
+        return reg;
 }
 
 static void *
