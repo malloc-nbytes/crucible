@@ -18,6 +18,7 @@ visitor_alloc(void                           *ctx,
               visit_expr_index_sig             visit_expr_index,
               visit_expr_un_sig                visit_expr_un,
               visit_expr_character_literal_sig visit_expr_character_literal,
+              visit_expr_cast_sig              visit_expr_cast,
 
               visit_stmt_let_sig              visit_stmt_let,
               visit_stmt_expr_sig             visit_stmt_expr,
@@ -52,6 +53,7 @@ visitor_alloc(void                           *ctx,
         v->visit_expr_index             = visit_expr_index;
         v->visit_expr_un                = visit_expr_un;
         v->visit_expr_character_literal = visit_expr_character_literal;
+        v->visit_expr_cast              = visit_expr_cast;
 
         v->visit_stmt_let             = visit_stmt_let;
         v->visit_stmt_expr            = visit_stmt_expr;
@@ -179,6 +181,15 @@ accept_expr_character_literal(expr *e, visitor *v)
 {
         if (v->visit_expr_character_literal) {
                 return v->visit_expr_character_literal(v, (expr_character_literal *)e);
+        }
+        return NULL;
+}
+
+void *
+accept_expr_cast(expr *e, visitor *v)
+{
+        if (v->visit_expr_cast) {
+                return v->visit_expr_cast(v, (expr_cast *)e);
         }
         return NULL;
 }

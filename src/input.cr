@@ -5,7 +5,8 @@ import std.io;
 
 export proc _start(void): !
 {
-        let c: u8 = 'a';
+        let a: i64 = 0;
+        let b: i32 = (i32)a;
 
         exit;
 }

@@ -76,5 +76,6 @@
 }
 
 int kwds_iskw(const char *s);
+int kwds_isty(const char *s);
 
 #endif // KWDS_H_INCLUDED

@@ -265,6 +265,14 @@ parse_primary_expr(parser_context *ctx)
                                 // function call
                                 expr_array args = parse_comma_sep_exprs(ctx);
                                 left = (expr *)expr_proccall_alloc(left, args);
+                        } else if (kwds_isty(lexer_peek(ctx->l, 1)->lx)) {
+                                // TODO: somehow handle struct names and things
+                                //       like `[i32]`.
+                                lexer_discard(ctx->l); // (
+                                type *ty = parse_type(ctx);
+                                (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
+                                left = (expr *)expr_cast_alloc(ty, parse_expr(ctx));
+                                left->loc = hd->loc;
                         } else {
                                 // Math expression
                                 lexer_discard(ctx->l); // (

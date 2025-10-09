@@ -146,6 +146,16 @@ expr_character_literal_alloc(const token *c)
         return e;
 }
 
+expr_cast *
+expr_cast_alloc(type *to, expr *rhs)
+{
+        expr_cast *e = (expr_cast *)alloc(sizeof(expr_cast));
+        e->base      = init_expr_kind(EXPR_KIND_INDEX, accept_expr_cast);
+        e->to        = to;
+        e->rhs       = rhs;
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                type        *type,
