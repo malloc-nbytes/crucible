@@ -730,6 +730,18 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
         // Procedure body.
         s->blk->accept(s->blk, v);
 
+        // Make sure the last statement is an exit statement
+        if (s->type->kind == TYPE_KIND_NORETURN) {
+                if (s->blk->kind == STMT_KIND_BLOCK) {
+                        stmt_block *blk = (stmt_block *)s->blk;
+                        if (blk->stmts.len == 0 || blk->stmts.data[blk->stmts.len-1]->kind != STMT_KIND_EXIT) {
+                                pusherr(tbl, ((stmt *)s)->loc,
+                                        "last statement in `%s` does not contain an `exit` statement",
+                                        s->id->lx);
+                        }
+                }
+        }
+
         // The number of bytes to subtract from RSP
         // for the procedure's local variables.
         s->rsp = tbl->proc.rsp;
