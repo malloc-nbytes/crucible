@@ -151,7 +151,9 @@ binop(symtbl      *tbl,
             || op->ty == TOKEN_TYPE_GREATERTHAN
             || op->ty == TOKEN_TYPE_LESSTHAN
             || op->ty == TOKEN_TYPE_GREATERTHAN_EQUALS
-            || op->ty == TOKEN_TYPE_LESSTHAN_EQUALS) {
+            || op->ty == TOKEN_TYPE_LESSTHAN_EQUALS
+            || op->ty == TOKEN_TYPE_DOUBLE_AMPERSAND
+            || op->ty == TOKEN_TYPE_DOUBLE_PIPE) {
                 res = (type *)type_bool_alloc();
         } else {
                 res = lhs->type;
@@ -529,6 +531,8 @@ visit_expr_un(visitor *v, expr_un *e)
                                 type_to_cstr(e->rhs->type));
                         goto bad;
                 }
+        } else if (e->op->ty == TOKEN_TYPE_BANG) {
+                ((expr *)e)->type = (type *)type_bool_alloc();
         } else {
                 ((expr *)e)->type = e->rhs->type;
         }
@@ -575,13 +579,13 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 return NULL;
         }
 
-        if (s->e) s->e->accept(s->e, v);
+        s->e->accept(s->e, v);
 
         sym *sym = sym_alloc(tbl, s->id->lx, s->type, 0);
 
         // Structs need a bit more information to compute.
         if (s->type->kind == TYPE_KIND_CUSTOM
-            && s->e && s->e->type->kind == TYPE_KIND_STRUCT) {
+            && s->e->type->kind == TYPE_KIND_STRUCT) {
                 free(s->type); // free temporary `custom` type.
                 s->type = s->e->type;
 
@@ -614,7 +618,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
         tbl->stack_offset += sym->ty->sz;
 
         if (s->type->kind == TYPE_KIND_ARRAY
-            && s->e && s->e->type->kind == TYPE_KIND_ARRAY) {
+            && s->e->type->kind == TYPE_KIND_ARRAY) {
                 type_array *t0 = (type_array *)s->type;
                 type_array *t1 = (type_array *)s->e->type;
                 if (t0->len == -1) {
@@ -640,13 +644,11 @@ visit_stmt_let(visitor *v, stmt_let *s)
         // i.e.:
         //   let x: i32 = 1;
         //          ^^^   ^
-        if (s->e) {
-                if (!type_is_compat(&s->type, &s->e->type)) {
-                        pusherr(tbl, s->id->loc,
-                                "type mismatch, expected `%s` but the expression evaluates to `%s`",
-                                type_to_cstr(s->type), type_to_cstr(s->e->type));
-                        return NULL;
-                }
+        if (!type_is_compat(&s->type, &s->e->type)) {
+                pusherr(tbl, s->id->loc,
+                        "type mismatch, expected `%s` but the expression evaluates to `%s`",
+                        type_to_cstr(s->type), type_to_cstr(s->e->type));
+                return NULL;
         }
 
         s->resolved = sym;

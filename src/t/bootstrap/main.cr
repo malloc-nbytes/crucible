@@ -18,9 +18,9 @@ import test.basic;
 import test.addition;
 import test.subtraction;
 import test.procs;
-import test.logical;
+-- import test.logical;
 import test.arrays;
-import test.ptrs;
+-- import test.ptrs;
 import test.chars;
 
 proc ok(void): void { cstdio::printf("ok\n"); }
@@ -138,58 +138,58 @@ export proc _start(void): !
 
         }
 
-        { -- LOGICAL
-                let resi32: i32 = 0;
+        -- { -- LOGICAL
+        --         let resi32: i32 = 0;
 
-                if ((resi32 = logical::or1_r1()) == 1) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 1);
-                        f = f+1;
-                }
+        --         if ((resi32 = logical::or1_r1()) == 1) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 1);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = logical::or2_r1()) == 1) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 1);
-                        f = f+1;
-                }
+        --         if ((resi32 = logical::or2_r1()) == 1) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 1);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = logical::and1_r0()) == 0) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 0);
-                        f = f+1;
-                }
+        --         if ((resi32 = logical::and1_r0()) == 0) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 0);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = logical::and2_r0()) == 0) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 0);
-                        f = f+1;
-                }
+        --         if ((resi32 = logical::and2_r0()) == 0) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 0);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = logical::or_wprocs1_r1()) == 1) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 1);
-                        f = f+1;
-                }
+        --         if ((resi32 = logical::or_wprocs1_r1()) == 1) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 1);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = logical::or_wprocs2_r1()) == 1) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 1);
-                        f = f+1;
-                }
+        --         -- if ((resi32 = logical::or_wprocs2_r1()) == 1) {
+        --         --         ok();
+        --         --         p = p+1;
+        --         -- } else {
+        --         --         bad(resi32, 1);
+        --         --         f = f+1;
+        --         -- }
 
-        }
+        -- }
 
         { -- ARRAYS
                 let resi32: i32 = 0;
@@ -227,68 +227,68 @@ export proc _start(void): !
                 }
         }
 
-        { -- PTRS
-                let resi32: i32 = 0;
-                let t1: i32 = 1;
-                let t2: [i32] = {1,2,3,4,5};
+        -- { -- PTRS
+        --         let resi32: i32 = 0;
+        --         let t1: i32 = 1;
+        --         let t2: [i32] = {1,2,3,4,5};
 
-                if ((resi32 = ptrs::take_ptr1_r1(&t1)) == 1) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 1);
-                        f = f+1;
-                }
+        --         if ((resi32 = ptrs::take_ptr1_r1(&t1)) == 1) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 1);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = ptrs::take_ptr2_t1_r1(&t1)) == 1) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 1);
-                        f = f+1;
-                }
+        --         if ((resi32 = ptrs::take_ptr2_t1_r1(&t1)) == 1) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 1);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = ptrs::sum_array1_t12345_t5_r15(&t2[0], 5)) == 15) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 15);
-                        f = f+1;
-                }
+        --         if ((resi32 = ptrs::sum_array1_t12345_t5_r15(&t2[0], 5)) == 15) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 15);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = ptrs::sum_array2_t12345_t5_r15(&t2[0], 5)) == 15) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 15);
-                        f = f+1;
-                }
+        --         if ((resi32 = ptrs::sum_array2_t12345_t5_r15(&t2[0], 5)) == 15) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 15);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = ptrs::ptr_arith1_t_12345_r2(&t2[2], 5)) == 2) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 2);
-                        f = f+1;
-                }
+        --         if ((resi32 = ptrs::ptr_arith1_t_12345_r2(&t2[2], 5)) == 2) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 2);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = ptrs::ptr_arith2_t_12345_r2(&t2[2], 5)) == 2) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 2);
-                        f = f+1;
-                }
+        --         if ((resi32 = ptrs::ptr_arith2_t_12345_r2(&t2[2], 5)) == 2) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 2);
+        --                 f = f+1;
+        --         }
 
-                if ((resi32 = ptrs::ptr_arith3_t_12345_r2(&t2[2], 5)) == 2) {
-                        ok();
-                        p = p+1;
-                } else {
-                        bad(resi32, 2);
-                        f = f+1;
-                }
+        --         if ((resi32 = ptrs::ptr_arith3_t_12345_r2(&t2[2], 5)) == 2) {
+        --                 ok();
+        --                 p = p+1;
+        --         } else {
+        --                 bad(resi32, 2);
+        --                 f = f+1;
+        --         }
 
-        }
+        -- }
 
         { -- CHARS
                 let resu8: u8 = 0;

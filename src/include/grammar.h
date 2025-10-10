@@ -165,7 +165,7 @@ typedef struct {
         stmt base;
         const token *id;
         type *type;
-        expr *e; // can be NULL
+        expr *e;
 
         sym *resolved;
 } stmt_let;

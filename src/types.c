@@ -155,7 +155,7 @@ type_bool_alloc(void)
 {
         type_bool *t = (type_bool *)alloc(sizeof(type_bool));
         t->base.kind = TYPE_KIND_BOOL;
-        t->base.sz   = 4;
+        t->base.sz   = 1;
         return t;
 }
 

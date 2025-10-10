@@ -1310,22 +1310,20 @@ visit_expr_bool_literal(visitor *v, expr_bool_literal *e)
 static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
-        if (s->e) {
-                asm_context *ctx = (asm_context *)v->context;
+        asm_context *ctx = (asm_context *)v->context;
 
-                char *value = (char *)s->e->accept(s->e, v);
+        char *value = (char *)s->e->accept(s->e, v);
 
-                if (s->resolved->ty->kind != TYPE_KIND_STRUCT) {
-                        int offset = s->resolved->stack_offset;
-                        char *offset_s = int_to_cstr(offset);
-                        const char *spec = szspec(s->e->type->sz);
+        if (s->resolved->ty->kind != TYPE_KIND_STRUCT) {
+                int offset = s->resolved->stack_offset;
+                char *offset_s = int_to_cstr(offset);
+                const char *spec = szspec(s->e->type->sz);
 
-                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset_s, "], ", value, NULL), 1);
-                        free(offset_s);
-                }
-
-                free_reg_literal(value);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset_s, "], ", value, NULL), 1);
+                free(offset_s);
         }
+
+        free_reg_literal(value);
 
         return NULL;
 }
