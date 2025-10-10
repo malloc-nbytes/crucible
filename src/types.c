@@ -198,7 +198,8 @@ type_to_cstr(const type *t)
                                           ", len=", sz,
                                           "]>", NULL);
         } break;
-        case TYPE_KIND_BOOL: return "bool";
+        case TYPE_KIND_BOOL:     return "bool";
+        case TYPE_KIND_SIZET:    return "size_t";
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
         } break;
@@ -227,6 +228,8 @@ type_kind_to_cstr(type_kind t)
         case TYPE_KIND_STRUCT:   return "<struct>";
         case TYPE_KIND_CUSTOM:   return "<struct>";
         case TYPE_KIND_ARRAY:    return "<array>";
+        case TYPE_KIND_BOOL:     return "bool";
+        case TYPE_KIND_SIZET:    return "size_t";
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t);
         } break;
@@ -309,6 +312,7 @@ type_to_int(const type *t)
         case TYPE_KIND_PROC:     return 8;
         case TYPE_KIND_STRUCT:   return t->sz;
         case TYPE_KIND_CUSTOM:   return 0;
+        case TYPE_KIND_SIZET:    return 8;
         default: {
                 forge_err_wargs("type_to_int(): unknown type `%d`", (int)t->kind);
         } break;

@@ -32,8 +32,8 @@ function compile() {
     info "Building Compiler"
     sleep 1
     pushd ../../
-    make clean
-    make -j$(nproc)
+    # make clean
+    # make -j$(nproc)
     popd
 }
 

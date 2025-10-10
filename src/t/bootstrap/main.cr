@@ -30,7 +30,7 @@ proc bad(got: i32, exp: i32): void
         cstdio::printf("FAIL [expected=%d, got=%d]\n", exp, got);
 }
 
-proc summary(p: i32, f: i32): void
+proc summary(p: size_t, f: size_t): void
 {
         cstdio::printf("===== Summary =====\n");
         cstdio::printf("PASSED: %d\n", p);
@@ -39,8 +39,8 @@ proc summary(p: i32, f: i32): void
 
 export proc _start(void): !
 {
-        let p: i32 = 0;
-        let f: i32 = 0;
+        let p: size_t = 0;
+        let f: size_t = 0;
 
         { -- BASIC
                 let resi32: i32 = 0;
