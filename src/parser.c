@@ -276,7 +276,6 @@ parse_primary_expr(parser_context *ctx)
                                 type *ty = parse_type(ctx);
                                 (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
                                 left = (expr *)expr_cast_alloc(ty, parse_expr(ctx));
-                                left->loc = hd->loc;
                         } else {
                                 // Math expression
                                 lexer_discard(ctx->l); // (
@@ -293,6 +292,7 @@ parse_primary_expr(parser_context *ctx)
                         const token *kw = lexer_next(ctx->l);
                         if (!strcmp(kw->lx, KWD_TRUE) || !strcmp(kw->lx, KWD_FALSE)) {
                                 left = (expr *)expr_bool_literal_alloc(kw);
+                                left->loc = kw->loc;
                         } else {
                                 return left;
                         }
@@ -322,6 +322,7 @@ parse_unary_expr(parser_context *ctx)
                     || cur->ty == TOKEN_TYPE_AMPERSAND)) {
                 token *op = lexer_next(ctx->l);
                 expr *lhs = (expr *)parse_unary_expr(ctx);
+                ((expr *)lhs)->loc = op->loc;
                 return (expr *)expr_un_alloc(op, lhs);
         }
         return parse_member_expr(ctx);
@@ -446,7 +447,7 @@ parse_stmt_let(parser_context *ctx)
 
         // Structs need extra information to be filled out.
         if (ty->kind == TYPE_KIND_CUSTOM
-            && e->kind == EXPR_KIND_BRACE_INIT) {
+            && e && e->kind == EXPR_KIND_BRACE_INIT) {
                 ((expr_brace_init *)e)->struct_id = ((type_custom *)ty)->struct_id;
         }
 

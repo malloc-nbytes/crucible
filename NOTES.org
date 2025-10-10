@@ -44,3 +44,14 @@ cstdio::printf("%d\n", x);
 #+end_src
 
 ** Misc.
+
+The following has incorrect size specifications.
+
+#+begin_src
+export proc or2_r1(void): i32
+{
+        log::id("logical::or2_r1");
+        return (i32)(0 || 1);
+}
+#+end_src
+

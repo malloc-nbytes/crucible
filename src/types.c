@@ -155,7 +155,7 @@ type_bool_alloc(void)
 {
         type_bool *t = (type_bool *)alloc(sizeof(type_bool));
         t->base.kind = TYPE_KIND_BOOL;
-        t->base.sz   = 4;
+        t->base.sz   = 1;
         return t;
 }
 
@@ -267,13 +267,13 @@ type_is_compat(type **t1, type **t2)
                         && ar1->len == ar2->len;
         }
 
-        if ((t1kind == TYPE_KIND_ARRAY && t2kind == TYPE_KIND_PTR)) {
-                return type_is_compat(&((type_array *)t1)->elemty, &((type_ptr *)t2)->to);
-        }
+        /* if ((t1kind == TYPE_KIND_ARRAY && t2kind == TYPE_KIND_PTR)) { */
+        /*         return type_is_compat(&((type_array *)t1)->elemty, &((type_ptr *)t2)->to); */
+        /* } */
 
-        if ((t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_ARRAY)) {
-                return type_is_compat(&((type_ptr *)t1)->to, &((type_array *)t2)->elemty);
-        }
+        /* if ((t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_ARRAY)) { */
+        /*         return type_is_compat(&((type_ptr *)t1)->to, &((type_array *)t2)->elemty); */
+        /* } */
 
         if (t1kind == TYPE_KIND_NUMBER
             && t2kind < TYPE_KIND_NUMBER) {

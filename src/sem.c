@@ -151,7 +151,9 @@ binop(symtbl      *tbl,
             || op->ty == TOKEN_TYPE_GREATERTHAN
             || op->ty == TOKEN_TYPE_LESSTHAN
             || op->ty == TOKEN_TYPE_GREATERTHAN_EQUALS
-            || op->ty == TOKEN_TYPE_LESSTHAN_EQUALS) {
+            || op->ty == TOKEN_TYPE_LESSTHAN_EQUALS
+            || op->ty == TOKEN_TYPE_DOUBLE_AMPERSAND
+            || op->ty == TOKEN_TYPE_DOUBLE_PIPE) {
                 res = (type *)type_bool_alloc();
         } else {
                 res = lhs->type;
@@ -529,6 +531,8 @@ visit_expr_un(visitor *v, expr_un *e)
                                 type_to_cstr(e->rhs->type));
                         goto bad;
                 }
+        } else if (e->op->ty == TOKEN_TYPE_BANG) {
+                ((expr *)e)->type = (type *)type_bool_alloc();
         } else {
                 ((expr *)e)->type = e->rhs->type;
         }
