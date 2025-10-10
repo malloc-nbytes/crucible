@@ -440,13 +440,17 @@ parse_stmt_let(parser_context *ctx)
         token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
         (void)expect(ctx, TOKEN_TYPE_COLON);
         type *ty = parse_type(ctx);
-        (void)expect(ctx, TOKEN_TYPE_EQUALS);
-        expr *e = parse_expr(ctx);
+
+        expr *e = NULL;
+        if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_EQUALS) {
+                (void)expect(ctx, TOKEN_TYPE_EQUALS);
+                e = parse_expr(ctx);
+        }
         (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
 
         // Structs need extra information to be filled out.
         if (ty->kind == TYPE_KIND_CUSTOM
-            && e->kind == EXPR_KIND_BRACE_INIT) {
+            && e && e->kind == EXPR_KIND_BRACE_INIT) {
                 ((expr_brace_init *)e)->struct_id = ((type_custom *)ty)->struct_id;
         }
 
