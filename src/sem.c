@@ -583,37 +583,6 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         sym *sym = sym_alloc(tbl, s->id->lx, s->type, 0);
 
-        // Structs need a bit more information to compute.
-        if (s->type->kind == TYPE_KIND_CUSTOM
-            && s->e->type->kind == TYPE_KIND_STRUCT) {
-                free(s->type); // free temporary `custom` type.
-                s->type = s->e->type;
-
-                // No need for type checking for casting, done earlier.
-                expr_brace_init *br = (expr_brace_init *)s->e;
-                assert(br->resolved_syms); // alloc'd in sem.c:visit_expr_brace_init
-
-                const char *st_id = br->struct_id->lx;
-                assert(st_id);
-
-                free(sym);
-                sym = get_sym_from_scope(tbl, st_id);
-                //sym->stack_offset = 0;
-
-                type_struct *stty = (type_struct *)sym->ty;
-                assert(stty);
-
-                for (size_t i = 0; i < br->ids.len; ++i) {
-                        assert(stty->members->data[i].resolved);
-                        dyn_array_append(*br->resolved_syms, stty->members->data[i].resolved);
-
-                        // Make symbols align with the stack. Originally, the symbols are
-                        // just offsets from each other, but now we update it to align
-                        // with the current global stack offset.
-                        br->resolved_syms->data[i]->stack_offset += tbl->stack_offset;
-                }
-        }
-
         insert_sym_into_scope(tbl, sym);
         tbl->stack_offset += sym->ty->sz;
 
