@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "flags.h"
 #include "utils.h"
+#include "kwds.h"
 
 #include <forge/err.h>
 #include <forge/utils.h>
@@ -1298,6 +1299,15 @@ visit_expr_cast(visitor *v, expr_cast *e)
 }
 
 static void *
+visit_expr_bool_literal(visitor *v, expr_bool_literal *e)
+{
+        NOOP(v);
+        static char *one  = "1";
+        static char *zero = "0";
+        return (void *)(strcmp(e->b->lx, KWD_TRUE) == 0 ? one : zero);
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -1454,7 +1464,9 @@ visit_stmt_if(visitor *v, stmt_if *s)
         char *lbl_done = genlbl("done");
 
         // Compare condition to 0
-        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
+        // NOTE: Changed this line after boolean support to "fix" assembler warnings
+        take_txt(ctx, forge_cstr_builder("cmp ", cond_reg, ", 0", NULL), 1);
+        //take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
 
         // Jump to `else` (if present) or done if `false`
         take_txt(ctx, forge_cstr_builder("je ", s->else_ ? lbl_else : lbl_done, NULL), 1);
@@ -1502,7 +1514,9 @@ visit_stmt_while(visitor *v, stmt_while *s)
                 cond_reg = cond;
         }
 
-        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
+        // NOTE: Changed this line after boolean support to "fix" assembler warnings
+        take_txt(ctx, forge_cstr_builder("cmp ", cond_reg, ", 0", NULL), 1);
+        //take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
 
         take_txt(ctx, forge_cstr_builder("je ", lbl_loop_end, NULL), 1);
 
@@ -1548,7 +1562,10 @@ visit_stmt_for(visitor *v, stmt_for *s)
                 cond_reg = cond;
         }
 
-        take_txt(ctx, forge_cstr_builder("cmp ", e_spec, " ", cond_reg, ", 0", NULL), 1);
+        // NOTE: Changed this line after boolean support to "fix" assembler warnings
+        take_txt(ctx, forge_cstr_builder("cmp ", cond_reg, ", 0", NULL), 1);
+        //take_txt(ctx, forge_cstr_builder("cmp ", e_spec, " ", cond_reg, ", 0", NULL), 1);
+
         take_txt(ctx, forge_cstr_builder("je ", lbl_for_end, NULL), 1);
 
         if (temp_reg_idx != -1) {
@@ -1693,6 +1710,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_un,
                 visit_expr_character_literal,
                 visit_expr_cast,
+                visit_expr_bool_literal,
 
                 visit_stmt_let,
                 visit_stmt_expr,

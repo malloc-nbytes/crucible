@@ -101,7 +101,10 @@ parse_type(parser_context *ctx)
                 ty = (type *)type_void_alloc();
         } else if (hd->ty == TOKEN_TYPE_BANG) {
                 ty = (type *)type_noreturn_alloc();
-        } else {
+        } else if (hd->ty == TOKEN_TYPE_KEYWORD && !strcmp(hd->lx, KWD_BOOL)) {
+                ty = (type *)type_bool_alloc();
+        }
+        else {
                 ty = (type *)type_custom_alloc(hd);
         }
 
@@ -284,6 +287,14 @@ parse_primary_expr(parser_context *ctx)
                 case TOKEN_TYPE_LEFT_CURLY: {
                         left = (expr *)parse_arrayinit(ctx);
                         left->loc = hd->loc;
+                } break;
+                case TOKEN_TYPE_KEYWORD: {
+                        const token *kw = lexer_next(ctx->l);
+                        if (!strcmp(kw->lx, KWD_TRUE) || !strcmp(kw->lx, KWD_FALSE)) {
+                                left = (expr *)expr_bool_literal_alloc(kw);
+                        } else {
+                                return left;
+                        }
                 } break;
                 default: return left;
                 }

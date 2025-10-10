@@ -53,7 +53,7 @@ sum_array1_t12345_t5_r15(p: i32*, n: i64): i32
 export proc take_ptr2_t1_r1(p: i32*): i32
 {
         log::id("ptrs::take_ptr2_t1_r1");
-        return p[0] == 1;
+        return (i32)(p[0] == 1);
 }
 
 export proc take_ptr1_r1(p: i32*): i32
