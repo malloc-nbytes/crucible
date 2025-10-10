@@ -1,5 +1,12 @@
 module string where
 
+export proc cstrlen(s: u8*): size_t
+{
+        let i: size_t = 0;
+        for (i = 0; s[i]; i += 1) {}
+        return i;
+}
+
 export proc eq(s0: u8*, s1: u8*): bool
 {
         while (*s0 && *s1) {

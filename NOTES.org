@@ -17,6 +17,7 @@
   - [X] indexing operator =[i]=
   - [X] literals ={1, 2, 3}=
   - [X] pointer arithmetic =ar + i=
+  - [ ] allow for empty arrays =let ar: [i32; 5] = {};=
 - [ ] booleans
   - [ ] all comparison operators should return =bool=
 - [ ] usize

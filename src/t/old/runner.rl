@@ -106,8 +106,8 @@ fn setup_compiler() {
     info("=== BUILDING COMPILER ===", 1);
     $"pwd" |> let cwd;
     cd("../../");
-    $"make clean";
-    $"make -j$(nproc)";
+    # $"make clean";
+    # $"make -j$(nproc)";
     cd(cwd);
 }
 
