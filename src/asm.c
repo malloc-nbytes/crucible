@@ -1514,7 +1514,9 @@ visit_stmt_while(visitor *v, stmt_while *s)
                 cond_reg = cond;
         }
 
-        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
+        // NOTE: Changed this line after boolean support to "fix" assembler warnings
+        take_txt(ctx, forge_cstr_builder("cmp ", cond_reg, ", 0", NULL), 1);
+        //take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
 
         take_txt(ctx, forge_cstr_builder("je ", lbl_loop_end, NULL), 1);
 
