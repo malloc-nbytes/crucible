@@ -156,6 +156,15 @@ expr_cast_alloc(type *to, expr *rhs)
         return e;
 }
 
+expr_bool_literal *
+expr_bool_literal_alloc(const token *b)
+{
+        expr_bool_literal *e = (expr_bool_literal *)alloc(sizeof(expr_bool_literal));
+        e->base              = init_expr_kind(EXPR_KIND_BOOL_LITERAL, accept_expr_bool_literal);
+        e->b                 = b;
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                type        *type,

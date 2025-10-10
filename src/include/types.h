@@ -22,8 +22,10 @@ typedef enum {
 
         TYPE_KIND_NUMBER,
 
+        TYPE_KIND_BOOL,
+
         TYPE_KIND_STR,
-        TYPE_KIND_VOID, /*10*/
+        TYPE_KIND_VOID, /*11*/
         TYPE_KIND_NORETURN,
 
         TYPE_KIND_PTR,
@@ -91,7 +93,10 @@ typedef struct {
         type base;
         const token *struct_id;
 } type_custom;
+
 typedef struct { type base; } type_unknown;
+
+typedef struct { type base; } type_bool;
 
 type_i32 *type_i32_alloc(void);
 type_i64 *type_i64_alloc(void);
@@ -106,6 +111,7 @@ type_struct *type_struct_alloc(const parameter_array *members, size_t sz);
 type_custom *type_custom_alloc(const token *struct_id);
 type_unknown *type_unknown_alloc(void);
 type_array *type_array_alloc(type *elemty, int len);
+type_bool *type_bool_alloc(void);
 
 type_proc *type_proc_alloc(
         const char *id,

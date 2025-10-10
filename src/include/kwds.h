@@ -10,6 +10,10 @@
 #define KWD_U32  "u32"
 #define KWD_U64  "u64"
 #define KWD_VOID "void"
+#define KWD_BOOL "bool"
+
+#define KWD_TRUE "true"
+#define KWD_FALSE "false"
 
 #define KWD_PROC   "proc"
 #define KWD_EXPORT "export"
@@ -61,6 +65,9 @@
                 KWD_IMPORT,                     \
                 KWD_WHERE,                      \
                 KWD_EMBED,                      \
+                KWD_BOOL,                       \
+                KWD_TRUE,                       \
+                KWD_FALSE,                      \
 }
 
 #define KWD_TYPES {                             \
@@ -73,6 +80,7 @@
                 KWD_U32,                        \
                 KWD_U64,                        \
                 KWD_VOID,                       \
+                KWD_BOOL,                       \
 }
 
 int kwds_iskw(const char *s);

@@ -5,7 +5,7 @@
 #include <forge/err.h>
 
 visitor *
-visitor_alloc(void                           *ctx,
+visitor_alloc(void                            *ctx,
               visit_expr_bin_sig               visit_expr_bin,
               visit_expr_identifier_sig        visit_expr_identifier,
               visit_expr_integer_literal_sig   visit_expr_integer_literal,
@@ -19,6 +19,7 @@ visitor_alloc(void                           *ctx,
               visit_expr_un_sig                visit_expr_un,
               visit_expr_character_literal_sig visit_expr_character_literal,
               visit_expr_cast_sig              visit_expr_cast,
+              visit_expr_bool_literal_sig      visit_expr_bool_literal,
 
               visit_stmt_let_sig              visit_stmt_let,
               visit_stmt_expr_sig             visit_stmt_expr,
@@ -54,6 +55,7 @@ visitor_alloc(void                           *ctx,
         v->visit_expr_un                = visit_expr_un;
         v->visit_expr_character_literal = visit_expr_character_literal;
         v->visit_expr_cast              = visit_expr_cast;
+        v->visit_expr_bool_literal      = visit_expr_bool_literal;
 
         v->visit_stmt_let             = visit_stmt_let;
         v->visit_stmt_expr            = visit_stmt_expr;
@@ -190,6 +192,15 @@ accept_expr_cast(expr *e, visitor *v)
 {
         if (v->visit_expr_cast) {
                 return v->visit_expr_cast(v, (expr_cast *)e);
+        }
+        return NULL;
+}
+
+void *
+accept_expr_bool_literal(expr *e, visitor *v)
+{
+        if (v->visit_expr_bool_literal) {
+                return v->visit_expr_bool_literal(v, (expr_bool_literal *)e);
         }
         return NULL;
 }

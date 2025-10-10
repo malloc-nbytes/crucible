@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "flags.h"
 #include "utils.h"
+#include "kwds.h"
 
 #include <forge/err.h>
 #include <forge/utils.h>
@@ -1298,6 +1299,15 @@ visit_expr_cast(visitor *v, expr_cast *e)
 }
 
 static void *
+visit_expr_bool_literal(visitor *v, expr_bool_literal *e)
+{
+        NOOP(v);
+        static char *one  = "1";
+        static char *zero = "0";
+        return (void *)(strcmp(e->b->lx, KWD_TRUE) == 0 ? one : zero);
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -1693,6 +1703,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_un,
                 visit_expr_character_literal,
                 visit_expr_cast,
+                visit_expr_bool_literal,
 
                 visit_stmt_let,
                 visit_stmt_expr,

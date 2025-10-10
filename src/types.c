@@ -150,6 +150,15 @@ type_array_alloc(type *elemty, int len)
         return t;
 }
 
+type_bool *
+type_bool_alloc(void)
+{
+        type_bool *t = (type_bool *)alloc(sizeof(type_bool));
+        t->base.kind = TYPE_KIND_BOOL;
+        t->base.sz   = 4;
+        return t;
+}
+
 char *
 type_to_cstr(const type *t)
 {
@@ -180,6 +189,7 @@ type_to_cstr(const type *t)
                                           ", len=", sz,
                                           "]>", NULL);
         } break;
+        case TYPE_KIND_BOOL: return "bool";
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
         } break;

@@ -138,10 +138,23 @@ binop(symtbl      *tbl,
       const token *op,
       expr        *rhs)
 {
+        type *res = NULL;
+
         if (op->ty >= TOKEN_TYPE_BINOP_LEN || op->ty <= TOKEN_TYPE_OTHER_LEN) {
                 forge_err_wargs("%sunsupported binary operator `%s`",
                                 loc_err(op->loc), op->lx);
                 (type *)type_unknown_alloc();
+        }
+
+        if (op->ty == TOKEN_TYPE_DOUBLE_EQUALS
+            || op->ty == TOKEN_TYPE_BANG_EQUALS
+            || op->ty == TOKEN_TYPE_GREATERTHAN
+            || op->ty == TOKEN_TYPE_LESSTHAN
+            || op->ty == TOKEN_TYPE_GREATERTHAN_EQUALS
+            || op->ty == TOKEN_TYPE_LESSTHAN_EQUALS) {
+                res = (type *)type_bool_alloc();
+        } else {
+                res = lhs->type;
         }
 
         if (lhs->type->kind == TYPE_KIND_PTR && rhs->type->kind <= TYPE_KIND_NUMBER) {
@@ -162,7 +175,8 @@ binop(symtbl      *tbl,
                 return (type *)type_unknown_alloc();
         }
 
-        return lhs->type;
+        assert(res);
+        return res;
 }
 
 static void *
@@ -539,6 +553,14 @@ visit_expr_cast(visitor *v, expr_cast *e)
         // TODO: make sure the types can be casted.
         e->rhs->accept(e->rhs, v);
         ((expr *)e)->type = e->to;
+        return NULL;
+}
+
+static void *
+visit_expr_bool_literal(visitor *v, expr_bool_literal *e)
+{
+        NOOP(v, e);
+        ((expr *)e)->type = (type *)type_bool_alloc();
         return NULL;
 }
 
@@ -988,6 +1010,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_un,
                 visit_expr_character_literal,
                 visit_expr_cast,
+                visit_expr_bool_literal,
 
                 visit_stmt_let,
                 visit_stmt_expr,

@@ -2,10 +2,12 @@ module main where
 
 import std.binds.c.stdio;
 
+proc f(a: i32, b: i32): i32
+{
+        return a+b;
+}
+
 export proc _start(void): !
 {
-        let b1: bool = true;
-        let b2: bool = false;
-
-        exit;
+        exit f(0-5, 5);
 }
