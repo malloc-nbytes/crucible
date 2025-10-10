@@ -103,8 +103,9 @@ parse_type(parser_context *ctx)
                 ty = (type *)type_noreturn_alloc();
         } else if (hd->ty == TOKEN_TYPE_KEYWORD && !strcmp(hd->lx, KWD_BOOL)) {
                 ty = (type *)type_bool_alloc();
-        }
-        else {
+        } else if (hd->ty == TOKEN_TYPE_KEYWORD && !strcmp(hd->lx, KWD_SIZET)) {
+                ty = (type *)type_sizet_alloc();
+        } else {
                 ty = (type *)type_custom_alloc(hd);
         }
 

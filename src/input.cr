@@ -5,8 +5,9 @@ import std.io;
 
 export proc _start(void): !
 {
-        let x: u8 = 97;
-        cstdio::printf("%d\n", x);
+        let u: size_t = 0;
+
+        cstdio::printf("%zu\n", u);
 
         exit;
 }

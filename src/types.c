@@ -159,6 +159,15 @@ type_bool_alloc(void)
         return t;
 }
 
+type_sizet *
+type_sizet_alloc(void)
+{
+        type_sizet *t = (type_sizet *)alloc(sizeof(type_sizet));
+        t->base.kind  = TYPE_KIND_SIZET;
+        t->base.sz    = 8;
+        return t;
+}
+
 char *
 type_to_cstr(const type *t)
 {
