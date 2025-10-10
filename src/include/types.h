@@ -20,6 +20,8 @@ typedef enum {
         TYPE_KIND_U32,
         TYPE_KIND_U64,
 
+        TYPE_KIND_SIZET,
+
         TYPE_KIND_NUMBER,
 
         TYPE_KIND_BOOL,
@@ -95,8 +97,8 @@ typedef struct {
 } type_custom;
 
 typedef struct { type base; } type_unknown;
-
 typedef struct { type base; } type_bool;
+typedef struct { type base; } type_sizet;
 
 type_i32 *type_i32_alloc(void);
 type_i64 *type_i64_alloc(void);
@@ -112,6 +114,7 @@ type_custom *type_custom_alloc(const token *struct_id);
 type_unknown *type_unknown_alloc(void);
 type_array *type_array_alloc(type *elemty, int len);
 type_bool *type_bool_alloc(void);
+type_sizet *type_sizet_alloc(void);
 
 type_proc *type_proc_alloc(
         const char *id,

@@ -9,7 +9,7 @@ export proc eqplus1_r1(void): i32
         let ar1: [i32] = {1,2,3,4,5};
         let ar2: [i32] = {2,3,4,5,6};
 
-        for (let i: i64 = 0; i < 5; i += 1) {
+        for (let i: size_t = 0; i < 5; i += 1) {
                 if (ar1[i]+1 != ar2[i]) {
                         return 0;
                 }
@@ -25,7 +25,7 @@ export proc summation_r15(void): i32
         let ar: [i32] = {1,2,3,4,5};
         let res: i32 = 0;
 
-        for (let i: i64 = 0; i < 5; i += 1) {
+        for (let i: size_t = 0; i < 5; i += 1) {
                 res += ar[i];
         }
 

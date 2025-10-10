@@ -109,7 +109,7 @@ coerce_integer_literal(symtbl    *tbl,
         if (e->type->kind == TYPE_KIND_NUMBER) {
                 // TODO: Write custom free() for each type
                 free(e->type);
-                e->type = (type *)type_i64_alloc();
+                e->type = (type *)type_sizet_alloc();
                 return;
         }
 
@@ -158,12 +158,12 @@ binop(symtbl      *tbl,
         }
 
         if (lhs->type->kind == TYPE_KIND_PTR && rhs->type->kind <= TYPE_KIND_NUMBER) {
-                coerce_integer_literal(tbl, rhs, TYPE_KIND_I64);
+                coerce_integer_literal(tbl, rhs, TYPE_KIND_SIZET);
                 return lhs->type;
         }
 
         if (rhs->type->kind == TYPE_KIND_PTR && lhs->type->kind <= TYPE_KIND_NUMBER) {
-                coerce_integer_literal(tbl, lhs, TYPE_KIND_I64);
+                coerce_integer_literal(tbl, lhs, TYPE_KIND_SIZET);
                 return rhs->type;
         }
 
@@ -318,11 +318,11 @@ visit_expr_mut(visitor *v, expr_mut *e)
                 if ((e->lhs->type->kind == TYPE_KIND_ARRAY
                      || e->lhs->type->kind == TYPE_KIND_PTR)
                     && e->rhs->type->kind <= TYPE_KIND_NUMBER) {
-                        coerce_integer_literal(tbl, e->rhs, TYPE_KIND_I64);
+                        coerce_integer_literal(tbl, e->rhs, TYPE_KIND_SIZET);
                 } else if ((e->rhs->type->kind == TYPE_KIND_ARRAY
                             || e->rhs->type->kind == TYPE_KIND_PTR)
                            && e->lhs->type->kind <= TYPE_KIND_NUMBER) {
-                        coerce_integer_literal(tbl, e->lhs, TYPE_KIND_I64);
+                        coerce_integer_literal(tbl, e->lhs, TYPE_KIND_SIZET);
                 }
 
         }
@@ -494,10 +494,10 @@ visit_expr_index(visitor *v, expr_index *e)
                         type_to_cstr(e->idx->type));
         }
 
-        coerce_integer_literal(tbl, e->idx, TYPE_KIND_I64);
+        coerce_integer_literal(tbl, e->idx, TYPE_KIND_SIZET);
 
         if (e->idx->type->sz != 8) {
-                pusherr(tbl, e->idx->loc, "array indices are allowed only for 64-bit numbers");
+                pusherr(tbl, e->idx->loc, "array indices are allowed only for size_t numbers");
         }
 
         if (e->lhs->type->kind == TYPE_KIND_ARRAY) {

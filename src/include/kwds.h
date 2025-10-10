@@ -11,6 +11,7 @@
 #define KWD_U64  "u64"
 #define KWD_VOID "void"
 #define KWD_BOOL "bool"
+#define KWD_SIZET "size_t"
 
 #define KWD_TRUE "true"
 #define KWD_FALSE "false"
@@ -68,6 +69,7 @@
                 KWD_BOOL,                       \
                 KWD_TRUE,                       \
                 KWD_FALSE,                      \
+                KWD_SIZET,                      \
 }
 
 #define KWD_TYPES {                             \
@@ -81,6 +83,7 @@
                 KWD_U64,                        \
                 KWD_VOID,                       \
                 KWD_BOOL,                       \
+                KWD_SIZET,                      \
 }
 
 int kwds_iskw(const char *s);
