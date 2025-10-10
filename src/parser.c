@@ -106,7 +106,7 @@ parse_type(parser_context *ctx)
         } else if (hd->ty == TOKEN_TYPE_KEYWORD && !strcmp(hd->lx, KWD_SIZET)) {
                 ty = (type *)type_sizet_alloc();
         } else {
-                ty = (type *)type_custom_alloc(hd);
+                forge_err_wargs("unknown type: `%s`", hd->lx);
         }
 
         // Handles all pointer types (ex: u8**).
@@ -444,12 +444,6 @@ parse_stmt_let(parser_context *ctx)
         (void)expect(ctx, TOKEN_TYPE_EQUALS);
         expr *e = parse_expr(ctx);
         (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
-
-        // Structs need extra information to be filled out.
-        if (ty->kind == TYPE_KIND_CUSTOM
-            && e && e->kind == EXPR_KIND_BRACE_INIT) {
-                ((expr_brace_init *)e)->struct_id = ((type_custom *)ty)->struct_id;
-        }
 
         return stmt_let_alloc(id, ty, e);
 }

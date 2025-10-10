@@ -469,127 +469,190 @@ visit_expr_binary(visitor *v, expr_bin *e)
                 return ptr_reg;
         }
 
-        const char *spec = szspec(e->lhs->type->sz);
-        char *v1 = e->lhs->accept(e->lhs, v);
+        // Logical operations [boolean] (1 byte)
+        if (e->op->ty == TOKEN_TYPE_DOUBLE_EQUALS ||
+            e->op->ty == TOKEN_TYPE_BANG_EQUALS ||
+            e->op->ty == TOKEN_TYPE_LESSTHAN ||
+            e->op->ty == TOKEN_TYPE_GREATERTHAN ||
+            e->op->ty == TOKEN_TYPE_LESSTHAN_EQUALS ||
+            e->op->ty == TOKEN_TYPE_GREATERTHAN_EQUALS ||
+            e->op->ty == TOKEN_TYPE_DOUBLE_AMPERSAND ||
+            e->op->ty == TOKEN_TYPE_DOUBLE_PIPE) {
+                // Use 1-byte register for boolean result
+                const char *spec = "BYTE";
+                int regi = alloc_reg(1);
+                char *reg = g_regs[regi];
 
-        int regi = alloc_reg(e->lhs->type->sz);
-        char *reg = g_regs[regi];
+                // Evaluate left-hand side
+                char *v1 = e->lhs->accept(e->lhs, v);
+                const char *lhs_spec = szspec(e->lhs->type->sz);
+                int lhs_regi = alloc_reg(e->lhs->type->sz);
+                char *lhs_reg = g_regs[lhs_regi];
+                if (!is_register(v1)) {
+                        take_txt(ctx, forge_cstr_builder("mov ", lhs_spec, " ", lhs_reg, ", ", v1, NULL), 1);
+                } else if (strcmp(v1, lhs_reg)) {
+                        take_txt(ctx, forge_cstr_builder("mov ", lhs_spec, " ", lhs_reg, ", ", v1, NULL), 1);
+                }
+                free_reg_literal(v1);
 
-        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v1, NULL), 1);
-        free_reg_literal(v1);
+                // Evaluate right-hand side
+                char *v2 = NULL;
+                int rhs_regi = -1;
+                char *rhs_reg = NULL;
+                if (e->op->ty != TOKEN_TYPE_DOUBLE_AMPERSAND && e->op->ty != TOKEN_TYPE_DOUBLE_PIPE) {
+                        v2 = e->rhs->accept(e->rhs, v);
+                        const char *rhs_spec = szspec(e->rhs->type->sz);
+                        rhs_regi = alloc_reg(e->rhs->type->sz);
+                        rhs_reg = g_regs[rhs_regi];
+                        if (!is_register(v2)) {
+                                take_txt(ctx, forge_cstr_builder("mov ", rhs_spec, " ", rhs_reg, ", ", v2, NULL), 1);
+                        } else if (strcmp(v2, rhs_reg)) {
+                                take_txt(ctx, forge_cstr_builder("mov ", rhs_spec, " ", rhs_reg, ", ", v2, NULL), 1);
+                        }
+                }
 
-        char *v2 = NULL;
-
-        switch (e->op->ty) {
-        case TOKEN_TYPE_PLUS:
-                v2 = e->rhs->accept(e->rhs, v);
-                take_txt(ctx, forge_cstr_builder("add ", spec, " ", reg, ", ", v2, NULL), 1);
-                break;
-        case TOKEN_TYPE_MINUS:
-                v2 = e->rhs->accept(e->rhs, v);
-                take_txt(ctx, forge_cstr_builder("sub ", spec, " ", reg, ", ", v2, NULL), 1);
-                break;
-        case TOKEN_TYPE_ASTERISK:
-                v2 = e->rhs->accept(e->rhs, v);
-                take_txt(ctx, forge_cstr_builder("imul ", spec, " ", reg, ", ", v2, NULL), 1);
-                break;
-        case TOKEN_TYPE_FORWARDSLASH: {
-                v2 = e->rhs->accept(e->rhs, v);
-                write_txt(ctx, "xor rdx, rdx", 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
-                take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rax", NULL), 1);
-        } break;
-        case TOKEN_TYPE_PERCENT: {
-                v2 = e->rhs->accept(e->rhs, v);
-                write_txt(ctx, "xor rdx, rdx", 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
-                take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rdx", NULL), 1);
-        } break;
-        case TOKEN_TYPE_DOUBLE_EQUALS:
-        case TOKEN_TYPE_BANG_EQUALS:
-        case TOKEN_TYPE_LESSTHAN:
-        case TOKEN_TYPE_GREATERTHAN:
-        case TOKEN_TYPE_LESSTHAN_EQUALS:
-        case TOKEN_TYPE_GREATERTHAN_EQUALS: {
-                v2 = e->rhs->accept(e->rhs, v);
-                char *lbl_true = genlbl(NULL);
-                char *lbl_done = genlbl(NULL);
-                const char *cmp_op = NULL;
                 switch (e->op->ty) {
-                case TOKEN_TYPE_DOUBLE_EQUALS:      cmp_op = "je";  break;
-                case TOKEN_TYPE_BANG_EQUALS:        cmp_op = "jne"; break;
-                case TOKEN_TYPE_LESSTHAN:           cmp_op = "jl";  break;
-                case TOKEN_TYPE_GREATERTHAN:        cmp_op = "jg";  break;
-                case TOKEN_TYPE_LESSTHAN_EQUALS:    cmp_op = "jle"; break;
-                case TOKEN_TYPE_GREATERTHAN_EQUALS: cmp_op = "jge"; break;
-                default: forge_err_wargs("unimplemented comparison op `%s`", e->op->lx);
+                case TOKEN_TYPE_DOUBLE_EQUALS:
+                case TOKEN_TYPE_BANG_EQUALS:
+                case TOKEN_TYPE_LESSTHAN:
+                case TOKEN_TYPE_GREATERTHAN:
+                case TOKEN_TYPE_LESSTHAN_EQUALS:
+                case TOKEN_TYPE_GREATERTHAN_EQUALS: {
+                        char *lbl_true = genlbl(NULL);
+                        char *lbl_done = genlbl(NULL);
+                        const char *cmp_op = NULL;
+                        switch (e->op->ty) {
+                        case TOKEN_TYPE_DOUBLE_EQUALS:      cmp_op = "je";  break;
+                        case TOKEN_TYPE_BANG_EQUALS:        cmp_op = "jne"; break;
+                        case TOKEN_TYPE_LESSTHAN:           cmp_op = "jl";  break;
+                        case TOKEN_TYPE_GREATERTHAN:        cmp_op = "jg";  break;
+                        case TOKEN_TYPE_LESSTHAN_EQUALS:    cmp_op = "jle"; break;
+                        case TOKEN_TYPE_GREATERTHAN_EQUALS: cmp_op = "jge"; break;
+                        default: forge_err_wargs("unimplemented comparison op `%s`", e->op->lx);
+                        }
+                        take_txt(ctx, forge_cstr_builder("cmp ", lhs_reg, ", ", rhs_reg, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder(cmp_op, " ", lbl_true, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
+                        free(lbl_true);
+                        free(lbl_done);
+                        free_reg(rhs_regi);
+                        free_reg_literal(v2);
+                        break;
                 }
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", ", v2, NULL), 1);
-                take_txt(ctx, forge_cstr_builder(cmp_op, " ", lbl_true, NULL), 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
-                take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
-                take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
-                free(lbl_true);
-                free(lbl_done);
-        } break;
-        case TOKEN_TYPE_DOUBLE_AMPERSAND: {
-                char *lbl_false = genlbl("false");
-                char *lbl_done = genlbl("done");
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
-                free_reg(regi);
-                v2 = e->rhs->accept(e->rhs, v);
-                regi = alloc_reg(e->rhs->type->sz);
-                reg = g_regs[regi];
-                if (!is_register(v2)) {
-                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v2, NULL), 1);
-                } else if (strcmp(v2, reg)) {
-                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v2, NULL), 1);
+                case TOKEN_TYPE_DOUBLE_AMPERSAND: {
+                        char *lbl_false = genlbl("false");
+                        char *lbl_done = genlbl("done");
+                        take_txt(ctx, forge_cstr_builder("cmp ", lhs_spec, " ", lhs_reg, ", 0", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
+                        free_reg(lhs_regi);
+                        v2 = e->rhs->accept(e->rhs, v);
+                        rhs_regi = alloc_reg(e->rhs->type->sz);
+                        rhs_reg = g_regs[rhs_regi];
+                        const char *rhs_spec = szspec(e->rhs->type->sz);
+                        if (!is_register(v2)) {
+                                take_txt(ctx, forge_cstr_builder("mov ", rhs_spec, " ", rhs_reg, ", ", v2, NULL), 1);
+                        } else if (strcmp(v2, rhs_reg)) {
+                                take_txt(ctx, forge_cstr_builder("mov ", rhs_spec, " ", rhs_reg, ", ", v2, NULL), 1);
+                        }
+                        take_txt(ctx, forge_cstr_builder("cmp ", rhs_spec, " ", rhs_reg, ", 0", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder(lbl_false, ":", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
+                        free(lbl_false);
+                        free(lbl_done);
+                        free_reg(rhs_regi);
+                        free_reg_literal(v2);
+                        break;
                 }
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("je ", lbl_false, NULL), 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
-                take_txt(ctx, forge_cstr_builder(lbl_false, ":", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
-                take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
-                free(lbl_false);
-                free(lbl_done);
-        } break;
-        case TOKEN_TYPE_DOUBLE_PIPE: {
-                char *lbl_true = genlbl("true");
-                char *lbl_done = genlbl("done");
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
-                free_reg(regi);
-                v2 = e->rhs->accept(e->rhs, v);
-                regi = alloc_reg(e->rhs->type->sz);
-                reg = g_regs[regi];
-                if (!is_register(v2)) {
-                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v2, NULL), 1);
-                } else if (strcmp(v2, reg)) {
-                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v2, NULL), 1);
-                }
-                take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", reg, ", 0", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
-                take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
-                take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
-                free(lbl_true);
-                free(lbl_done);
-        } break;
-        default:
-                forge_err_wargs("unimplemented binop `%s`", e->op->lx);
-        }
+                case TOKEN_TYPE_DOUBLE_PIPE: {
+                        char *lbl_true = genlbl("true");
+                        char *lbl_done = genlbl("done");
+                        take_txt(ctx, forge_cstr_builder("cmp ", lhs_spec, " ", lhs_reg, ", 0", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
+                        free_reg(lhs_regi);
+                        v2 = e->rhs->accept(e->rhs, v);
+                        rhs_regi = alloc_reg(e->rhs->type->sz);
+                        rhs_reg = g_regs[rhs_regi];
+                        const char *rhs_spec = szspec(e->rhs->type->sz);
+                        if (!is_register(v2)) {
+                                take_txt(ctx, forge_cstr_builder("mov ", rhs_spec, " ", rhs_reg, ", ", v2, NULL), 1);
+                        } else if (strcmp(v2, rhs_reg)) {
+                                take_txt(ctx, forge_cstr_builder("mov ", rhs_spec, " ", rhs_reg, ", ", v2, NULL), 1);
+                        }
+                        take_txt(ctx, forge_cstr_builder("cmp ", rhs_spec, " ", rhs_reg, ", 0", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("jne ", lbl_true, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 0", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("jmp ", lbl_done, NULL), 1);
+                        take_txt(ctx, forge_cstr_builder(lbl_true, ":", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
+                        take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
+                        free(lbl_true);
+free(lbl_done);
+                    free_reg(rhs_regi);
+                    free_reg_literal(v2);
+                    break;
+            }
+            default:
+                    forge_err_wargs("unimplemented binop `%s`", e->op->lx);
+            }
+            free_reg(lhs_regi);
+            return reg;
+    }
 
-        free_reg_literal(v2);
-        return reg;
+    // Arithmetic operations
+    const char *spec = szspec(e->lhs->type->sz);
+    char *v1 = e->lhs->accept(e->lhs, v);
+
+    int regi = alloc_reg(e->lhs->type->sz);
+    char *reg = g_regs[regi];
+
+    take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v1, NULL), 1);
+    free_reg_literal(v1);
+
+    char *v2 = NULL;
+
+    switch (e->op->ty) {
+    case TOKEN_TYPE_PLUS:
+            v2 = e->rhs->accept(e->rhs, v);
+            take_txt(ctx, forge_cstr_builder("add ", spec, " ", reg, ", ", v2, NULL), 1);
+            break;
+    case TOKEN_TYPE_MINUS:
+            v2 = e->rhs->accept(e->rhs, v);
+            take_txt(ctx, forge_cstr_builder("sub ", spec, " ", reg, ", ", v2, NULL), 1);
+            break;
+    case TOKEN_TYPE_ASTERISK:
+            v2 = e->rhs->accept(e->rhs, v);
+            take_txt(ctx, forge_cstr_builder("imul ", spec, " ", reg, ", ", v2, NULL), 1);
+            break;
+    case TOKEN_TYPE_FORWARDSLASH: {
+            v2 = e->rhs->accept(e->rhs, v);
+            write_txt(ctx, "xor rdx, rdx", 1);
+            take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
+            take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
+            take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rax", NULL), 1);
+            break;
+    }
+    case TOKEN_TYPE_PERCENT: {
+            v2 = e->rhs->accept(e->rhs, v);
+            write_txt(ctx, "xor rdx, rdx", 1);
+            take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
+            take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
+            take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rdx", NULL), 1);
+            break;
+    }
+    default:
+            forge_err_wargs("unimplemented binop `%s`", e->op->lx);
+    }
+
+    free_reg_literal(v2);
+    return reg;
 }
 
 static void *
