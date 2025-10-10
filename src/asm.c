@@ -1464,7 +1464,9 @@ visit_stmt_if(visitor *v, stmt_if *s)
         char *lbl_done = genlbl("done");
 
         // Compare condition to 0
-        take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
+        // NOTE: Changed this line after boolean support to "fix" assembler warnings
+        take_txt(ctx, forge_cstr_builder("cmp ", cond_reg, ", 0", NULL), 1);
+        //take_txt(ctx, forge_cstr_builder("cmp ", spec, " ", cond_reg, ", 0", NULL), 1);
 
         // Jump to `else` (if present) or done if `false`
         take_txt(ctx, forge_cstr_builder("je ", s->else_ ? lbl_else : lbl_done, NULL), 1);
@@ -1558,7 +1560,10 @@ visit_stmt_for(visitor *v, stmt_for *s)
                 cond_reg = cond;
         }
 
-        take_txt(ctx, forge_cstr_builder("cmp ", e_spec, " ", cond_reg, ", 0", NULL), 1);
+        // NOTE: Changed this line after boolean support to "fix" assembler warnings
+        take_txt(ctx, forge_cstr_builder("cmp ", cond_reg, ", 0", NULL), 1);
+        //take_txt(ctx, forge_cstr_builder("cmp ", e_spec, " ", cond_reg, ", 0", NULL), 1);
+
         take_txt(ctx, forge_cstr_builder("je ", lbl_for_end, NULL), 1);
 
         if (temp_reg_idx != -1) {

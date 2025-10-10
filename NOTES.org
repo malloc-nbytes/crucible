@@ -36,12 +36,11 @@
 
 ** Critical
 
+The following code prints garbage.
+
 #+begin_src
-  -- in order for the following to work, you must
-  -- cast to i32.
-  let c1: u8 = 'a';
-  let c2: u8 = 'b';
-  printf("%d\n", (i32)(c1 == c2));
+let x: u8 = 97;
+cstdio::printf("%d\n", x);
 #+end_src
 
 ** Misc.
