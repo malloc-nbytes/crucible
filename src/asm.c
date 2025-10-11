@@ -1394,6 +1394,14 @@ visit_expr_bool_literal(visitor *v, expr_bool_literal *e)
 }
 
 static void *
+visit_expr_null(visitor *v, expr_null *e)
+{
+        NOOP(v, e);
+        static char *zero = "0";
+        return zero;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -1804,6 +1812,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_character_literal,
                 visit_expr_cast,
                 visit_expr_bool_literal,
+                visit_expr_null,
 
                 visit_stmt_let,
                 visit_stmt_expr,

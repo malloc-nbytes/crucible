@@ -17,6 +17,7 @@ typedef void *(*visit_expr_un_sig)(visitor *v, expr_un *e);
 typedef void *(*visit_expr_character_literal_sig)(visitor *v, expr_character_literal *e);
 typedef void *(*visit_expr_cast_sig)(visitor *v, expr_cast *e);
 typedef void *(*visit_expr_bool_literal_sig)(visitor *v, expr_bool_literal *e);
+typedef void *(*visit_expr_null_sig)(visitor *v, expr_null *e);
 
 typedef void *(*visit_stmt_let_sig)(visitor *v, stmt_let *s);
 typedef void *(*visit_stmt_expr_sig)(visitor *v, stmt_expr *s);
@@ -53,6 +54,7 @@ typedef struct visitor {
         visit_expr_character_literal_sig visit_expr_character_literal;
         visit_expr_cast_sig              visit_expr_cast;
         visit_expr_bool_literal_sig      visit_expr_bool_literal;
+        visit_expr_null_sig              visit_expr_null;
 
         visit_stmt_let_sig         visit_stmt_let;
         visit_stmt_expr_sig        visit_stmt_expr;
@@ -89,6 +91,7 @@ visitor *visitor_alloc(
         visit_expr_character_literal_sig visit_expr_character_literal,
         visit_expr_cast_sig              visit_expr_cast,
         visit_expr_bool_literal_sig      visit_expr_bool_literal,
+        visit_expr_null_sig              visit_expr_null,
 
         visit_stmt_let_sig             visit_stmt_let,
         visit_stmt_expr_sig            visit_stmt_expr,
@@ -123,6 +126,7 @@ void *accept_expr_un(expr *e, visitor *v);
 void *accept_expr_character_literal(expr *e, visitor *v);
 void *accept_expr_cast(expr *e, visitor *v);
 void *accept_expr_bool_literal(expr *e, visitor *v);
+void *accept_expr_null(expr *e, visitor *v);
 
 void *accept_expr_unimplemented(expr *e, visitor *v);
 

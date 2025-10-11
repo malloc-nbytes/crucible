@@ -166,6 +166,14 @@ expr_bool_literal_alloc(const token *b)
         return e;
 }
 
+expr_null *
+expr_null_alloc(void)
+{
+        expr_null *e = (expr_null *)alloc(sizeof(expr_null));
+        e->base      = init_expr_kind(EXPR_KIND_NULL, accept_expr_null);
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                type        *type,

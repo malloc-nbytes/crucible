@@ -27,6 +27,7 @@ typedef enum {
         EXPR_KIND_INDEX,
         EXPR_KIND_CAST,
         EXPR_KIND_BOOL_LITERAL,
+        EXPR_KIND_NULL,
 } expr_kind;
 
 typedef enum {
@@ -150,6 +151,8 @@ typedef struct {
         expr base;
         const token *b;
 } expr_bool_literal;
+
+typedef struct { expr base; } expr_null;
 
 ///////////////////////////////////////////
 // STATEMENTS
@@ -305,6 +308,7 @@ expr_index *expr_index_alloc(expr *lhs, expr *idx);
 expr_character_literal *expr_character_literal_alloc(const token *c);
 expr_cast *expr_cast_alloc(type *to, expr *rhs);
 expr_bool_literal *expr_bool_literal_alloc(const token *b);
+expr_null *expr_null_alloc(void);
 
 stmt_let *stmt_let_alloc(const token *id, type *type, expr *e);
 stmt_expr *stmt_expr_alloc(expr *e);

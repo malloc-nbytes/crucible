@@ -235,7 +235,6 @@ type_is_compat(type **t1, type **t2)
         assert(*t1);
         assert(*t2);
 
-
         type_kind t1kind = (*t1)->kind;
         type_kind t2kind = (*t2)->kind;
 

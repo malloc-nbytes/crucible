@@ -16,6 +16,8 @@
 #define KWD_TRUE "true"
 #define KWD_FALSE "false"
 
+#define KWD_NULL "null"
+
 #define KWD_PROC   "proc"
 #define KWD_EXPORT "export"
 #define KWD_LET    "let"
@@ -69,6 +71,7 @@
                 KWD_BOOL,                       \
                 KWD_TRUE,                       \
                 KWD_FALSE,                      \
+                KWD_NULL,                       \
                 KWD_SIZET,                      \
 }
 

@@ -569,6 +569,16 @@ visit_expr_bool_literal(visitor *v, expr_bool_literal *e)
 }
 
 static void *
+visit_expr_null(visitor *v, expr_null *e)
+{
+        NOOP(v, e);
+
+        ((expr *)e)->type = (type *)type_ptr_alloc(NULL);
+
+        return NULL;
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         symtbl *tbl = (symtbl *)v->context;
@@ -585,6 +595,13 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         insert_sym_into_scope(tbl, sym);
         tbl->stack_offset += sym->ty->sz;
+
+        if (s->type->kind == TYPE_KIND_PTR
+            && s->e->type->kind == TYPE_KIND_PTR) {
+                type_ptr *t1 = (type_ptr *)s->type;
+                type_ptr *t2 = (type_ptr *)s->e->type;
+                if (!t2->to) t2->to = t1->to;
+        }
 
         // Check for a zeroed array initializer. Set appropriate
         // lengths if necessary.
@@ -1019,6 +1036,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_character_literal,
                 visit_expr_cast,
                 visit_expr_bool_literal,
+                visit_expr_null,
 
                 visit_stmt_let,
                 visit_stmt_expr,

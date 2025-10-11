@@ -44,7 +44,7 @@
   (defconst crucible-keywords
     '("if" "else" "while" "let"
       "void" "i8" "i16" "i32" "i64" "u8" "u16" "u32" "u64" "bool" "str" "size_t"
-      "for" "proc" "return" "mut" "break" "macro" "exit" "extern"
+      "for" "proc" "return" "mut" "break" "macro" "exit" "extern" "enum"
       "struct" "import" "ref" "end" "export" "embed" "true" "false"
       "def" "in" "null" "type" "module" "where" "continue")))
 

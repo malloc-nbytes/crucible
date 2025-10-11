@@ -304,6 +304,9 @@ parse_primary_expr(parser_context *ctx)
                         if (!strcmp(kw->lx, KWD_TRUE) || !strcmp(kw->lx, KWD_FALSE)) {
                                 left = (expr *)expr_bool_literal_alloc(kw);
                                 left->loc = kw->loc;
+                        } else if (!strcmp(kw->lx, KWD_NULL)) {
+                                left = (expr *)expr_null_alloc();
+                                left->loc = hd->loc;
                         } else {
                                 return left;
                         }

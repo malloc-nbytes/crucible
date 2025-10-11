@@ -5,7 +5,7 @@ module bytes where
 export proc length(s: u8*): size_t
 {
         let i: size_t = 0;
-        for (i = 0; s[i]; i += 1) {}
+        for (i = 0; s[i]; i += 1);
         return i;
 }
 
@@ -16,14 +16,13 @@ export proc copy(dst: u8*, src: u8*): void
         }
 }
 
--- Almost Working
--- export proc cat(dst: u8*, src: u8*): void
--- {
---         while (*dst) dst += 1;
---         for (let i: size_t = 0; src[i]; i += 1) {
---                 dst[i] = src[i];
---         }
--- }
+export proc cat(dst: u8*, src: u8*): void
+{
+        while (*dst) dst += 1;
+        for (let i: size_t = 0; src[i]; i += 1) {
+                dst[i] = src[i];
+        }
+}
 
 export proc eq(s0: u8*, s1: u8*): bool
 {

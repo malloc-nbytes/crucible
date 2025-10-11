@@ -1,4 +1,4 @@
-* TODO [62%]
+* TODO [82%]
 - [X] while loops
 - [X] mut statements
 - [X] convert =type_to_int(type)= to =type->sz=
@@ -13,26 +13,24 @@
 - [X] casting
 - [X] 'address of' operator =&var=
 - [X] 'dereference operator =*var=
-- [ ] empty statements
-- [ ] null
-- [-] arrays
+- [X] empty statements
+- [X] null
+- [X] arrays
   - [X] indexing operator =[i]=
   - [X] literals ={1, 2, 3}=
   - [X] pointer arithmetic =ar + i=
-  - [ ] allow for empty arrays =let ar: [i32; 5] = {};=
-- [ ] booleans
-  - [ ] all comparison operators should return =bool=
+  - [X] allow for empty arrays =let ar: [i32; 5] = {};=
+- [X] booleans
 - [X] size_t
 - [ ] macros
 - [ ] global variables
-- [-] structs
-  - [X] statement =struct P {}=
+- [ ] structs
+  - [ ] statement =struct P {}=
   - [ ] literals =(obj) {.x = 1, .y = 2}=
   - [ ] members =p.x; p.y=
 - [-] enums
   - [X] statements =enum P {}=
   - [ ] members =P.I1; P.I2=
-- [ ] unsigned should use =movzx=
 
 * StdLib [66%]
 - [X] strcpy
