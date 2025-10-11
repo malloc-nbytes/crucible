@@ -4,9 +4,14 @@ module dev where
 
 import std.io;
 
-export proc TODO(msg: u8*): !
+export proc todo(msg: u8*): !
 {
-    io::echo("[crucible] TODO: ");
-    io::echoln(msg);
+    io::echof("[crucible] TODO: %s\n", msg);
     exit 1;
+}
+
+export proc unimplemented(msg: u8*): !
+{
+        io::echof("unimplemented: %s\n", msg);
+        exit 1;
 }

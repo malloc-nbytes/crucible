@@ -586,13 +586,29 @@ visit_stmt_let(visitor *v, stmt_let *s)
         insert_sym_into_scope(tbl, sym);
         tbl->stack_offset += sym->ty->sz;
 
+        // Check for a zeroed array initializer. Set appropriate
+        // lengths if necessary.
         if (s->type->kind == TYPE_KIND_ARRAY
             && s->e->type->kind == TYPE_KIND_ARRAY) {
-                type_array *t0 = (type_array *)s->type;
-                type_array *t1 = (type_array *)s->e->type;
-                if (t0->len == -1) {
-                        t0->len = t1->len;
+                type_array *let_ty   = (type_array *)s->type;
+                type_array *e_ty     = (type_array *)s->e->type;
+                expr_arrayinit *init = (expr_arrayinit *)s->e;
+
+                if (init->zeroed && let_ty->len != -1/*array has length decl.*/) {
+                        // We are zeroing the array, expand the array initializer
+                        // to all zeros.
+                        e_ty->len = let_ty->len;
+                } else if (let_ty->len == -1) {
+                        // Not zeroing, length not declared, set the declared
+                        // length to the expression's length.
+                        let_ty->len = e_ty->len;
+                        init->zeroed = 0;
+                } else {
+                        // Not zeroing, length is declared, wait until
+                        // typecheck to make sure they are compatible.
+                        init->zeroed = 0;
                 }
+
                 ((expr_arrayinit *)s->e)->stack_offset_base = sym->stack_offset;
         }
 

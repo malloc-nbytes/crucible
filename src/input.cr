@@ -1,10 +1,10 @@
 module main where
 
-import std.io;
+import std.dev;
 
 export proc _start(void): !
 {
-        io::echof("foo %s bar\n", "test");
+
 
         exit;
 }

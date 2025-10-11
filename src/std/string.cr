@@ -1,6 +1,6 @@
 module string where
 
-export proc cstrlen(s: u8*): size_t
+export proc len(s: u8*): size_t
 {
         let i: size_t = 0;
         for (i = 0; s[i]; i += 1) {}

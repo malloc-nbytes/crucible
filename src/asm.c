@@ -1106,27 +1106,81 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
         return e->e->accept(e->e, v);
 }
 
+/* static void * */
+/* visit_expr_arrayinit(visitor *v, expr_arrayinit *e) */
+/* { */
+/*         asm_context *ctx = (asm_context *)v->context; */
+
+/*         size_t szsum = 0; */
+/*         for (size_t i = 0; i < e->exprs.len; ++i) { */
+/*                 expr *eidx = e->exprs.data[i]; */
+/*                 char *res = eidx->accept(eidx, v); */
+/*                 const char *spec = szspec(eidx->type->sz); */
+/*                 szsum += eidx->type->sz; */
+/*                 char *offset = int_to_cstr(e->stack_offset_base + szsum); */
+
+/*                 take_txt(ctx, forge_cstr_builder("mov ", spec, */
+/*                                                  " [rbp-", offset, "], ", */
+/*                                                  res, NULL), 1); */
+
+/*                 free(offset); */
+/*                 free_reg_literal(res); */
+/*         } */
+
+/*         type_array *ty = (type_array *)((expr *)e)->type; */
+/*         szsum = ty->elemty->sz * ty->len; */
+
+/*         char *ptr_reg = g_regs[alloc_reg(8)]; */
+/*         char *last_elem_offset = int_to_cstr(e->stack_offset_base + szsum); */
+/*         take_txt(ctx, forge_cstr_builder("lea ", ptr_reg, ", [rbp-", last_elem_offset, "]", NULL), 1); */
+/*         free(last_elem_offset); */
+/*         return ptr_reg; */
+/* } */
+
 static void *
 visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 {
         asm_context *ctx = (asm_context *)v->context;
 
-        size_t szsum = 0;
+        type_array *ty = (type_array *)((expr *)e)->type;
+        size_t szsum = ty->elemty->sz * ty->len; // Total size of the array in bytes
+
+        // Zero the array if e->zeroed is true
+        if (e->zeroed) {
+                // Save registers that rep stosd will clobber (rax, rdi, rcx)
+                push_inuse_regs(ctx);
+
+                // Zero the array using rep stosd
+                write_txt(ctx, "xor eax, eax", 1); // eax = 0
+                char *offset = int_to_cstr(e->stack_offset_base + szsum);
+                take_txt(ctx, forge_cstr_builder("lea rdi, [rbp-", offset, "]", NULL), 1);
+                free(offset);
+                char *count = int_to_cstr(ty->len); // Number of elements
+                take_txt(ctx, forge_cstr_builder("mov rcx, ", count, NULL), 1);
+                free(count);
+                write_txt(ctx, "cld", 1); // Clear direction flag (increment rdi)
+                write_txt(ctx, "rep stosd", 1); // Zero ty->len * 4 bytes
+
+                // Restore registers
+                pop_inuse_regs(ctx);
+        }
+
+        // Process explicit initializers, if any
+        size_t init_offset = 0;
         for (size_t i = 0; i < e->exprs.len; ++i) {
                 expr *eidx = e->exprs.data[i];
                 char *res = eidx->accept(eidx, v);
                 const char *spec = szspec(eidx->type->sz);
-                szsum += eidx->type->sz;
-                char *offset = int_to_cstr(e->stack_offset_base + szsum);
+                init_offset += eidx->type->sz;
+                char *offset = int_to_cstr(e->stack_offset_base + init_offset);
 
-                take_txt(ctx, forge_cstr_builder("mov ", spec,
-                                                 " [rbp-", offset, "], ",
-                                                 res, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", res, NULL), 1);
 
                 free(offset);
                 free_reg_literal(res);
         }
 
+        // Return the address of the array (lea of the first element)
         char *ptr_reg = g_regs[alloc_reg(8)];
         char *last_elem_offset = int_to_cstr(e->stack_offset_base + szsum);
         take_txt(ctx, forge_cstr_builder("lea ", ptr_reg, ", [rbp-", last_elem_offset, "]", NULL), 1);

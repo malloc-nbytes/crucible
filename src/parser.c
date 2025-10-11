@@ -197,10 +197,21 @@ static expr_arrayinit *
 parse_arrayinit(parser_context *ctx)
 {
         expr_array exprs = dyn_array_empty(expr_array);
+        int zeroed = 1;
 
         (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
         while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
-                dyn_array_append(exprs, parse_expr(ctx));
+                if (exprs.len > 1) zeroed = 0;
+
+                expr *e = parse_expr(ctx);
+                dyn_array_append(exprs, e);
+
+                if (zeroed && e->kind == EXPR_KIND_INTEGER_LITERAL) {
+                        if (strcmp(((expr_integer_literal *)e)->i->lx, "0")) {
+                                zeroed = 0;
+                        }
+                }
+
                 if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
                         lexer_discard(ctx->l); // ,
                 } else {
@@ -209,7 +220,7 @@ parse_arrayinit(parser_context *ctx)
         }
         (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
 
-        return expr_arrayinit_alloc(exprs);
+        return expr_arrayinit_alloc(exprs, zeroed);
 }
 
 expr *
