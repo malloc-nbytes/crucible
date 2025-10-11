@@ -15,3 +15,10 @@ export proc sum_range(st: i32, en: i32): i32
 
     return s;
 }
+
+
+export proc abs(a: i32): i32
+{
+        if (a < 0) return a*-1;
+        return a;
+}

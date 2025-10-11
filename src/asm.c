@@ -1106,37 +1106,6 @@ visit_expr_namespace(visitor *v, expr_namespace *e)
         return e->e->accept(e->e, v);
 }
 
-/* static void * */
-/* visit_expr_arrayinit(visitor *v, expr_arrayinit *e) */
-/* { */
-/*         asm_context *ctx = (asm_context *)v->context; */
-
-/*         size_t szsum = 0; */
-/*         for (size_t i = 0; i < e->exprs.len; ++i) { */
-/*                 expr *eidx = e->exprs.data[i]; */
-/*                 char *res = eidx->accept(eidx, v); */
-/*                 const char *spec = szspec(eidx->type->sz); */
-/*                 szsum += eidx->type->sz; */
-/*                 char *offset = int_to_cstr(e->stack_offset_base + szsum); */
-
-/*                 take_txt(ctx, forge_cstr_builder("mov ", spec, */
-/*                                                  " [rbp-", offset, "], ", */
-/*                                                  res, NULL), 1); */
-
-/*                 free(offset); */
-/*                 free_reg_literal(res); */
-/*         } */
-
-/*         type_array *ty = (type_array *)((expr *)e)->type; */
-/*         szsum = ty->elemty->sz * ty->len; */
-
-/*         char *ptr_reg = g_regs[alloc_reg(8)]; */
-/*         char *last_elem_offset = int_to_cstr(e->stack_offset_base + szsum); */
-/*         take_txt(ctx, forge_cstr_builder("lea ", ptr_reg, ", [rbp-", last_elem_offset, "]", NULL), 1); */
-/*         free(last_elem_offset); */
-/*         return ptr_reg; */
-/* } */
-
 static void *
 visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 {
@@ -1809,6 +1778,13 @@ visit_stmt_embed(visitor *v, stmt_embed *s)
         return NULL;
 }
 
+static void *
+visit_stmt_empty(visitor *v, stmt_empty *s)
+{
+        NOOP(v, s);
+        return NULL;
+}
+
 static visitor *
 asm_visitor_alloc(asm_context *ctx)
 {
@@ -1844,7 +1820,8 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_stmt_struct,
                 visit_stmt_module,
                 visit_stmt_import,
-                visit_stmt_embed
+                visit_stmt_embed,
+                visit_stmt_empty
         );
 }
 

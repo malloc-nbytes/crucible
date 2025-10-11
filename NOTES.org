@@ -1,4 +1,4 @@
-* TODO [65%]
+* TODO [62%]
 - [X] while loops
 - [X] mut statements
 - [X] convert =type_to_int(type)= to =type->sz=
@@ -13,15 +13,16 @@
 - [X] casting
 - [X] 'address of' operator =&var=
 - [X] 'dereference operator =*var=
-- [X] arrays
+- [ ] empty statements
+- [ ] null
+- [-] arrays
   - [X] indexing operator =[i]=
   - [X] literals ={1, 2, 3}=
   - [X] pointer arithmetic =ar + i=
   - [ ] allow for empty arrays =let ar: [i32; 5] = {};=
 - [ ] booleans
   - [ ] all comparison operators should return =bool=
-- [ ] usize
-- [ ] null
+- [X] size_t
 - [ ] macros
 - [ ] global variables
 - [-] structs
@@ -32,6 +33,17 @@
   - [X] statements =enum P {}=
   - [ ] members =P.I1; P.I2=
 - [ ] unsigned should use =movzx=
+
+* StdLib [66%]
+- [X] strcpy
+- [X] memcpy
+- [X] isalpha
+- [X] isdigit
+- [X] isalnum
+- [X] abs
+- [ ] strcat # not overwriting the null bytes
+- [ ] atoi (string to int) # bad asm reg and spec sizes
+- [ ] memcmp # lazy
 
 * Bugs
 
@@ -56,3 +68,28 @@ export proc or2_r1(void): i32
 }
 #+end_src
 
+The following segfaults only if using zeroing.
+
+#+begin_src
+        let src: u8* = "hello";
+        let buf: [u8; 10] = {0};
+
+        bytes::copy((u8*)buf, src);
+#+end_src
+
+The following code prints nothing
+
+#+begin_src
+module main where
+
+import std.binds.c.stdio;
+
+export proc _start(void): !
+{
+        let buf: [u8; 7] = {'a', 'b', 'c', 'd', 'e', 'f', 0};
+
+        cstdio::printf("%s\n", buf);
+
+        exit;
+}
+#+end_src

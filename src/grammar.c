@@ -365,3 +365,12 @@ stmt_embed_alloc(token_array lns)
         s->lns             = lns;
         return s;
 }
+
+stmt_empty *
+stmt_empty_alloc(void)
+{
+        stmt_empty *s      = alloc(sizeof(stmt_empty));
+        s->base.kind       = STMT_KIND_EMPTY;
+        s->base.accept     = accept_stmt_empty;
+        return s;
+}

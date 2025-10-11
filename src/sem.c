@@ -993,6 +993,13 @@ visit_stmt_embed(visitor *v, stmt_embed *s)
         return NULL;
 }
 
+static void *
+visit_stmt_empty(visitor *v, stmt_empty *s)
+{
+        NOOP(v, s);
+        return NULL;
+}
+
 static visitor *
 sem_visitor_alloc(symtbl *tbl)
 {
@@ -1028,7 +1035,8 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_stmt_struct,
                 visit_stmt_module,
                 visit_stmt_import,
-                visit_stmt_embed
+                visit_stmt_embed,
+                visit_stmt_empty
         );
 }
 

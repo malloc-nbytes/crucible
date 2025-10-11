@@ -820,6 +820,9 @@ parse_stmt(parser_context *ctx)
                 s = (stmt *)parse_stmt_block(ctx);
                 s->loc = loc;
                 return s;
+        } else if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_SEMICOLON) {
+                lexer_discard(ctx->l); // ;
+                return (stmt *)stmt_empty_alloc();
         }
 
         s = (stmt *)parse_stmt_expr(ctx);
