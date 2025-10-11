@@ -128,6 +128,7 @@ typedef struct {
 typedef struct {
         expr base;
         expr_array exprs;
+        int zeroed;
 
         int stack_offset_base; // resolved in semantic analysis
 } expr_arrayinit;
@@ -296,7 +297,7 @@ expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
 expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
 expr_namespace *expr_namespace_alloc(const token *namespace, expr *e);
-expr_arrayinit *expr_arrayinit_alloc(expr_array exprs);
+expr_arrayinit *expr_arrayinit_alloc(expr_array exprs, int zeroed);
 expr_index *expr_index_alloc(expr *lhs, expr *idx);
 expr_character_literal *expr_character_literal_alloc(const token *c);
 expr_cast *expr_cast_alloc(type *to, expr *rhs);
