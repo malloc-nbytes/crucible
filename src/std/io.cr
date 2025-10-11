@@ -10,7 +10,7 @@ import std.string;
 
 export proc echo(msg: u8*): void
 {
-        let sz: size_t = string::cstrlen(msg);
+        let sz: size_t = string::len(msg);
 
         embed {
                 "mov rax, 1",
@@ -29,7 +29,7 @@ export proc echoln(msg: u8*): void
 
 export proc echof(fmt: u8*, s: u8*): void
 {
-        let buf: u8* = (u8*)cstdlib::malloc(1);
+        let buf: u8*    = (u8*)cstdlib::malloc(1);
         let len: size_t = 0;
         let cap: size_t = 1;
 
