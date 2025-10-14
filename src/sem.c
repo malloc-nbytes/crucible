@@ -106,7 +106,7 @@ coerce_integer_literal(symtbl    *tbl,
 
         if (e->type->kind == to) return;
 
-        if (e->type->kind == TYPE_KIND_NUMBER) {
+        if (e->type->kind <= TYPE_KIND_NUMBER) {
                 // TODO: Write custom free() for each type
                 free(e->type);
                 e->type = (type *)type_sizet_alloc();
@@ -116,21 +116,6 @@ coerce_integer_literal(symtbl    *tbl,
         pusherr(tbl, e->loc, "could not coerce type `%s` to type `%s`",
                 type_to_cstr(e->type), type_kind_to_cstr(to));
 }
-
-/* static void */
-/* coerce(type **decl, type **actual) */
-/* { */
-/*         if ((*decl)->kind == TYPE_KIND_I8 && (*actual)->kind == TYPE_KIND_U8) { */
-/*                 free(*actual); */
-/*                 *actual = *decl; */
-/*         } */
-
-/*         if ((*decl)->kind == TYPE_KIND_U8 && (*actual)->kind == TYPE_KIND_I8) { */
-/*                 free(*actual); */
-/*                 *actual = *decl; */
-/*         } */
-
-/* } */
 
 static type *
 binop(symtbl      *tbl,
@@ -215,8 +200,12 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
 static void *
 visit_expr_integer_literal(visitor *v, expr_integer_literal *e)
 {
-        NOOP(v);
-        ((expr *)e)->type = (type *)type_number_alloc();
+        symtbl *tbl = (symtbl *)v->context;
+        if (tbl->expty) {
+                ((expr *)e)->type = tbl->expty;
+        } else {
+                ((expr *)e)->type = (type *)type_number_alloc();
+        }
         return NULL;
 }
 
@@ -589,7 +578,17 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 return NULL;
         }
 
-        s->e->accept(s->e, v);
+        if (s->type->kind != TYPE_KIND_PTR) {
+                // Doing this does *not* work for pointer
+                // arithmetic i.e.,
+                //   let p1: i32* = null;
+                //   let p2: i32* = p1-1;
+                tbl->expty = type_get_lowest(s->type);
+                s->e->accept(s->e, v);
+                tbl->expty = NULL;
+        } else {
+                s->e->accept(s->e, v);
+        }
 
         sym *sym = sym_alloc(tbl, s->id->lx, s->type, 0);
 
@@ -1076,6 +1075,7 @@ sem_analysis(program *p)
         tbl->imports.cap    = 0;
         tbl->context_switch = 0;
         tbl->export_syms    = dyn_array_empty(sym_array);
+        tbl->expty          = NULL;
 
         // Need to immediately add a scope for global scope.
         dyn_array_append(tbl->scope, smap_create(NULL));

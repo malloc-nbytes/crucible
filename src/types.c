@@ -317,3 +317,14 @@ type_is_unsigned(const type *t)
                 || k == TYPE_KIND_U32
                 || k == TYPE_KIND_U64;
 }
+
+type *
+type_get_lowest(type *t)
+{
+        if (t->kind == TYPE_KIND_PTR) {
+                return type_get_lowest(((type_ptr *)t)->to);
+        } else if (t->kind == TYPE_KIND_ARRAY) {
+                return type_get_lowest(((type_array *)t)->elemty);
+        }
+        return t;
+}

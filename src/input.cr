@@ -1,28 +1,12 @@
 module main where
 
+import std.binds.c.stdlib;
 import std.binds.c.stdio;
-import std.bytes;
 
-export proc atoi(s: u8*): i32
+proc f(p: i32*, n: size_t): i32
 {
-        let result: i32 = 0;
-        let sign: i32 = 1;
-
-        while (*s == ' ') s += 1;
-
-        if (*s == '-') {
-                sign = -1;
-                s += 1;
-        } else if (*s == '+') {
-                s += 1;
-        }
-
-        while (bytes::isdigit(*s)) {
-                result = result * 10 + (i32)(*s - '0');
-                s += 1;
-        }
-
-        return sign * result;
+        let p2: i32* = p-1;
+        return *p2;
 }
 
 export proc _start(void): !

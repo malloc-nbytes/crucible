@@ -119,5 +119,6 @@ int type_is_compat(type **t1, type **t2);
 int type_to_int(const type *t);
 const char *type_kind_to_cstr(type_kind t);
 int type_is_unsigned(const type *t);
+type *type_get_lowest(type *t);
 
 #endif // TYPES_H_INCLUDED

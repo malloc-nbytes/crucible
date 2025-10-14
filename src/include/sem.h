@@ -44,6 +44,8 @@ typedef struct symtbl {
         int context_switch;
 
         sym_array export_syms;
+
+        type *expty; // The expected type to convert integer literals to.
 } symtbl;
 
 symtbl *sem_analysis(program *p);
