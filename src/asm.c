@@ -175,7 +175,6 @@ get_reg_from_size(const char *reg, int sz)
         for (size_t i = 0; i < g_regs_r; ++i) {
                 for (size_t j = 0; j < g_regs_c; ++j) {
                         if (!strcmp(REGAT(i, j, g_regs), reg)) {
-                                // Found the register; return the register of the requested size in the same family
                                 switch (sz) {
                                 case 8: return REGAT(i, 0, g_regs); // 64-bit (e.g., rax, rcx)
                                 case 4: return REGAT(i, 1, g_regs); // 32-bit (e.g., eax, ecx)
@@ -594,71 +593,81 @@ visit_expr_binary(visitor *v, expr_bin *e)
                         take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", 1", NULL), 1);
                         take_txt(ctx, forge_cstr_builder(lbl_done, ":", NULL), 1);
                         free(lbl_true);
-free(lbl_done);
-                    free_reg(rhs_regi);
-                    free_reg_literal(v2);
-                    break;
-            }
-            default:
-                    forge_err_wargs("unimplemented binop `%s`", e->op->lx);
-            }
-            free_reg(lhs_regi);
-            return reg;
-    }
+                        free(lbl_done);
+                        free_reg(rhs_regi);
+                        free_reg_literal(v2);
+                        break;
+                }
+                default:
+                        forge_err_wargs("unimplemented binop `%s`", e->op->lx);
+                }
+                free_reg(lhs_regi);
+                return reg;
+        }
+        // Arithmetic operations
+        const char *spec = szspec(e->lhs->type->sz);
+        char *v1 = e->lhs->accept(e->lhs, v);
 
-    // Arithmetic operations
-    const char *spec = szspec(e->lhs->type->sz);
-    char *v1 = e->lhs->accept(e->lhs, v);
+        int regi = alloc_reg(e->lhs->type->sz);
+        char *reg = g_regs[regi];
 
-    int regi = alloc_reg(e->lhs->type->sz);
-    char *reg = g_regs[regi];
+        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v1, NULL), 1);
+        free_reg_literal(v1);
 
-    take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", ", v1, NULL), 1);
-    free_reg_literal(v1);
+        char *v2 = e->rhs->accept(e->rhs, v);
 
-    char *v2 = NULL;
+        switch (e->op->ty) {
+        case TOKEN_TYPE_PLUS:
+                take_txt(ctx, forge_cstr_builder("add ", spec, " ", reg, ", ", v2, NULL), 1);
+                break;
+        case TOKEN_TYPE_MINUS:
+                take_txt(ctx, forge_cstr_builder("sub ", spec, " ", reg, ", ", v2, NULL), 1);
+                break;
+        case TOKEN_TYPE_ASTERISK:
+                if (e->lhs->type->sz == 1) {
+                        // Special case for 8-bit multiplication
+                        int rhs_regi = alloc_reg(8);
+                        char *rhs_reg = g_regs[rhs_regi];
+                        // Zero-extend to rax
+                        take_txt(ctx, forge_cstr_builder("movzx rax, ", spec, " ", reg, NULL), 1);
+                        // Zero-extend v2 to rcx
+                        take_txt(ctx, forge_cstr_builder("movzx ", rhs_reg, ", ", spec, " ", v2, NULL), 1);
+                        // Multiply rax by rcx, result in rax
+                        take_txt(ctx, forge_cstr_builder("mul ", rhs_reg, NULL), 1);
+                        // Move low byte to reg
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", al", NULL), 1);
+                        free_reg(rhs_regi);
+                } else {
+                        take_txt(ctx, forge_cstr_builder("imul ", reg, ", ", v2, NULL), 1);
+                }
+                break;
+        case TOKEN_TYPE_FORWARDSLASH: {
+                write_txt(ctx, "xor rdx, rdx", 1);
+                take_txt(ctx, forge_cstr_builder("mov rax, ", v1, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rax", NULL), 1);
+                break;
+        }
+        case TOKEN_TYPE_PERCENT: {
+                write_txt(ctx, "xor rdx, rdx", 1);
+                take_txt(ctx, forge_cstr_builder("mov rax, ", v1, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
+                take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rdx", NULL), 1);
+                break;
+        }
+        default:
+                forge_err_wargs("unimplemented binop `%s`", e->op->lx);
+        }
 
-    switch (e->op->ty) {
-    case TOKEN_TYPE_PLUS:
-            v2 = e->rhs->accept(e->rhs, v);
-            take_txt(ctx, forge_cstr_builder("add ", spec, " ", reg, ", ", v2, NULL), 1);
-            break;
-    case TOKEN_TYPE_MINUS:
-            v2 = e->rhs->accept(e->rhs, v);
-            take_txt(ctx, forge_cstr_builder("sub ", spec, " ", reg, ", ", v2, NULL), 1);
-            break;
-    case TOKEN_TYPE_ASTERISK:
-            v2 = e->rhs->accept(e->rhs, v);
-            take_txt(ctx, forge_cstr_builder("imul ", spec, " ", reg, ", ", v2, NULL), 1);
-            break;
-    case TOKEN_TYPE_FORWARDSLASH: {
-            v2 = e->rhs->accept(e->rhs, v);
-            write_txt(ctx, "xor rdx, rdx", 1);
-            take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
-            take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
-            take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rax", NULL), 1);
-            break;
-    }
-    case TOKEN_TYPE_PERCENT: {
-            v2 = e->rhs->accept(e->rhs, v);
-            write_txt(ctx, "xor rdx, rdx", 1);
-            take_txt(ctx, forge_cstr_builder("mov ", spec, " rax, ", v1, NULL), 1);
-            take_txt(ctx, forge_cstr_builder("idiv ", spec, " ", v2, NULL), 1);
-            take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", rdx", NULL), 1);
-            break;
-    }
-    default:
-            forge_err_wargs("unimplemented binop `%s`", e->op->lx);
-    }
-
-    free_reg_literal(v2);
-    return reg;
+        free_reg_literal(v2);
+        return reg;
 }
 
 static void *
 visit_expr_identifier(visitor *v, expr_identifier *e)
 {
         asm_context *ctx = (asm_context *)v->context;
+
 
         assert(e->resolved);
 

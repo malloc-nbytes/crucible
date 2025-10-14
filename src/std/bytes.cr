@@ -50,25 +50,24 @@ export proc isalnum(c: u8): bool
         isdigit(c) || isalpha(c);
 }
 
--- export proc atoi(s: u8*): i32
--- {
---         let result: i32 = 0;
---         let sign: i32 = 1;
+export proc atoi(s: u8*): i32
+{
+        let result: i32 = 0;
+        let sign: i32 = 1;
 
---         while (*s == ' ') s += 1;
+        while (*s == ' ') s += 1;
 
---         if (*s == '-') {
---                 sign = -1;
---                 s += 1;
---         } else if (*s == '+') {
---                 s += 1;
---         }
+        if (*s == '-') {
+                sign = -1;
+                s += 1;
+        } else if (*s == '+') {
+                s += 1;
+        }
 
---         while (isdigit(*s)) {
---                 result = (u8)result * 10 + (*s - '0');
---                 s += 1;
---         }
+        while (isdigit(*s)) {
+                result = result * 10 + (i32)(*s - '0');
+                s += 1;
+        }
 
---         return sign * result;
--- }
-
+        return sign * result;
+}
