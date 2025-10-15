@@ -16,6 +16,31 @@ not_ignorable(int c)
         return !is_ignorable(c);
 }
 
+static char *
+lexer_as_cstr(lexer  *l,
+              char   *src,
+              size_t  fp_n)
+{
+        size_t cap = fp_n;
+        size_t len = 0;
+
+        while (l->hd) {
+                const char *ln = l->hd->lx;
+                for (size_t i = 0; ln[i]; ++i) {
+                        if (len >= cap) {
+                                cap *= 2;
+                                src = (char *)realloc((void *)src, cap);
+                        }
+                        src[len++] = ln[i];
+                }
+                l->hd = l->hd->next;
+        }
+
+        memset(src+len, 0, cap);
+
+        return src;
+}
+
 char *
 preproc(const char *fp)
 {
@@ -24,6 +49,8 @@ preproc(const char *fp)
                 .tl = NULL,
                 .src_filepath = fp,
         };
+
+        smap macros = smap_create(NULL);
 
         char *src = forge_io_read_file_to_cstr(fp);
         size_t i = 0, c = 1, r = 1;
@@ -42,18 +69,15 @@ preproc(const char *fp)
                                 if (isalpha(ch) || ch == '_') {
                                         id_n = consume_while(src+i+len+1, is_ident);
                                         id = token_alloc(src+i+len+1, id_n, TOKEN_TYPE_IDENTIFIER, r, c, fp);
-                                        lexer_append(&l, t);
                                 } else {
                                         forge_err("expected identifier after `macro`");
                                 }
 
-                                lexer_append(&l, t);
-                                lexer_append(&l, id);
                                 i += len+1+id_n;
                                 c += len+1+id_n;
 
                                 token *hd = NULL, *tl = NULL;
-
+                                char *macro_id = id->lx;
 #define APPEND(t)                                                       \
                                 do {                                    \
                                         if (!hd && !tl) {               \
@@ -70,6 +94,8 @@ preproc(const char *fp)
                                                 id_n = consume_while(src+i, is_ident);
                                                 id = token_alloc(src+i, id_n, TOKEN_TYPE_IDENTIFIER, r, c, fp);
                                                 if (!strcmp(id->lx, KWD_END)) {
+                                                        smap_insert(&macros, macro_id, hd);
+                                                        i += id_n, c += id_n;
                                                         break;
                                                 } else {
                                                         i += id_n, c += id_n;
@@ -92,6 +118,17 @@ preproc(const char *fp)
                                 }
 #undef APPEND
 
+                        } else if (smap_has(&macros, t->lx)) {
+                                token *body = (token *)smap_get(&macros, t->lx);
+                                while (body) {
+                                        lexer_append(&l, body);
+                                        body = body->next;
+                                }
+                                i += len;
+                                c += len;
+                        } else if (!strcmp(KWD_END, t->lx)) {
+                                i += len;
+                                c += len;
                         } else {
                                 i += len;
                                 c += len;
@@ -131,7 +168,8 @@ preproc(const char *fp)
 
         free(src);
 
-        lexer_dump(&l);
+        //lexer_dump(&l);
 
-        return NULL;
+        char *res = lexer_as_cstr(&l, src, i);
+        return res;
 }
