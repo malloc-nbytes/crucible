@@ -2,14 +2,15 @@ module main where
 
 import std.binds.c.stdio;
 
-macro F(a)
-        if (a == 0) { printf("a is 0\n"); }
-        else        { printf("a is something else\n"); }
+macro F(a, b)
+cstdio::printf("here: %d\n", a+b);
 end
 
 export proc _start(void): !
 {
-        F(1);
+        let x: i32 = 1;
+
+        F(x, 1);
 
         exit;
 }
