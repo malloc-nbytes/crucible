@@ -1,21 +1,15 @@
-;; INSTALLATION
-;;
-;; You can either just evaluate this buffer while in Emacs
-;; or put it in your ~/.emacs.d/init.el (or a different file and load it).
-
 ;; Crucible mode
 (defconst crucible-mode-syntax-table
   (with-syntax-table (copy-syntax-table)
     (modify-syntax-entry ?- ". 124b")
     (modify-syntax-entry ?* ". 23")
     (modify-syntax-entry ?\n "> b")
-    (modify-syntax-entry ?' "\"")
+    (modify-syntax-entry ?' "\"") ; Single quote for character literals
+    (modify-syntax-entry ?\" "\"") ; Double quote for string literals
     (modify-syntax-entry ?' ".")
     (syntax-table))
   "Syntax table for `crucible-mode'.")
 
-;; Function taken from:
-;;  https://www.omarpolo.com/post/writing-a-major-mode.html
 (defun crucible-indent-line ()
   "Indent current line."
   (let (indent
@@ -41,20 +35,26 @@
       (move-end-of-line nil))))
 
 (eval-and-compile
+  (defconst crucible-types
+    '("void" "i8" "i16" "i32" "i64" "u8" "u16" "u32" "u64" "bool" "str" "size_t")
+    "Type keywords for Crucible mode.")
   (defconst crucible-keywords
-    '("if" "else" "while" "let"
-      "void" "i8" "i16" "i32" "i64" "u8" "u16" "u32" "u64" "bool" "str" "size_t"
-      "for" "proc" "return" "mut" "break" "macro" "exit" "extern" "enum"
-      "struct" "import" "ref" "end" "export" "embed" "true" "false"
-      "def" "in" "null" "type" "module" "where" "continue" "cast")))
+    '("if" "else" "while" "let" "for" "proc" "return" "mut" "break" "macro" "exit"
+      "extern" "enum" "struct" "import" "ref" "end" "export" "embed" "true" "false"
+      "def" "in" "null" "type" "module" "where" "continue" "cast")
+    "Non-type keywords for Crucible mode."))
 
 (defconst crucible-highlights
-  `((,(concat "\\<" (regexp-opt crucible-keywords) "\\>")
+  `((,(concat "\\<" (regexp-opt crucible-types) "\\>")
+      . font-lock-type-face)
+    (,(concat "\\<" (regexp-opt crucible-keywords) "\\>")
       . font-lock-keyword-face)
     (,(concat "<" (regexp-opt crucible-keywords) ">")
       . font-lock-keyword-face)
+    (,(rx (group "\"" (zero-or-more (not (any "\"" "\\"))) (zero-or-one "\\\"") "\""))
+      . font-lock-string-face) ; String literals
     (,(rx (group "'" (any "a-zA-Z0-9") "'"))
-      . font-lock-constant-face)
+      . font-lock-string-face) ; Character literals
     (,(rx (group "--" (zero-or-more (not (any "\n"))))
           (group-n 1 (zero-or-more (any "\n"))))
      (1 font-lock-comment-delimiter-face)
@@ -75,4 +75,3 @@
 (add-to-list 'auto-mode-alist '("\\.cr\\'" . crucible-mode))
 
 (provide 'crucible-mode)
-;; End Crucible mode
