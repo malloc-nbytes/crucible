@@ -46,12 +46,22 @@
       "void" "i8" "i16" "i32" "i64" "u8" "u16" "u32" "u64" "bool" "str" "size_t"
       "for" "proc" "return" "mut" "break" "macro" "exit" "extern" "enum"
       "struct" "import" "ref" "end" "export" "embed" "true" "false"
-      "def" "in" "null" "type" "module" "where" "continue")))
+      "def" "in" "null" "type" "module" "where" "continue" "cast")))
+
+;; (defconst crucible-highlights
+;;   `((,(regexp-opt crucible-keywords 'symbols) . font-lock-keyword-face)
+;;     (,(rx (group "--" (zero-or-more (not (any "\n"))))
+;;          (group-n 1 (zero-or-more (any "\n"))))
+;;      (1 font-lock-comment-delimiter-face)
+;;      (2 font-lock-comment-face nil t))))
 
 (defconst crucible-highlights
-  `((,(regexp-opt crucible-keywords 'symbols) . font-lock-keyword-face)
+  `((,(concat "\\<" (regexp-opt crucible-keywords) "\\>")
+      . font-lock-keyword-face)
+    (,(concat "<" (regexp-opt crucible-keywords) ">")
+      . font-lock-keyword-face)
     (,(rx (group "--" (zero-or-more (not (any "\n"))))
-         (group-n 1 (zero-or-more (any "\n"))))
+          (group-n 1 (zero-or-more (any "\n"))))
      (1 font-lock-comment-delimiter-face)
      (2 font-lock-comment-face nil t))))
 

@@ -41,6 +41,8 @@
 
 #define KWD_EMBED  "embed"
 
+#define KWD_CAST "cast"
+
 #define KWDS {                                  \
                 KWD_I8,                         \
                 KWD_I16,                        \
@@ -73,6 +75,7 @@
                 KWD_FALSE,                      \
                 KWD_NULL,                       \
                 KWD_SIZET,                      \
+                KWD_CAST,                       \
 }
 
 #define KWD_TYPES {                             \

@@ -286,7 +286,7 @@ parse_primary_expr(parser_context *ctx)
                                 lexer_discard(ctx->l); // (
                                 type *ty = parse_type(ctx);
                                 (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
-                                left = (expr *)expr_cast_alloc(ty, parse_expr(ctx));
+                                left = (expr *)expr_cast_alloc(ty, parse_primary_expr(ctx));
                         } else {
                                 // Math expression
                                 lexer_discard(ctx->l); // (
@@ -306,6 +306,14 @@ parse_primary_expr(parser_context *ctx)
                                 left->loc = kw->loc;
                         } else if (!strcmp(kw->lx, KWD_NULL)) {
                                 left = (expr *)expr_null_alloc();
+                                left->loc = hd->loc;
+                        } else if (!strcmp(kw->lx, KWD_CAST)) {
+                                (void)expect(ctx, TOKEN_TYPE_LESSTHAN);
+                                type *ty = parse_type(ctx);
+                                (void)expect(ctx, TOKEN_TYPE_GREATERTHAN);
+                                (void)expect(ctx, TOKEN_TYPE_LEFT_PARENTHESIS);
+                                left = (expr *)expr_cast_alloc(ty, parse_expr(ctx));
+                                (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
                                 left->loc = hd->loc;
                         } else {
                                 return left;
@@ -803,6 +811,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_import(ctx);
         } else if (!strcmp(hd->lx, KWD_EMBED)) {
                 return (stmt *)parse_stmt_embed(ctx);
+        } else {
+                assert(0);
         }
 
         assert(0 && "todo");
