@@ -10,6 +10,8 @@
 #include <string.h>
 #include <assert.h>
 
+smap g_macros = {0};
+
 static int
 not_ignorable(int c)
 {
@@ -41,6 +43,64 @@ lexer_as_cstr(lexer  *l,
         return src;
 }
 
+#define APPEND(t)                               \
+        do {                                    \
+                if (!hd && !tl) {               \
+                        hd = tl = t;            \
+                } else {                        \
+                        token *tmp = tl;        \
+                        tl = t;                 \
+                        tmp->next = t;          \
+                }                               \
+        } while (0)
+size_t
+handle_macro(char       *src,
+             size_t     *c,
+             size_t     *r,
+             const char *fp)
+{
+        assert(*src == ' ');
+        ++src;
+
+        size_t macro_id_n = consume_while(src, is_ident);
+        char *macro_id = strndup(src, macro_id_n);
+        src += macro_id_n;
+
+        token *hd = NULL, *tl = NULL;
+        size_t i = macro_id_n;
+
+        while (src[i]) {
+                if (isalpha(src[i])) {
+                        size_t alpha_n = consume_while(src+i, is_ident);
+                        token *alpha = token_alloc(src+i, alpha_n, TOKEN_TYPE_IDENTIFIER, *r, *c, fp);
+                        if (!strcmp(alpha->lx, KWD_END)) {
+                                smap_insert(&g_macros, macro_id, hd);
+                                i += alpha_n+2, c += alpha_n+2;
+                                break;
+                        } else {
+                                i += alpha_n, c += alpha_n;
+                                APPEND(alpha);
+                        }
+                } else if (src[i] == ' ' || src[i] == '\t' || src[i] == '\r') {
+                        token *other = token_alloc(src+i, 1, TOKEN_TYPE_OTHER, *r, *c, fp);
+                        i += 1, *c += 1;
+                        APPEND(other);
+                } else if (src[i] == '\n') {
+                        token *other = token_alloc(src+i, 1, TOKEN_TYPE_OTHER, *r, *c, fp);
+                        i += 1, *c = 1, *r += 1;
+                        APPEND(other);
+                } else {
+                        size_t ig_n = consume_while(src+i, not_ignorable);
+                        token *other = token_alloc(src+i, ig_n, TOKEN_TYPE_OTHER, *r, *c, fp);
+                        i += ig_n, *c += ig_n;
+                        APPEND(other);
+                }
+        }
+
+        return i;
+}
+#undef APPEND
+
 char *
 preproc(const char *fp)
 {
@@ -50,7 +110,7 @@ preproc(const char *fp)
                 .src_filepath = fp,
         };
 
-        smap macros = smap_create(NULL);
+        g_macros = smap_create(NULL);
 
         char *src = forge_io_read_file_to_cstr(fp);
         size_t i = 0, c = 1, r = 1;
@@ -60,66 +120,10 @@ preproc(const char *fp)
                 if (ch == '_' || isalpha(ch)) {
                         size_t len = consume_while(src+i, is_ident);
                         token *t = token_alloc(src+i, len, TOKEN_TYPE_IDENTIFIER, r, c, fp);
-
                         if (!strcmp(t->lx, KWD_MACRO)) {
-                                t->ty = TOKEN_TYPE_KEYWORD;
-                                ch = src[i+len+1];
-                                token *id = NULL;
-                                size_t id_n = 0;
-                                if (isalpha(ch) || ch == '_') {
-                                        id_n = consume_while(src+i+len+1, is_ident);
-                                        id = token_alloc(src+i+len+1, id_n, TOKEN_TYPE_IDENTIFIER, r, c, fp);
-                                } else {
-                                        forge_err("expected identifier after `macro`");
-                                }
-
-                                i += len+1+id_n;
-                                c += len+1+id_n;
-
-                                token *hd = NULL, *tl = NULL;
-                                char *macro_id = id->lx;
-#define APPEND(t)                                                       \
-                                do {                                    \
-                                        if (!hd && !tl) {               \
-                                                hd = tl = t;            \
-                                        } else {                        \
-                                                token *tmp = tl;        \
-                                                tl = t;                 \
-                                                tmp->next = t;          \
-                                        }                               \
-                                } while (0)
-
-                                while (src[i]) {
-                                        if (isalpha(src[i])) {
-                                                id_n = consume_while(src+i, is_ident);
-                                                id = token_alloc(src+i, id_n, TOKEN_TYPE_IDENTIFIER, r, c, fp);
-                                                if (!strcmp(id->lx, KWD_END)) {
-                                                        smap_insert(&macros, macro_id, hd);
-                                                        i += id_n, c += id_n;
-                                                        break;
-                                                } else {
-                                                        i += id_n, c += id_n;
-                                                        APPEND(id);
-                                                }
-                                        } else if (src[i] == ' ' || src[i] == '\t' || src[i] == '\r') {
-                                                token *other = token_alloc(src+i, 1, TOKEN_TYPE_OTHER, r, c, fp);
-                                                i += 1, c += 1;
-                                                APPEND(other);
-                                        } else if (src[i] == '\n') {
-                                                token *other = token_alloc(src+i, 1, TOKEN_TYPE_OTHER, r, c, fp);
-                                                i += 1, c = 1, r += 1;
-                                                APPEND(other);
-                                        } else {
-                                                size_t ig_n = consume_while(src+i, not_ignorable);
-                                                token *other = token_alloc(src+i, ig_n, TOKEN_TYPE_OTHER, r, c, fp);
-                                                i += ig_n, c += ig_n;
-                                                APPEND(other);
-                                        }
-                                }
-#undef APPEND
-
-                        } else if (smap_has(&macros, t->lx)) {
-                                token *body = (token *)smap_get(&macros, t->lx);
+                                i += len + handle_macro(src+i+len, &c, &r, fp);
+                        } else if (smap_has(&g_macros, t->lx)) {
+                                token *body = (token *)smap_get(&g_macros, t->lx);
                                 while (body) {
                                         lexer_append(&l, body);
                                         body = body->next;
@@ -130,9 +134,9 @@ preproc(const char *fp)
                                 i += len;
                                 c += len;
                         } else {
+                                lexer_append(&l, t);
                                 i += len;
                                 c += len;
-                                lexer_append(&l, t);
                         }
                 } else if (ch == '(') {
                         token *t = token_alloc(src+i, 1, TOKEN_TYPE_LEFT_PARENTHESIS, r, c, fp);
@@ -171,5 +175,6 @@ preproc(const char *fp)
         //lexer_dump(&l);
 
         char *res = lexer_as_cstr(&l, src, i);
+        printf("%s\n", res);
         return res;
 }
