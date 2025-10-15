@@ -4,6 +4,7 @@
 #include "sem.h"
 #include "asm.h"
 #include "visitor.h"
+#include "preproc.h"
 
 #include <forge/arg.h>
 #include <forge/err.h>
@@ -137,7 +138,9 @@ main(int argc, char **argv)
                 g_config.outname = "a.out";
         }
 
-        char *src = forge_io_read_file_to_cstr(g_config.filepath);
+        //char *src = forge_io_read_file_to_cstr(g_config.filepath);
+        char *src = preproc(g_config.filepath);
+        assert(0);
         if (!src) {
                 forge_err_wargs("could not read filepath `%s`", g_config.filepath);
         }

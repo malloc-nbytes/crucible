@@ -67,6 +67,13 @@ typedef enum {
         TOKEN_TYPE_DOUBLE_PIPE,
 
         TOKEN_TYPE_BINOP_LEN,
+
+        // Only used in the preprocessor
+        TOKEN_TYPE_WHITESPACE,
+        TOKEN_TYPE_NEWLINE,
+        TOKEN_TYPE_TAB,
+        TOKEN_TYPE_CARRIAGE,
+        TOKEN_TYPE_OTHER,
 } token_type;
 
 typedef struct token {
@@ -96,5 +103,13 @@ token *lexer_peek(const lexer *l, size_t peek);
 token *lexer_next(lexer *l);
 void lexer_discard(lexer *l);
 const char *token_type_to_cstr(token_type ty);
+void lexer_append(lexer *l, token *t);
+size_t consume_while(const char *st, int (pred)(int));
+int is_ignorable(int c);
+int is_ident(int c);
+int not_double_quote(int c);
+int not_eol(int c);
+int issym(int c);
+token_type *determine_sym(const char *s, size_t *len);
 
 #endif // LEXER_H_INCLUDED

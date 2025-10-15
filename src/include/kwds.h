@@ -43,6 +43,9 @@
 
 #define KWD_CAST "cast"
 
+#define KWD_MACRO "macro"
+#define KWD_END "end"
+
 #define KWDS {                                  \
                 KWD_I8,                         \
                 KWD_I16,                        \
@@ -76,6 +79,8 @@
                 KWD_NULL,                       \
                 KWD_SIZET,                      \
                 KWD_CAST,                       \
+                KWD_MACRO,                      \
+                KWD_END,                        \
 }
 
 #define KWD_TYPES {                             \

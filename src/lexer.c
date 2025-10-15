@@ -72,6 +72,11 @@ token_type_to_cstr(token_type ty)
         case TOKEN_TYPE_DOUBLE_PIPE:         return "TOKEN_TYPE_DOUBLE_PIPE";
         case TOKEN_TYPE_ELLIPSIS:            return "TOKEN_TYPE_ELLIPSIS";
         case TOKEN_TYPE_DOUBLE_COLON:        return "TOKEN_TYPE_DOUBLE_COLON";
+        case TOKEN_TYPE_WHITESPACE:          return "TOKEN_TYPE_WHITESPACE";
+        case TOKEN_TYPE_NEWLINE:             return "TOKEN_TYPE_NEWLINE";
+        case TOKEN_TYPE_TAB:                 return "TOKEN_TYPE_TAB";
+        case TOKEN_TYPE_CARRIAGE:            return "TOKEN_TYPE_CARRIAGE";
+        case TOKEN_TYPE_OTHER:               return "TOKEN_TYPE_OTHER";
         default: forge_err_wargs("token_type_to_cstr(): unknown token type `%d`", (int)ty);
         }
         return NULL; // unreachable
@@ -237,7 +242,7 @@ lexer_append(lexer *l, token *t)
         }
 }
 
-static size_t
+size_t
 consume_while(const char *st,
               int (pred)(int))
 {
@@ -251,11 +256,11 @@ consume_while(const char *st,
         return i;
 }
 
-static int is_ignorable(int c)        { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
-static int is_ident(int c)            { return isalnum(c) || c == '_'; }
-static int not_double_quote(int c)    { return c != '"'; }
-static int not_eol(int c)             { return c != '\n'; }
-static int issym(int c) {
+int is_ignorable(int c)        { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
+int is_ident(int c)            { return isalnum(c) || c == '_'; }
+int not_double_quote(int c)    { return c != '"'; }
+int not_eol(int c)             { return c != '\n'; }
+int issym(int c) {
         return !is_ident(c)
                 && !is_ignorable(c)
                 && c != '"'
