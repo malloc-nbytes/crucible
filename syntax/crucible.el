@@ -48,18 +48,13 @@
       "struct" "import" "ref" "end" "export" "embed" "true" "false"
       "def" "in" "null" "type" "module" "where" "continue" "cast")))
 
-;; (defconst crucible-highlights
-;;   `((,(regexp-opt crucible-keywords 'symbols) . font-lock-keyword-face)
-;;     (,(rx (group "--" (zero-or-more (not (any "\n"))))
-;;          (group-n 1 (zero-or-more (any "\n"))))
-;;      (1 font-lock-comment-delimiter-face)
-;;      (2 font-lock-comment-face nil t))))
-
 (defconst crucible-highlights
   `((,(concat "\\<" (regexp-opt crucible-keywords) "\\>")
       . font-lock-keyword-face)
     (,(concat "<" (regexp-opt crucible-keywords) ">")
       . font-lock-keyword-face)
+    (,(rx (group "'" (any "a-zA-Z0-9") "'"))
+      . font-lock-constant-face)
     (,(rx (group "--" (zero-or-more (not (any "\n"))))
           (group-n 1 (zero-or-more (any "\n"))))
      (1 font-lock-comment-delimiter-face)
