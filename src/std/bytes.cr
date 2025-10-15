@@ -9,13 +9,6 @@ export proc length(s: u8*): size_t
         return i;
 }
 
-export proc copy(dst: u8*, src: u8*): void
-{
-        for (let i: size_t = 0; src[i]; i += 1) {
-                dst[i] = src[i];
-        }
-}
-
 export proc cat(dst: u8*, src: u8*): void
 {
         while (*dst) dst += 1;
