@@ -144,7 +144,7 @@ main(int argc, char **argv)
                 forge_err_wargs("could not read filepath `%s`", g_config.filepath);
         }
 
-        lexer    l      = lexer_create(src, g_config.filepath);
+        lexer    l      = lexer_create(src, g_config.filepath, 0x0);
         program  *p     = parser_create_program(&l);
         symtbl  *tbl    = sem_analysis(p);
 

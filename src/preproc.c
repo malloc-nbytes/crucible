@@ -9,6 +9,14 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
+#include <stdlib.h>
+
+typedef struct {
+        const char   *id;
+        token_array   params;
+        //token_array   body;
+        token *hd, *tl;
+} macro_content;
 
 smap g_macros = {0};
 
@@ -23,158 +31,161 @@ lexer_as_cstr(lexer  *l,
               char   *src,
               size_t  fp_n)
 {
+
         size_t cap = fp_n;
         size_t len = 0;
 
-        while (l->hd) {
-                const char *ln = l->hd->lx;
-                for (size_t i = 0; ln[i]; ++i) {
-                        if (len >= cap) {
-                                cap *= 2;
-                                src = (char *)realloc((void *)src, cap);
-                        }
-                        src[len++] = ln[i];
+#define APPEND(c)                                                       \
+        do {                                                            \
+                if (len >= cap) {                                       \
+                        cap *= 2;                                       \
+                        src = (char *)realloc((void *)src, cap);        \
+                }                                                       \
+                src[len++] = c;                                         \
+        } while (0)
+
+        while (l->hd && l->hd->ty != TOKEN_TYPE_EOF) {
+                const token *tok = l->hd;
+                if (tok->ty == TOKEN_TYPE_STRING_LITERAL)    APPEND('"');
+                if (tok->ty == TOKEN_TYPE_CHARACTER_LITERAL) APPEND('\'');
+                for (size_t i = 0; tok->lx[i]; ++i) {
+                        APPEND(tok->lx[i]);
                 }
+                if (tok->ty == TOKEN_TYPE_STRING_LITERAL)    APPEND('"');
+                if (tok->ty == TOKEN_TYPE_CHARACTER_LITERAL) APPEND('\'');
                 l->hd = l->hd->next;
         }
 
-        memset(src+len, 0, cap);
+        APPEND('\0');
+#undef APPEND
 
         return src;
 }
 
-#define APPEND(t)                               \
-        do {                                    \
-                if (!hd && !tl) {               \
-                        hd = tl = t;            \
-                } else {                        \
-                        token *tmp = tl;        \
-                        tl = t;                 \
-                        tmp->next = t;          \
-                }                               \
-        } while (0)
-size_t
-handle_macro(char       *src,
-             size_t     *c,
-             size_t     *r,
-             const char *fp)
+static void
+free_macro_content(void *mc)
 {
-        assert(*src == ' ');
-        ++src;
+        macro_content *macro = (macro_content *)mc;
+        free((void *)macro->id);
+        for (size_t i = 0; i < macro->params.len; ++i) {
+                token *t = macro->params.data[i];
+                free(t->lx);
+                free(t);
+        }
+        dyn_array_free(macro->params);
+        /* for (size_t i = 0; i < macro->body.len; ++i) { */
+        /*         token *t = macro->body.data[i]; */
+        /*         free(t->lx); */
+        /*         free(t); */
+        /* } */
+        //dyn_array_free(macro->body);
+        free(macro);
+}
 
-        size_t macro_id_n = consume_while(src, is_ident);
-        char *macro_id = strndup(src, macro_id_n);
-        src += macro_id_n;
+static void
+process_macro_definition(lexer *l, token **it, macro_content *mc)
+{
+        mc->hd     = NULL;
+        mc->tl     = NULL;
 
-        token *hd = NULL, *tl = NULL;
-        size_t i = macro_id_n;
+#define APPEND(t) \
+        do { \
+                if (!mc->hd && !mc->tl) { \
+                        mc->hd = mc->tl = t; \
+                } else { \
+                        token *tmp = mc->tl; \
+                        mc->tl = t; \
+                        tmp->next = t; \
+                } \
+        } while (0)
 
-        while (src[i]) {
-                if (isalpha(src[i])) {
-                        size_t alpha_n = consume_while(src+i, is_ident);
-                        token *alpha = token_alloc(src+i, alpha_n, TOKEN_TYPE_IDENTIFIER, *r, *c, fp);
-                        if (!strcmp(alpha->lx, KWD_END)) {
-                                smap_insert(&g_macros, macro_id, hd);
-                                i += alpha_n+2, c += alpha_n+2;
-                                break;
-                        } else {
-                                i += alpha_n, c += alpha_n;
-                                APPEND(alpha);
-                        }
-                } else if (src[i] == ' ' || src[i] == '\t' || src[i] == '\r') {
-                        token *other = token_alloc(src+i, 1, TOKEN_TYPE_OTHER, *r, *c, fp);
-                        i += 1, *c += 1;
-                        APPEND(other);
-                } else if (src[i] == '\n') {
-                        token *other = token_alloc(src+i, 1, TOKEN_TYPE_OTHER, *r, *c, fp);
-                        i += 1, *c = 1, *r += 1;
-                        APPEND(other);
-                } else {
-                        size_t ig_n = consume_while(src+i, not_ignorable);
-                        token *other = token_alloc(src+i, ig_n, TOKEN_TYPE_OTHER, *r, *c, fp);
-                        i += ig_n, *c += ig_n;
-                        APPEND(other);
-                }
+        *it = (*it)->next; // macro
+
+        // Consume whitespace
+        while ((*it)->ty == TOKEN_TYPE_WHITESPACE || (*it)->ty == TOKEN_TYPE_TAB || (*it)->ty == TOKEN_TYPE_NEWLINE) {
+                *it = (*it)->next; // ' '
         }
 
-        return i;
-}
+        token *id = *it;
+        *it = (*it)->next; // id
+        token_array params = dyn_array_empty(token_array);
+        token_array body = dyn_array_empty(token_array);
+
+        if ((*it)->ty == TOKEN_TYPE_LEFT_PARENTHESIS) {
+                *it = (*it)->next; // (
+                while ((*it)->ty != TOKEN_TYPE_RIGHT_PARENTHESIS) {
+                        dyn_array_append(params, *it);
+                        *it = (*it)->next; // id
+                        if ((*it)->ty == TOKEN_TYPE_COMMA) {
+                                *it = (*it)->next; // ,
+                        } else {
+                                break;
+                        }
+                }
+                *it = (*it)->next; // )
+        }
+
+        while ((*it)->ty != TOKEN_TYPE_END) {
+                APPEND(*it);
+                *it = (*it)->next;
+        }
+        *it = (*it)->next; // end
+
+        mc->id     = strdup(id->lx);
+        mc->params = params;
+
+        smap_insert(&g_macros, mc->id, (void *)mc);
+
 #undef APPEND
+}
 
 char *
 preproc(const char *fp)
 {
-        lexer l = (lexer) {
-                .hd = NULL,
-                .tl = NULL,
-                .src_filepath = fp,
-        };
+        char *src = forge_io_read_file_to_cstr(fp);
+        lexer l = lexer_create(src, fp, LEXER_TRACK_SPACES | LEXER_TRACK_NEWLINES | LEXER_TRACK_TABS);
+        free(src);
+        lexer output = (lexer){.hd = NULL, .tl = NULL, .src_filepath = fp};
+        token *it = l.hd;
 
         g_macros = smap_create(NULL);
 
-        char *src = forge_io_read_file_to_cstr(fp);
-        size_t i = 0, c = 1, r = 1;
-
-        while (src[i]) {
-                char ch = src[i];
-                if (ch == '_' || isalpha(ch)) {
-                        size_t len = consume_while(src+i, is_ident);
-                        token *t = token_alloc(src+i, len, TOKEN_TYPE_IDENTIFIER, r, c, fp);
-                        if (!strcmp(t->lx, KWD_MACRO)) {
-                                i += len + handle_macro(src+i+len, &c, &r, fp);
-                        } else if (smap_has(&g_macros, t->lx)) {
-                                token *body = (token *)smap_get(&g_macros, t->lx);
-                                while (body) {
-                                        lexer_append(&l, body);
-                                        body = body->next;
-                                }
-                                i += len;
-                                c += len;
-                        } else if (!strcmp(KWD_END, t->lx)) {
-                                i += len;
-                                c += len;
-                        } else {
-                                lexer_append(&l, t);
-                                i += len;
-                                c += len;
-                        }
-                } else if (ch == '(') {
-                        token *t = token_alloc(src+i, 1, TOKEN_TYPE_LEFT_PARENTHESIS, r, c, fp);
-                        lexer_append(&l, t);
-                        i += 1, c += 1;
-                } else if (ch == ')') {
-                        token *t = token_alloc(src+i, 1, TOKEN_TYPE_RIGHT_PARENTHESIS, r, c, fp);
-                        lexer_append(&l, t);
-                        i += 1, c += 1;
-                } else if (ch == ' ') {
-                        token *t = token_alloc(src+i, 1, TOKEN_TYPE_WHITESPACE, r, c, fp);
-                        lexer_append(&l, t);
-                        i += 1, c += 1;
-                } else if (ch == '\n') {
-                        token *t = token_alloc(src+i, 1, TOKEN_TYPE_NEWLINE, r, c, fp);
-                        lexer_append(&l, t);
-                        i += 1, c = 0, r += 1;
-                } else if (ch == '\t') {
-                        token *t = token_alloc(src+i, 1, TOKEN_TYPE_TAB, r, c, fp);
-                        lexer_append(&l, t);
-                        i += 1, c += 1;
-                } else if (ch == '\r') {
-                        token *t = token_alloc(src+i, 1, TOKEN_TYPE_TAB, r, c, fp);
-                        lexer_append(&l, t);
-                        i += 1, c += 1;
+        // First pass: collect macro definitions
+        while (it) {
+                if (it->ty == TOKEN_TYPE_MACRO) {
+                        macro_content *mc = (macro_content *)malloc(sizeof(macro_content));
+                        process_macro_definition(&l, &it, mc);
                 } else {
-                        size_t len = consume_while(src+i, not_ignorable);
-                        token *t = token_alloc(src+i, len, TOKEN_TYPE_OTHER, r, c, fp);
-                        lexer_append(&l, t);
-                        i += len, c += len;
+                        token *t = token_alloc(it->lx, strlen(it->lx), it->ty,
+                                               it->loc.r, it->loc.c, it->loc.fp);
+                        lexer_append(&output, t);
+                        it = it->next;
                 }
         }
 
-        free(src);
+        // Second pass: replace macro calls with macro defs.
+        it = output.hd;
+        token *prev = NULL;
+        while (it) {
+                if (it->ty == TOKEN_TYPE_IDENTIFIER && smap_has(&g_macros, it->lx)) {
+                        macro_content *mc = (macro_content *)smap_get(&g_macros, it->lx);
+                        prev->next = mc->hd;
+                        mc->tl->next = it->next;
+                        it = mc->hd;
+                }
+                prev = it;
+                it = it->next;
+        }
 
-        //lexer_dump(&l);
+        //lexer_dump(&output);
 
-        char *res = lexer_as_cstr(&l, src, i);
-        printf("%s\n", res);
-        return res;
+        // Convert final output to string
+        char *result = (char *)malloc(1024);
+        result = lexer_as_cstr(&output, result, 1024);
+
+        printf("%s\n", result);
+
+        return result;
+        //return NULL;
 }
+

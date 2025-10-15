@@ -77,6 +77,9 @@ token_type_to_cstr(token_type ty)
         case TOKEN_TYPE_TAB:                 return "TOKEN_TYPE_TAB";
         case TOKEN_TYPE_CARRIAGE:            return "TOKEN_TYPE_CARRIAGE";
         case TOKEN_TYPE_OTHER:               return "TOKEN_TYPE_OTHER";
+        case TOKEN_TYPE_MACRO:               return "TOKEN_TYPE_MACRO";
+        case TOKEN_TYPE_END:                 return "TOKEN_TYPE_END";
+
         default: forge_err_wargs("token_type_to_cstr(): unknown token type `%d`", (int)ty);
         }
         return NULL; // unreachable
@@ -332,7 +335,8 @@ lexer_discard(lexer *l)
 
 lexer
 lexer_create(const char *src,
-             const char *fp)
+             const char *fp,
+             uint32_t    config)
 {
         if (!smap_size(&g_syms)) {
                 init_syms();
@@ -356,11 +360,17 @@ lexer_create(const char *src,
                         i += len;
                         c += len;
                 } else if (ch == ' ') {
+                        if (config & LEXER_TRACK_SPACES)
+                                lexer_append(&l, token_alloc(src+i, 1, TOKEN_TYPE_WHITESPACE, r, c, fp));
                         ++i, ++c;
                 } else if (ch == '\n') {
+                        if (config & LEXER_TRACK_NEWLINES)
+                                lexer_append(&l, token_alloc(src+i, 1, TOKEN_TYPE_NEWLINE, r, c, fp));
                         c = 1;
                         ++r, ++i;
                 } else if (ch == '\t') {
+                        if (config & LEXER_TRACK_TABS)
+                                lexer_append(&l, token_alloc(src+i, 1, TOKEN_TYPE_TAB, r, c, fp));
                         ++c, ++i;
                 } else if (ch == '\r') {
                         c = 1;
@@ -382,7 +392,11 @@ lexer_create(const char *src,
                         size_t len = consume_while(src+i, is_ident);
 
                         token *t = token_alloc(src+i, len, TOKEN_TYPE_IDENTIFIER, r, c, fp);
-                        if (kwds_iskw(t->lx)) {
+                        if (!strcmp(t->lx, KWD_MACRO)) {
+                                t->ty = TOKEN_TYPE_MACRO;
+                        } else if (!strcmp(t->lx, KWD_END)) {
+                                t->ty = TOKEN_TYPE_END;
+                        } else if (kwds_iskw(t->lx)) {
                                 t->ty = TOKEN_TYPE_KEYWORD;
                         }
                         lexer_append(&l, t);

@@ -6,6 +6,11 @@
 #include <forge/array.h>
 
 #include <stddef.h>
+#include <stdint.h>
+
+#define LEXER_TRACK_SPACES   (1 << 0)
+#define LEXER_TRACK_TABS     (1 << 1)
+#define LEXER_TRACK_NEWLINES (1 << 2)
 
 typedef enum {
         TOKEN_TYPE_EOF,
@@ -74,6 +79,8 @@ typedef enum {
         TOKEN_TYPE_TAB,
         TOKEN_TYPE_CARRIAGE,
         TOKEN_TYPE_OTHER,
+        TOKEN_TYPE_MACRO,
+        TOKEN_TYPE_END,
 } token_type;
 
 typedef struct token {
@@ -91,7 +98,7 @@ typedef struct {
         const char *src_filepath;
 } lexer;
 
-lexer lexer_create(const char *src, const char *fp);
+lexer lexer_create(const char *src, const char *fp, uint32_t config);
 token *token_alloc(const char *st,
                    size_t      st_n,
                    token_type  ty,

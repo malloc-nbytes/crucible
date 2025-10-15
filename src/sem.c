@@ -956,7 +956,7 @@ visit_stmt_import(visitor *v, stmt_import *s)
         symtbl *tbl = (symtbl *)v->context;
 
         char    *src        = read_file_from_searchpaths(&s->filepath, &((stmt *)s)->loc);
-        lexer    l          = lexer_create(src, s->filepath);
+        lexer    l          = lexer_create(src, s->filepath, 0x0);
         program *p          = parser_create_program(&l);
         symtbl  *import_tbl = sem_analysis(p);
 
