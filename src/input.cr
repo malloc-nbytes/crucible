@@ -14,5 +14,7 @@ export proc _start(void): !
                 .y = 2,
         };
 
+        let copy: Point = p;
+
         exit;
 }

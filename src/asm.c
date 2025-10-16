@@ -668,25 +668,27 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
 {
         asm_context *ctx = (asm_context *)v->context;
 
-
         assert(e->resolved);
 
-        int regi = alloc_reg(e->resolved->ty->sz);
-        char *reg = g_regs[regi];
+        if (e->resolved->ty->kind != TYPE_KIND_STRUCT) {
+                char *reg = g_regs[alloc_reg(e->resolved->ty->sz)];
 
-        if (e->resolved->extern_ || ((expr *)e)->type->kind == TYPE_KIND_PROC) {
-                if (!e->resolved->extern_) {
-                        take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->resolved->modname, "_", e->id->lx, NULL), 1);
-                } else {
-                        take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->id->lx, NULL), 1);
+                if (e->resolved->extern_ || ((expr *)e)->type->kind == TYPE_KIND_PROC) {
+                        if (!e->resolved->extern_) {
+                                take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->resolved->modname, "_", e->id->lx, NULL), 1);
+                        } else {
+                                take_txt(ctx, forge_cstr_builder("mov ", reg, ", ", e->id->lx, NULL), 1);
+                        }
+                        return reg;
                 }
-        } else {
+
                 char *offset_s = int_to_cstr(e->resolved->stack_offset);
                 const char *spec = szspec(e->resolved->ty->sz);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", [rbp-", offset_s, "]", NULL), 1);
+                return reg;
+        } else {
+                assert(0);
         }
-
-        return reg;
 }
 
 static void *
