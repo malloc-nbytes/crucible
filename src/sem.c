@@ -326,12 +326,12 @@ visit_expr_mut(visitor *v, expr_mut *e)
 static void *
 visit_expr_brace_init(visitor *v, expr_struct *e)
 {
-        assert(e->struct_id);
+        assert(e->id);
         assert(e->ids.len == e->exprs.len);
 
         symtbl *tbl = (symtbl *)v->context;
 
-        const char *struct_id = e->struct_id->lx;
+        const char *struct_id = e->id->lx;
 
         if (!sym_exists_in_scope(tbl, struct_id)) {
                 pusherr(tbl, ((expr *)e)->loc, "struct `%s` is not defined", struct_id);
@@ -354,7 +354,7 @@ visit_expr_brace_init(visitor *v, expr_struct *e)
 
         // Make sure members length matches the struct's members.
         if (e->ids.len != struct_ty->members->len) {
-                pusherr(tbl, e->struct_id->loc,
+                pusherr(tbl, e->id->loc,
                         "struct `%s` requires %zu members but %zu were supplied",
                         struct_id, struct_ty->members->len, e->ids.len);
                 ((expr *)e)->type = (type *)type_unknown_alloc();
@@ -936,7 +936,8 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
                 pusherr(tbl, s->id->loc, "struct `%s` has no members", s->id->lx);
         }
 
-        type_struct *st_ty = type_struct_alloc(&s->members, sz);
+        assert(0);
+        type_struct *st_ty = type_struct_alloc(NULL, &s->members, sz);
         sym *sym = sym_alloc(tbl, s->id->lx, (type *)st_ty, 0);
         insert_sym_into_scope(tbl, sym);
 

@@ -106,7 +106,7 @@ parse_type(parser_context *ctx)
         } else if (hd->ty == TOKEN_TYPE_KEYWORD && !strcmp(hd->lx, KWD_SIZET)) {
                 ty = (type *)type_sizet_alloc();
         } else {
-                forge_err_wargs("unknown type: `%s`", hd->lx);
+                ty = (type *)type_struct_alloczero(lx);
         }
 
         // Handles all pointer types (ex: u8**).
@@ -167,7 +167,7 @@ parse_bracket_ids_and_types(parser_context *ctx)
 }
 
 static expr_struct *
-parse_brace_initializer(parser_context *ctx)
+parse_expr_struct(parser_context *ctx, const token *id)
 {
         (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
 
@@ -190,7 +190,8 @@ parse_brace_initializer(parser_context *ctx)
 
         (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
 
-        return expr_struct_alloc(ids, exprs);
+        assert(0);
+        return expr_struct_alloc(id, ids, exprs);
 }
 
 static expr_arrayinit *
@@ -270,12 +271,6 @@ parse_primary_expr(parser_context *ctx)
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_LEFT_PARENTHESIS: {
-                        // TODO: redo breace_initializer parsing
-                        /* if (struct) {
-                           left = (expr *)parse_brace_initializer(ctx);
-                           left->loc = hd->loc;
-                           }
-                         */
                         if (left) {
                                 // function call
                                 expr_array args = parse_comma_sep_exprs(ctx);
@@ -296,7 +291,12 @@ parse_primary_expr(parser_context *ctx)
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_LEFT_CURLY: {
-                        left = (expr *)parse_arrayinit(ctx);
+                        if (left && left->kind == EXPR_KIND_IDENTIFIER) {
+                                const token *id = ((expr_identifier *)left)->id;
+                                left = (expr *)parse_expr_struct(ctx, id);
+                        } else {
+                                left = (expr *)parse_arrayinit(ctx);
+                        }
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_KEYWORD: {
@@ -846,8 +846,6 @@ parse_stmt(parser_context *ctx)
 program *
 parser_create_program(lexer *l)
 {
-        NOOP(parse_brace_initializer);
-
         parser_context ctx = (parser_context) {
                 .l         = l,
                 .in_global = 1,

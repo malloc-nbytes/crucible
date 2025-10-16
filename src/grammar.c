@@ -95,14 +95,15 @@ expr_proccall_alloc(expr       *lhs,
 }
 
 expr_struct *
-expr_struct_alloc(token_array ids,
-                  expr_array  exprs)
+expr_struct_alloc(const token *id,
+                  token_array  ids,
+                  expr_array   exprs)
 {
         expr_struct *e     = (expr_struct *)alloc(sizeof(expr_struct));
         e->base            = init_expr_kind(EXPR_KIND_BRACE_INIT, accept_expr_struct);
+        e->id              = id;
         e->ids             = ids;
         e->exprs           = exprs;
-        e->struct_id       = NULL; // to be resolved in lexer
         return e;
 }
 

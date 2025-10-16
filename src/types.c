@@ -119,13 +119,26 @@ type_number_alloc(void)
 }
 
 type_struct *
-type_struct_alloc(const parameter_array *members, size_t sz)
+type_struct_alloc(const char            *id,
+                  const parameter_array *members,
+                  size_t                 sz)
 {
         type_struct *t = (type_struct *)alloc(sizeof(type_struct));
         t->base.kind   = TYPE_KIND_STRUCT;
         t->base.sz     = sz;
+        t->id          = id;
         t->members     = members;
+        return t;
+}
 
+type_struct *
+type_struct_alloczero(const char *id)
+{
+        type_struct *t = (type_struct *)alloc(sizeof(type_struct));
+        t->base.kind   = TYPE_KIND_STRUCT;
+        t->base.sz     = -1;
+        t->id          = id;
+        t->members     = NULL;
         return t;
 }
 
