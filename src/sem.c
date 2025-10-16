@@ -392,6 +392,10 @@ visit_expr_struct(visitor *v, expr_struct *e)
         e->resolved_syms = (sym_array *)alloc(sizeof(sym_array));
         *e->resolved_syms = dyn_array_empty(sym_array);
 
+        for (size_t i = 0; i < struct_ty->members->len; ++i) {
+                dyn_array_append(*e->resolved_syms, struct_ty->members->data[i].resolved);
+        }
+
         return NULL;
 }
 
@@ -664,6 +668,12 @@ visit_stmt_let(visitor *v, stmt_let *s)
                         "type mismatch, expected `%s` but the expression evaluates to `%s`",
                         type_to_cstr(s->type), type_to_cstr(s->e->type));
                 return NULL;
+        }
+
+        // If both are structs, fill out missing information.
+        if (s->type->kind == TYPE_KIND_STRUCT
+            && s->e->type->kind == TYPE_KIND_STRUCT) {
+                ((type_struct *)s->type)->members = ((type_struct *)s->e->type)->members;
         }
 
         s->resolved = sym;
