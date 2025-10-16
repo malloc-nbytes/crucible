@@ -363,14 +363,28 @@ visit_expr_struct(visitor *v, expr_struct *e)
 
         // Verify members and their expressions.
         for (size_t i = 0; i < e->ids.len; ++i) {
-                const char *got = e->ids.data[i]->lx;
-                const char *expected = struct_ty->members->data[i].id->lx;
-                if (strcmp(got, expected)) {
+                const char *got_id = e->ids.data[i]->lx;
+                const char *expected_id = struct_ty->members->data[i].id->lx;
+                if (strcmp(got_id, expected_id)) {
                         pusherr(tbl, e->ids.data[i]->loc,
                                 "expected member ID `%s` but got `%s`",
-                                expected, got);
+                                expected_id, got_id);
                 }
+
+                type *old_expty = tbl->expty;
+                tbl->expty = e->exprs.data[i]->type;
                 e->exprs.data[i]->accept(e->exprs.data[i], v);
+                tbl->expty = old_expty;
+
+                // Typecheck
+                type *got_ty = e->exprs.data[i]->type;
+                type *expected_ty = struct_ty->members->data[i].type;
+
+                if (!type_is_compat(&got_ty, &expected_ty)) {
+                        pusherr(tbl, e->ids.data[i]->loc,
+                                "expected type `%s` but got `%s`",
+                                type_to_cstr(expected_ty), type_to_cstr(got_ty));
+                }
         }
 
         ((expr *)e)->type = struct_sym->ty;
