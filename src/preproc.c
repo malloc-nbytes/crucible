@@ -164,7 +164,7 @@ expand_macro(macro_content *mc, token_array args, const char *fp, size_t r, size
                 } else {
                         new_token = token_alloc(current->lx, strlen(current->lx), current->ty, r, c, fp);
                 }
-                
+
                 if (!new_head) {
                         new_head = new_tail = new_token;
                 } else {
@@ -174,7 +174,6 @@ expand_macro(macro_content *mc, token_array args, const char *fp, size_t r, size
                 current = current->next;
         }
 
-        // Cleanup param_map
         /* smap_iter_t iter = smap_iter(&param_map); */
         /* while (smap_iter_next(&iter)) { */
         /*         token *t = (token *)iter.value; */
@@ -184,6 +183,112 @@ expand_macro(macro_content *mc, token_array args, const char *fp, size_t r, size
         /* smap_destroy(&param_map); */
 
         return new_head;
+}
+
+static token_array
+collect_arg_tokens(token **next_ptr, int *paren_count)
+{
+        printf("gathering\n");
+
+        token_array arg_tokens = dyn_array_empty(token_array);
+        token *next = *next_ptr;
+
+        while (next && *paren_count > 0) {
+                if (next->ty == TOKEN_TYPE_LEFT_PARENTHESIS) {
+                        (*paren_count)++;
+                        dyn_array_append(arg_tokens, next);
+                } else if (next->ty == TOKEN_TYPE_RIGHT_PARENTHESIS) {
+                        (*paren_count)--;
+                        if (*paren_count > 0) {
+                                dyn_array_append(arg_tokens, next);
+                        }
+                } else if (next->ty == TOKEN_TYPE_COMMA && *paren_count == 1) {
+                        break;
+                } else {
+                        dyn_array_append(arg_tokens, next);
+                }
+                next = next->next;
+        }
+
+        for (size_t i = 0; i < arg_tokens.len; ++i) {
+                printf("\t%s\n", arg_tokens.data[i]->lx);
+        }
+
+        *next_ptr = next;
+        printf("done\n");
+        return arg_tokens;
+}
+
+static token *
+expand_nested_macro(token *start, const char *fp, size_t r, size_t c)
+{
+        if (!start || start->ty != TOKEN_TYPE_IDENTIFIER || !smap_has(&g_macros, start->lx)) {
+                return copy_token(start);
+        }
+
+        macro_content *mc = (macro_content *)smap_get(&g_macros, start->lx);
+        token_array args = dyn_array_empty(token_array);
+        token *next = start->next;
+
+        // Collect arguments if macro has parameters
+        if (mc->params.len && next && next->ty == TOKEN_TYPE_LEFT_PARENTHESIS) {
+                next = next->next; // Skip (
+                int paren_count = 1;
+
+                while (next && paren_count > 0) {
+                        if (next->ty == TOKEN_TYPE_WHITESPACE ||
+                            next->ty == TOKEN_TYPE_TAB ||
+                            next->ty == TOKEN_TYPE_NEWLINE) {
+                                next = next->next;
+                                continue;
+                        }
+
+                        if (next->ty == TOKEN_TYPE_COMMA && paren_count == 1) {
+                                next = next->next;
+                                continue;
+                        }
+
+                        //printf("HERE: %s\n", next->lx);
+
+                        if (next->ty == TOKEN_TYPE_IDENTIFIER && smap_has(&g_macros, next->lx)) {
+                                // Recursively expand nested macro
+                                token *expanded = expand_nested_macro(next, fp, r, c);
+                                dyn_array_append(args, expanded);
+                                next = next->next; // Move past macro identifier
+
+                                // Skip the entire nested macro call
+                                if (next && next->ty == TOKEN_TYPE_LEFT_PARENTHESIS) {
+                                        int nested_paren = 1;
+                                        next = next->next; // Skip (
+                                        while (next && nested_paren > 0) {
+                                                if (next->ty == TOKEN_TYPE_LEFT_PARENTHESIS) nested_paren++;
+                                                else if (next->ty == TOKEN_TYPE_RIGHT_PARENTHESIS) nested_paren--;
+                                                next = next->next;
+                                        }
+                                }
+                        } else {
+                                // Collect all tokens until comma or closing parenthesis
+                                token_array arg_tokens = collect_arg_tokens(&next, &paren_count);
+                                if (arg_tokens.len > 0) {
+                                        dyn_array_append(args, arg_tokens.data[0]);
+                                        dyn_array_free(arg_tokens);
+                                }
+                        }
+                }
+                if (next) next = next->next; // Skip )
+        }
+
+        // Validate argument count
+        if (args.len != mc->params.len) {
+                forge_err_wargs("macro `%s` expects %zu arguments, got %zu",
+                                mc->id, mc->params.len, args.len);
+        }
+
+        // Expand macro
+        token *expanded = expand_macro(mc, args, fp, r, c);
+        dyn_array_free(args);
+
+        return expanded;
 }
 
 char *
@@ -215,25 +320,7 @@ preproc(const char *fp)
         token *prev = NULL;
         while (it) {
                 if (it->ty == TOKEN_TYPE_IDENTIFIER && smap_has(&g_macros, it->lx)) {
-                        macro_content *mc = (macro_content *)smap_get(&g_macros, it->lx);
-                        token_array args = dyn_array_empty(token_array);
-                        token *next = it->next;
-
-                        // Collect arguments if macro has parameters
-                        if (mc->params.len && next && next->ty == TOKEN_TYPE_LEFT_PARENTHESIS) {
-                                next = next->next; // Skip (
-                                while (next && next->ty != TOKEN_TYPE_RIGHT_PARENTHESIS) {
-                                        if (next->ty != TOKEN_TYPE_COMMA) {
-                                                dyn_array_append(args, next);
-                                        }
-                                        next = next->next;
-                                }
-                                if (next) next = next->next; // Skip )
-                        }
-
-                        // Expand macro
-                        token *expanded = expand_macro(mc, args, it->loc.fp, it->loc.r, it->loc.c);
-                        dyn_array_free(args);
+                        token *expanded = expand_nested_macro(it, it->loc.fp, it->loc.r, it->loc.c);
 
                         // Rewire token list
                         if (prev) {
@@ -248,13 +335,26 @@ preproc(const char *fp)
                                 expanded_tail = expanded_tail->next;
                         }
                         if (expanded_tail) {
+                                token *next = it->next;
+                                if (next && next->ty == TOKEN_TYPE_LEFT_PARENTHESIS) {
+                                        int paren_count = 1;
+                                        next = next->next; // Skip (
+                                        while (next && paren_count > 0) {
+                                                if (next->ty == TOKEN_TYPE_LEFT_PARENTHESIS) paren_count++;
+                                                else if (next->ty == TOKEN_TYPE_RIGHT_PARENTHESIS) paren_count--;
+                                                next = next->next;
+                                        }
+                                }
                                 expanded_tail->next = next;
                                 if (!output.tl || output.tl == it) {
                                         output.tl = expanded_tail;
                                 }
                         }
 
-                        it = next;
+                        // Free the original macro call token
+                        free(it->lx);
+                        free(it);
+                        it = it->next;
                 } else {
                         prev = it;
                         it = it->next;
@@ -264,7 +364,6 @@ preproc(const char *fp)
         // Convert final output to string
         char *result = (char *)malloc(1024);
         result = lexer_as_cstr(&output, result, 1024);
-        printf("%s\n", result);
 
         // Cleanup output lexer
         token *current = output.hd;
@@ -274,6 +373,8 @@ preproc(const char *fp)
                 free(current);
                 current = next;
         }
+
+        printf("%s\n", result);
 
         //smap_destroy(&g_macros);
 
