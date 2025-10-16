@@ -96,6 +96,18 @@ sym_alloc(symtbl     *tbl,
         return s;
 }
 
+static sym *
+sym_dup(const sym *other)
+{
+        sym *s = (sym *)alloc(sizeof(sym));
+        s->id = other->id;
+        s->ty = other->ty;
+        s->stack_offset = other->stack_offset;
+        s->extern_ = other->extern_;
+        s->modname = other->modname;
+        return s;
+}
+
 static void
 coerce_integer_literal(symtbl    *tbl,
                        expr      *e,
@@ -393,7 +405,8 @@ visit_expr_struct(visitor *v, expr_struct *e)
         *e->resolved_syms = dyn_array_empty(sym_array);
 
         for (size_t i = 0; i < struct_ty->members->len; ++i) {
-                dyn_array_append(*e->resolved_syms, struct_ty->members->data[i].resolved);
+                dyn_array_append(*e->resolved_syms, sym_dup(struct_ty->members->data[i].resolved));
+                (*e->resolved_syms).data[i]->stack_offset += tbl->stack_offset;
         }
 
         return NULL;
@@ -608,6 +621,12 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 s->e->accept(s->e, v);
         }
 
+        // If both are structs, fill out missing information.
+        if (s->type->kind == TYPE_KIND_STRUCT
+            && s->e->type->kind == TYPE_KIND_STRUCT) {
+                ((type *)s->type)->sz = s->e->type->sz;
+        }
+
         sym *sym = sym_alloc(tbl, s->id->lx, s->type, 0);
 
         insert_sym_into_scope(tbl, sym);
@@ -668,12 +687,6 @@ visit_stmt_let(visitor *v, stmt_let *s)
                         "type mismatch, expected `%s` but the expression evaluates to `%s`",
                         type_to_cstr(s->type), type_to_cstr(s->e->type));
                 return NULL;
-        }
-
-        // If both are structs, fill out missing information.
-        if (s->type->kind == TYPE_KIND_STRUCT
-            && s->e->type->kind == TYPE_KIND_STRUCT) {
-                ((type_struct *)s->type)->members = ((type_struct *)s->e->type)->members;
         }
 
         s->resolved = sym;
