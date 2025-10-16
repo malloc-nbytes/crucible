@@ -12,7 +12,7 @@ visitor_alloc(void                            *ctx,
               visit_expr_string_literal_sig    visit_expr_string_literal,
               visit_expr_proccall_sig          visit_expr_proccall,
               visit_expr_mut_sig               visit_expr_mut,
-              visit_expr_brace_init_sig        visit_expr_brace_init,
+              visit_expr_struct_sig            visit_expr_struct,
               visit_expr_namespace_sig         visit_expr_namespace,
               visit_expr_arrayinit_sig         visit_expr_arrayinit,
               visit_expr_index_sig             visit_expr_index,
@@ -50,7 +50,7 @@ visitor_alloc(void                            *ctx,
         v->visit_expr_string_literal    = visit_expr_string_literal;
         v->visit_expr_proccall          = visit_expr_proccall;
         v->visit_expr_mut               = visit_expr_mut;
-        v->visit_expr_brace_init        = visit_expr_brace_init;
+        v->visit_expr_struct            = visit_expr_struct;
         v->visit_expr_namespace         = visit_expr_namespace;
         v->visit_expr_arrayinit         = visit_expr_arrayinit;
         v->visit_expr_index             = visit_expr_index;
@@ -138,10 +138,10 @@ accept_expr_mut(expr *e, visitor *v)
 }
 
 void *
-accept_expr_brace_init(expr *e, visitor *v)
+accept_expr_struct(expr *e, visitor *v)
 {
-        if (v->visit_expr_brace_init) {
-                return v->visit_expr_brace_init(v, (expr_brace_init *)e);
+        if (v->visit_expr_struct) {
+                return v->visit_expr_struct(v, (expr_struct *)e);
         }
         return NULL;
 }

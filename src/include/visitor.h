@@ -9,7 +9,7 @@ typedef void *(*visit_expr_integer_literal_sig)(visitor *v, expr_integer_literal
 typedef void *(*visit_expr_string_literal_sig)(visitor *v, expr_string_literal *e);
 typedef void *(*visit_expr_proccall_sig)(visitor *v, expr_proccall *e);
 typedef void *(*visit_expr_mut_sig)(visitor *v, expr_mut *e);
-typedef void *(*visit_expr_brace_init_sig)(visitor *v, expr_brace_init *e);
+typedef void *(*visit_expr_struct_sig)(visitor *v, expr_struct *e);
 typedef void *(*visit_expr_namespace_sig)(visitor *v, expr_namespace *e);
 typedef void *(*visit_expr_arrayinit_sig)(visitor *v, expr_arrayinit *e);
 typedef void *(*visit_expr_index_sig)(visitor *v, expr_index *e);
@@ -46,7 +46,7 @@ typedef struct visitor {
         visit_expr_string_literal_sig    visit_expr_string_literal;
         visit_expr_proccall_sig          visit_expr_proccall;
         visit_expr_mut_sig               visit_expr_mut;
-        visit_expr_brace_init_sig        visit_expr_brace_init;
+        visit_expr_struct_sig            visit_expr_struct;
         visit_expr_namespace_sig         visit_expr_namespace;
         visit_expr_arrayinit_sig         visit_expr_arrayinit;
         visit_expr_index_sig             visit_expr_index;
@@ -83,7 +83,7 @@ visitor *visitor_alloc(
         visit_expr_string_literal_sig    visit_expr_string_literal,
         visit_expr_proccall_sig          visit_expr_proccall,
         visit_expr_mut_sig               visit_expr_mut,
-        visit_expr_brace_init_sig        visit_expr_brace_init,
+        visit_expr_struct_sig            visit_expr_struct,
         visit_expr_namespace_sig         visit_expr_namespace,
         visit_expr_arrayinit_sig         visit_expr_arrayinit,
         visit_expr_index_sig             visit_expr_index,
@@ -118,7 +118,7 @@ void *accept_expr_identifier(expr *e, visitor *v);
 void *accept_expr_string_literal(expr *e, visitor *v);
 void *accept_expr_proccall(expr *e, visitor *v);
 void *accept_expr_mut(expr *e, visitor *v);
-void *accept_expr_brace_init(expr *e, visitor *v);
+void *accept_expr_struct(expr *e, visitor *v);
 void *accept_expr_namespace(expr *e, visitor *v);
 void *accept_expr_arrayinit(expr *e, visitor *v);
 void *accept_expr_index(expr *e, visitor *v);

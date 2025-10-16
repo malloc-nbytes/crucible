@@ -94,12 +94,12 @@ expr_proccall_alloc(expr       *lhs,
         return e;
 }
 
-expr_brace_init *
-expr_brace_init_alloc(token_array ids,
-                      expr_array  exprs)
+expr_struct *
+expr_struct_alloc(token_array ids,
+                  expr_array  exprs)
 {
-        expr_brace_init *e = (expr_brace_init *)alloc(sizeof(expr_brace_init));
-        e->base            = init_expr_kind(EXPR_KIND_BRACE_INIT, accept_expr_brace_init);
+        expr_struct *e     = (expr_struct *)alloc(sizeof(expr_struct));
+        e->base            = init_expr_kind(EXPR_KIND_BRACE_INIT, accept_expr_struct);
         e->ids             = ids;
         e->exprs           = exprs;
         e->struct_id       = NULL; // to be resolved in lexer

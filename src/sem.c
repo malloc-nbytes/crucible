@@ -324,7 +324,7 @@ visit_expr_mut(visitor *v, expr_mut *e)
 }
 
 static void *
-visit_expr_brace_init(visitor *v, expr_brace_init *e)
+visit_expr_brace_init(visitor *v, expr_struct *e)
 {
         assert(e->struct_id);
         assert(e->ids.len == e->exprs.len);

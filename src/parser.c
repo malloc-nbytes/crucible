@@ -166,7 +166,7 @@ parse_bracket_ids_and_types(parser_context *ctx)
         return members;
 }
 
-static expr_brace_init *
+static expr_struct *
 parse_brace_initializer(parser_context *ctx)
 {
         (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
@@ -190,7 +190,7 @@ parse_brace_initializer(parser_context *ctx)
 
         (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
 
-        return expr_brace_init_alloc(ids, exprs);
+        return expr_struct_alloc(ids, exprs);
 }
 
 static expr_arrayinit *

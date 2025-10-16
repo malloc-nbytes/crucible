@@ -119,7 +119,7 @@ typedef struct {
 
         sym_array *resolved_syms; // assert(resolved_syms.len == ids.len == exprs.len)
                                   // to be resolved in semantic analysis
-} expr_brace_init;
+} expr_struct;
 
 typedef struct {
         expr base;
@@ -301,7 +301,7 @@ expr_mut *expr_mut_alloc(expr *lhs, const token *op, expr *rhs);
 expr_un *expr_un_alloc(const token *op, expr *rhs);
 expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs);
 expr_proccall *expr_proccall_alloc(expr *lhs, expr_array args);
-expr_brace_init *expr_brace_init_alloc(token_array ids, expr_array exprs);
+expr_struct *expr_struct_alloc(token_array ids, expr_array exprs);
 expr_namespace *expr_namespace_alloc(const token *namespace, expr *e);
 expr_arrayinit *expr_arrayinit_alloc(expr_array exprs, int zeroed);
 expr_index *expr_index_alloc(expr *lhs, expr *idx);
