@@ -686,9 +686,10 @@ visit_expr_identifier(visitor *v, expr_identifier *e)
                 const char *spec = szspec(e->resolved->ty->sz);
                 take_txt(ctx, forge_cstr_builder("mov ", spec, " ", reg, ", [rbp-", offset_s, "]", NULL), 1);
                 return reg;
-        } else {
-                assert(0);
         }
+
+        // structs don't actually return anything...
+        return "rax";
 }
 
 static void *
@@ -1419,7 +1420,53 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         char *value = (char *)s->e->accept(s->e, v);
 
-        if (s->resolved->ty->kind != TYPE_KIND_STRUCT) {
+        if (s->resolved->ty->kind == TYPE_KIND_STRUCT) {
+                // Handle struct duplication
+                type_struct *struct_ty = (type_struct *)s->resolved->ty;
+                size_t struct_size = ((type *)struct_ty)->sz;
+                char *offset = int_to_cstr(s->resolved->stack_offset);
+
+                if (s->e->kind == EXPR_KIND_IDENTIFIER) {
+                        expr_identifier *id_expr = (expr_identifier *)s->e;
+                        assert(id_expr->resolved);
+                        char *src_offset = int_to_cstr(id_expr->resolved->stack_offset);
+
+                        // Save registers that rep movsb will clobber (rsi, rdi, rcx)
+                        push_inuse_regs(ctx);
+
+                        // Load source address (other)
+                        char *src_reg = g_regs[alloc_reg(8)];
+                        take_txt(ctx, forge_cstr_builder("lea rsi, [rbp-", src_offset, "]", NULL), 1);
+
+                        // Load destination address
+                        char *dst_reg = g_regs[alloc_reg(8)];
+                        take_txt(ctx, forge_cstr_builder("lea rdi, [rbp-", offset, "]", NULL), 1);
+
+                        // Set count to struct size
+                        char *count = int_to_cstr(struct_size);
+                        take_txt(ctx, forge_cstr_builder("mov rcx, ", count, NULL), 1);
+
+                        // Copy
+                        write_txt(ctx, "cld", 1);       // Clear direction flag (increment rsi/rdi)
+                        write_txt(ctx, "rep movsb", 1); // Copy ((type *)struct_type)->sz bytes
+
+                        // Free registers
+                        free_reg_literal(src_reg);
+                        free_reg_literal(dst_reg);
+                        free(src_offset);
+                        free(count);
+                        pop_inuse_regs(ctx);
+                } else if (s->e->kind == EXPR_KIND_STRUCT) {
+                        // Handle brace initializer (already handled by visit_expr_struct)
+                        // No additional copying needed here
+                        // Keeping this here for possible changes...
+                } else {
+                        forge_err_wargs("visit_stmt_let(): unsupported expression kind `%d` for struct assignment", (int)s->e->kind);
+                }
+
+                free(offset);
+        } else {
+                // Existing non-struct case
                 int offset = s->resolved->stack_offset;
                 char *offset_s = int_to_cstr(offset);
                 const char *spec = szspec(s->e->type->sz);

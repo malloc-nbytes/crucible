@@ -100,7 +100,7 @@ expr_struct_alloc(const token *id,
                   expr_array   exprs)
 {
         expr_struct *e     = (expr_struct *)alloc(sizeof(expr_struct));
-        e->base            = init_expr_kind(EXPR_KIND_BRACE_INIT, accept_expr_struct);
+        e->base            = init_expr_kind(EXPR_KIND_STRUCT, accept_expr_struct);
         e->id              = id;
         e->ids             = ids;
         e->exprs           = exprs;

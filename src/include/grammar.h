@@ -21,7 +21,7 @@ typedef enum {
         EXPR_KIND_MUT,
         EXPR_KIND_UNARY,
         EXPR_KIND_PROCCALL,
-        EXPR_KIND_BRACE_INIT,
+        EXPR_KIND_STRUCT,
         EXPR_KIND_NAMESPACE,
         EXPR_KIND_ARRAYINIT, // 10
         EXPR_KIND_INDEX,
