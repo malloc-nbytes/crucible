@@ -404,9 +404,17 @@ visit_expr_struct(visitor *v, expr_struct *e)
         e->resolved_syms = (sym_array *)alloc(sizeof(sym_array));
         *e->resolved_syms = dyn_array_empty(sym_array);
 
+        size_t szsum = 0;
         for (size_t i = 0; i < struct_ty->members->len; ++i) {
                 dyn_array_append(*e->resolved_syms, sym_dup(struct_ty->members->data[i].resolved));
+                //printf("BEFORE: %d\n", (*e->resolved_syms).data[i]->stack_offset);
+                //if (struct_ty->members->data[i].type->kind == TYPE_KIND_STRUCT) {
+                //        sym *other = get_sym_from_scope(tbl, ((type_struct *)struct_ty->members->data[i].type)->id);
+                //        type_struct *otherty = (type_struct *)other->ty;
+                //        (*e->resolved_syms).data[i]->stack_offset += other->ty->sz;
+                //}
                 (*e->resolved_syms).data[i]->stack_offset += tbl->stack_offset;
+                //printf("AFTER: %d\n", (*e->resolved_syms).data[i]->stack_offset);
         }
 
         return NULL;
@@ -979,6 +987,7 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
                 }
 
                 sz += p->type->sz;
+                printf("HERE: %s, %d\n", p->id->lx, sz);
                 s->members.data[i].resolved = sym_alloc(tbl, p->id->lx, p->type, 0);
                 p->resolved->stack_offset = sz;
 
