@@ -621,6 +621,15 @@ visit_stmt_let(visitor *v, stmt_let *s)
                 s->e->accept(s->e, v);
         }
 
+        if (s->type->kind == TYPE_KIND_STRUCT) {
+                type_struct *sty = (type_struct *)s->type;
+                if (!sym_exists_in_scope(tbl, sty->id)) {
+                        pusherr(tbl, ((stmt *)s)->loc, "struct `%s` does not exist", sty->id);
+                }
+                sym *decl_st = get_sym_from_scope(tbl, sty->id);
+                ((type *)s->type)->sz = decl_st->ty->sz;
+        }
+
         // If both are structs, fill out missing information.
         if (s->type->kind == TYPE_KIND_STRUCT
             && s->e->type->kind == TYPE_KIND_STRUCT) {

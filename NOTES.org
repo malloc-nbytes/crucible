@@ -28,10 +28,12 @@
   - [ ] macros
   - [ ] macro functions
 - [ ] global variables
-- [ ] structs
-  - [ ] statement =struct P {}=
-  - [ ] literals =(obj) {.x = 1, .y = 2}=
+- [-] structs
+  - [X] statement =struct P {}=
+  - [X] literals =(obj) {.x = 1, .y = 2}=
   - [ ] members =p.x; p.y=
+  - [ ] pass structs to a function =let p: Point = {...}; f(p);=
+  - [ ] take the address of structs
 - [ ] enums
   - [ ] statements =enum P {}=
   - [ ] members =P.I1; P.I2=
