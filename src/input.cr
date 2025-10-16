@@ -18,13 +18,11 @@ export proc _start(void): !
         let p: Point = Point {
                 .x = 1,
                 .y = 2,
-                .s = (S) {
+                .s = S {
                         .a = "foo",
                         .b = "bar",
                 },
         };
-
-        -- let copy: Point = p;
 
         exit;
 }

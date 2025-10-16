@@ -1099,14 +1099,19 @@ visit_expr_struct(visitor *v, expr_struct *e)
 
         for (size_t i = 0; i < e->resolved_syms->len; ++i) {
                 const sym *sym = e->resolved_syms->data[i];
-                const char *spec = szspec(sym->ty->sz);
-                char *offset = int_to_cstr(sym->stack_offset);
-                char *value = e->exprs.data[i]->accept(e->exprs.data[i], v);
 
-                take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", value, NULL), 1);
+                if (sym->ty->kind != TYPE_KIND_STRUCT) {
+                        const char *spec = szspec(sym->ty->sz);
+                        char *offset = int_to_cstr(sym->stack_offset);
+                        char *value = e->exprs.data[i]->accept(e->exprs.data[i], v);
 
-                free_reg_literal(value);
-                free(offset);
+                        take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", value, NULL), 1);
+
+                        free_reg_literal(value);
+                        free(offset);
+                } else {
+                        (void)e->exprs.data[i]->accept(e->exprs.data[i], v);
+                }
         }
 
         return "rax";
