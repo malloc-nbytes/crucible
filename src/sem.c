@@ -593,7 +593,6 @@ visit_expr_null(visitor *v, expr_null *e)
 {
         NOOP(v, e);
 
-        ((expr *)e)->type = (type *)type_ptr_alloc(NULL);
 
         return NULL;
 }
@@ -967,6 +966,16 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
                         if (!strcmp(member_names.data[j], p->id->lx)) {
                                 pusherr(tbl, p->id->loc, "the member of struct `%s` is already defined", p->id->lx);
                         }
+                }
+
+                if (p->type->kind == TYPE_KIND_STRUCT) {
+                        type_struct *stty = (type_struct *)p->type;
+                        if (!sym_exists_in_scope(tbl, stty->id)) {
+                                pusherr(tbl, ((stmt *)s)->loc, "struct `%s` does not exist", stty->id);
+                                break;
+                        }
+                        sym *stsym = get_sym_from_scope(tbl, stty->id);
+                        p->type->sz = stsym->ty->sz;
                 }
 
                 sz += p->type->sz;

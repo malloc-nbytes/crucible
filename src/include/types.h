@@ -32,6 +32,7 @@ typedef enum {
 
         TYPE_KIND_PTR,
         TYPE_KIND_PROC,
+        TYPE_KIND_NULL,
 
         TYPE_KIND_ARRAY,
 
@@ -75,6 +76,8 @@ typedef struct {
         int extern_;
 } type_proc;
 
+typedef struct { type base; } type_null;
+
 typedef struct {
         type base;
         type *elemty;
@@ -115,6 +118,7 @@ type_proc *type_proc_alloc(
         int export,
         int extern_
 );
+type_null *type_null_alloc(void);
 
 char *type_to_cstr(const type *t);
 int type_is_compat(type **t1, type **t2);

@@ -1,6 +1,6 @@
 module main where
 
-import std.binds.c.stdlib;
+-- import std.binds.c.stdio;
 
 struct S {
         a: u8*,
@@ -15,16 +15,16 @@ struct Point {
 
 export proc _start(void): !
 {
-        let p: Point = (Point) {
+        let p: Point = Point {
                 .x = 1,
                 .y = 2,
                 .s = (S) {
-                        .a = null,
-                        .b = null,
+                        .a = "foo",
+                        .b = "bar",
                 },
         };
 
-        let copy: Point = p;
+        -- let copy: Point = p;
 
         exit;
 }

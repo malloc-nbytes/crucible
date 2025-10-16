@@ -101,6 +101,15 @@ type_proc_alloc(const char            *id,
         return t;
 }
 
+type_null *
+type_null_alloc(void)
+{
+        type_null *t = (type_null *)alloc(sizeof(type_null));
+        t->base.kind = TYPE_KIND_NULL;
+        t->base.sz   = 8;
+        return t;
+}
+
 type_unknown *
 type_unknown_alloc(void)
 {
@@ -257,6 +266,9 @@ type_is_compat(type **t1, type **t2)
         if (t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_PTR) {
                 return type_is_compat(&((type_ptr *)(*t1))->to, &((type_ptr *)(*t2))->to);
         }
+
+        if (t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_NULL) return 1;
+        if (t2kind == TYPE_KIND_PTR && t1kind == TYPE_KIND_NULL) return 1;
 
         if (t1kind == TYPE_KIND_ARRAY && t2kind == TYPE_KIND_ARRAY) {
                 type_array *ar1 = (type_array *)(*t1);

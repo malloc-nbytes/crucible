@@ -1,4 +1,4 @@
-* TODO [79%]
+* TODO [76%]
 - [X] while loops
 - [X] mut statements
 - [X] convert =type_to_int(type)= to =type->sz=
@@ -22,6 +22,8 @@
   - [X] allow for empty arrays =let ar: [i32; 5] = {};=
 - [X] booleans
 - [X] size_t
+- [ ] nested functions
+- [ ] closures
 - [ ] multi-imports =import std.binds.c.{stdio, stdlib}=
 - [ ] preprocessor
   - [ ] defines
