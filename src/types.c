@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <string.h>
 
 type_i32 *
 type_i32_alloc(void)
@@ -175,22 +176,20 @@ char *
 type_to_cstr(const type *t)
 {
         switch (t->kind) {
-        case TYPE_KIND_I8:     return "i8";
-        case TYPE_KIND_I16:    return "i16";
-        case TYPE_KIND_I32:    return "i32";
-        case TYPE_KIND_I64:    return "i64";
-        case TYPE_KIND_U8:     return "u8";
-        case TYPE_KIND_U16:    return "u16";
-        case TYPE_KIND_U32:    return "u32";
-        case TYPE_KIND_U64:    return "u64";
-        case TYPE_KIND_NUMBER: return "number";
-        case TYPE_KIND_PTR: {
-                return forge_cstr_builder("ptr<", type_to_cstr(((type_ptr *)t)->to), ">", NULL);
-        }
+        case TYPE_KIND_I8:       return "i8";
+        case TYPE_KIND_I16:      return "i16";
+        case TYPE_KIND_I32:      return "i32";
+        case TYPE_KIND_I64:      return "i64";
+        case TYPE_KIND_U8:       return "u8";
+        case TYPE_KIND_U16:      return "u16";
+        case TYPE_KIND_U32:      return "u32";
+        case TYPE_KIND_U64:      return "u64";
+        case TYPE_KIND_NUMBER:   return "number";
+        case TYPE_KIND_PTR:      return forge_cstr_builder("ptr<", type_to_cstr(((type_ptr *)t)->to), ">", NULL);
         case TYPE_KIND_VOID:     return "void";
         case TYPE_KIND_NORETURN: return "!";
         case TYPE_KIND_UNKNOWN:  return "<unknown>";
-        case TYPE_KIND_STRUCT:   return "<struct>";
+        case TYPE_KIND_STRUCT:   return forge_cstr_builder("<struct ", ((type_struct *)t)->id, ">", NULL);
         case TYPE_KIND_ARRAY: {
                 const type_array *ar = (const type_array *)t;
                 char sz[32] = {0};
@@ -275,6 +274,10 @@ type_is_compat(type **t1, type **t2)
         /* } */
 
         if (t1kind == TYPE_KIND_BOOL || t2kind == TYPE_KIND_BOOL) return 1;
+
+        if (t1kind == TYPE_KIND_STRUCT && t2kind == TYPE_KIND_STRUCT) {
+                return !strcmp(((type_struct *)(*t1))->id, ((type_struct *)(*t2))->id);
+        }
 
         if (t1kind == TYPE_KIND_NUMBER
             && t2kind < TYPE_KIND_NUMBER) {
