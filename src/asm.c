@@ -1090,7 +1090,7 @@ visit_expr_mut(visitor *v, expr_mut *e)
 }
 
 static void *
-visit_expr_brace_init(visitor *v, expr_struct *e)
+visit_expr_struct(visitor *v, expr_struct *e)
 {
         asm_context *ctx = (asm_context *)v->context;
 
@@ -1813,7 +1813,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_string_literal,
                 visit_expr_proccall,
                 visit_expr_mut,
-                visit_expr_brace_init,
+                visit_expr_struct,
                 visit_expr_namespace,
                 visit_expr_arrayinit,
                 visit_expr_index,

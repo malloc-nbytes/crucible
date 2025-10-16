@@ -324,7 +324,7 @@ visit_expr_mut(visitor *v, expr_mut *e)
 }
 
 static void *
-visit_expr_brace_init(visitor *v, expr_struct *e)
+visit_expr_struct(visitor *v, expr_struct *e)
 {
         assert(e->id);
         assert(e->ids.len == e->exprs.len);
@@ -936,8 +936,7 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
                 pusherr(tbl, s->id->loc, "struct `%s` has no members", s->id->lx);
         }
 
-        assert(0);
-        type_struct *st_ty = type_struct_alloc(NULL, &s->members, sz);
+        type_struct *st_ty = type_struct_alloc(s->id->lx, &s->members, sz);
         sym *sym = sym_alloc(tbl, s->id->lx, (type *)st_ty, 0);
         insert_sym_into_scope(tbl, sym);
 
@@ -1028,7 +1027,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_string_literal,
                 visit_expr_proccall,
                 visit_expr_mut,
-                visit_expr_brace_init,
+                visit_expr_struct,
                 visit_expr_namespace,
                 visit_expr_arrayinit,
                 visit_expr_index,

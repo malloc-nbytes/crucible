@@ -190,7 +190,6 @@ parse_expr_struct(parser_context *ctx, const token *id)
 
         (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
 
-        assert(0);
         return expr_struct_alloc(id, ids, exprs);
 }
 
