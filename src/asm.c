@@ -1419,6 +1419,13 @@ visit_expr_null(visitor *v, expr_null *e)
 }
 
 static void *
+visit_expr_member(visitor *v, expr_member *e)
+{
+        NOOP(v, e);
+        forge_todo("");
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         asm_context *ctx = (asm_context *)v->context;
@@ -1876,6 +1883,7 @@ asm_visitor_alloc(asm_context *ctx)
                 visit_expr_cast,
                 visit_expr_bool_literal,
                 visit_expr_null,
+                visit_expr_member,
 
                 visit_stmt_let,
                 visit_stmt_expr,

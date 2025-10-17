@@ -176,6 +176,17 @@ expr_null_alloc(void)
         return e;
 }
 
+expr_member *
+expr_member_alloc(expr *lhs, const token *mem)
+{
+        expr_member *e  = (expr_member *)alloc(sizeof(expr_member));
+        e->base         = init_expr_kind(EXPR_KIND_NULL, accept_expr_member);
+        e->lhs          = lhs;
+        e->mem          = mem;
+        e->resolved_mem = NULL;
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(const token *id,
                type        *type,

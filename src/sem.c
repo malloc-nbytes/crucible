@@ -594,7 +594,41 @@ static void *
 visit_expr_null(visitor *v, expr_null *e)
 {
         NOOP(v, e);
+        ((expr *)e)->type = (type *)type_null_alloc();
+        return NULL;
+}
 
+static void *
+visit_expr_member(visitor *v, expr_member *e)
+{
+        symtbl *tbl = (symtbl *)v->context;
+
+        e->lhs->accept(e->lhs, v);
+
+        if (e->lhs->type->kind != TYPE_KIND_STRUCT) {
+                pusherr(tbl, e->lhs->loc,
+                        "the left-hand-side expression evaluates to type `%s`, but type `<struct>` is needed",
+                        type_to_cstr(e->lhs->type));
+                return NULL;
+        }
+
+        const type_struct *stty = (type_struct *)e->lhs->type;
+
+        sym *member_sym = NULL;
+        for (size_t i = 0; i < stty->members->len; ++i) {
+                if (!strcmp(stty->members->data[i].id->lx, e->mem->lx)) {
+                        member_sym = stty->members->data[i].resolved;
+                        break;
+                }
+        }
+        if (!member_sym) {
+                pusherr(tbl, e->mem->loc, "struct `%s` has no member named `%s`",
+                        stty->id, e->mem->lx);
+                return NULL;
+        }
+
+        ((expr *)e)->type = member_sym->ty;
+        e->resolved_mem = member_sym;
 
         return NULL;
 }
@@ -1093,6 +1127,7 @@ sem_visitor_alloc(symtbl *tbl)
                 visit_expr_cast,
                 visit_expr_bool_literal,
                 visit_expr_null,
+                visit_expr_member,
 
                 visit_stmt_let,
                 visit_stmt_expr,
