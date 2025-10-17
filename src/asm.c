@@ -86,6 +86,10 @@ static str_array g_already_assembled = dyn_array_empty(str_array);
 static void
 assemble(asm_context *ctx)
 {
+        int (*_cmd)(const char *) = (g_config.flags & FLAG_TYPE_VERBOSE) == 0
+                ? cmd_s
+                : cmd;
+
         /* char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", g_config.filepath, ".asm -o ", */
         /*                                 g_config.outname, ".o", NULL); */
 
@@ -102,13 +106,13 @@ assemble(asm_context *ctx)
 
         char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", basename, ".asm -o ",
                                         basename, ".o", NULL);
-        cmd_s(nasm);
+        _cmd(nasm);
 
         dyn_array_append(g_already_assembled, strdup(src_filepath));
 
         char *rm_asm = forge_cstr_builder("rm ", basename, ".asm", NULL);
         if ((g_config.flags & FLAG_TYPE_ASM) == 0) {
-                cmd_s(rm_asm);
+                _cmd(rm_asm);
         }
 
         free(nasm);
@@ -1477,7 +1481,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                 dyn_array_append(ctx->globals, s->id->lx);
         }
 
-        if (!strcmp(s->id->lx, "_start")) {
+        if (!strcmp(s->id->lx, "_start") || !strcmp(s->id->lx, "main")) {
                 take_txt(ctx, forge_cstr_builder(s->id->lx, ":", NULL), 1);
         } else {
                 const char *modname = ctx->tbl->modname;
@@ -1902,7 +1906,7 @@ write_globals(asm_context *ctx)
 {
         for (size_t i = 0; i < ctx->globals.len; ++i) {
                 write_txt(ctx, "global ", 0);
-                if (strcmp(ctx->globals.data[i], "_start")) {
+                if (strcmp(ctx->globals.data[i], "_start") && strcmp(ctx->globals.data[i], "main")) {
                         write_txt(ctx, ctx->tbl->modname, 0);
                         write_txt(ctx, "_", 0);
                 }
