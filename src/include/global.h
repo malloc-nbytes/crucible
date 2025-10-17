@@ -10,6 +10,8 @@ extern struct {
         char *filepath;
         char *outname;
         str_array search_paths;
+        str_array lib_search_paths;
+        str_array link_libs;
 } g_config;
 
 #endif // GLOBAL_H_INCLUDED

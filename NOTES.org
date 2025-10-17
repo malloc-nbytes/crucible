@@ -25,9 +25,9 @@
 - [ ] nested functions
 - [ ] closures
 - [ ] multi-imports =import std.binds.c.{stdio, stdlib}=
-- [ ] preprocessor
+- [-] preprocessor
   - [ ] defines
-  - [ ] macros
+  - [X] macros
   - [ ] macro functions
 - [ ] global variables
 - [-] structs

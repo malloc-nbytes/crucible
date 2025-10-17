@@ -21,6 +21,7 @@ typedef struct {
 
 static stmt *parse_stmt(parser_context *ctx);
 static expr *parse_expr(parser_context *ctx);
+parameter_array parse_parameters(parser_context *ctx, int *variadic);
 
 token *
 expect(parser_context *ctx, token_type ty)
@@ -76,7 +77,7 @@ parse_type(parser_context *ctx)
                         lexer_discard(ctx->l); // ;
                         len = atoi(expect(ctx, TOKEN_TYPE_INTEGER_LITERAL)->lx);
                 }
-                ty = (type *)type_array_alloc(inner, len);
+                ty = (type *)type_list_alloc(inner, len);
                 (void)expect(ctx, TOKEN_TYPE_RIGHT_SQUARE);
                 return ty;
         }
@@ -105,8 +106,48 @@ parse_type(parser_context *ctx)
                 ty = (type *)type_bool_alloc();
         } else if (hd->ty == TOKEN_TYPE_KEYWORD && !strcmp(hd->lx, KWD_SIZET)) {
                 ty = (type *)type_sizet_alloc();
+        } else if (hd->ty == TOKEN_TYPE_KEYWORD && !strcmp(hd->lx, KWD_PROC)) {
+                (void)expect(ctx, TOKEN_TYPE_LEFT_PARENTHESIS);
+
+                type       *rettype  = NULL;
+                type_array  params   = dyn_array_empty(type_array);
+                int         variadic = 0;
+
+                while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_PARENTHESIS) {
+                        if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_ELLIPSIS) {
+                                lexer_discard(ctx->l); // ...
+                                variadic = 1;
+                                break;
+                        }
+
+                        type *ptype = parse_type(ctx);
+
+                        if (ptype->kind == TYPE_KIND_VOID) {
+                                if (params.len != 0) {
+                                        forge_err_wargs("%s`void` can only be used when no parameters are expected",
+                                                        loc_err(hd->loc));
+                                }
+                                free(ptype);
+                                break;
+                        }
+
+                        dyn_array_append(params, ptype);
+
+                        if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                                lexer_discard(ctx->l);
+                        } else {
+                                break;
+                        }
+                }
+
+                (void)expect(ctx, TOKEN_TYPE_RIGHT_PARENTHESIS);
+                (void)expect(ctx, TOKEN_TYPE_COLON);
+
+                rettype = parse_type(ctx);
+
+                ty = (type *)type_procptr_alloc(params, rettype, variadic);
         } else {
-                ty = (type *)type_struct_alloczero(lx);
+                forge_err_wargs("unknown type: `%s`", hd->lx);
         }
 
         // Handles all pointer types (ex: u8**).
@@ -199,8 +240,8 @@ parse_arrayinit(parser_context *ctx)
         expr_array exprs = dyn_array_empty(expr_array);
         int zeroed = 1;
 
-        (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
-        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
+        (void)expect(ctx, TOKEN_TYPE_LEFT_SQUARE);
+        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_SQUARE) {
                 if (exprs.len > 1) zeroed = 0;
 
                 expr *e = parse_expr(ctx);
@@ -218,7 +259,7 @@ parse_arrayinit(parser_context *ctx)
                         break;
                 }
         }
-        (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_SQUARE);
 
         return expr_arrayinit_alloc(exprs, zeroed);
 }
@@ -262,11 +303,14 @@ parse_primary_expr(parser_context *ctx)
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_LEFT_SQUARE: {
-                        if (!left) forge_err_wargs("%sunexpected '['", loc_err(hd->loc));
-                        lexer_discard(ctx->l); // [
-                        expr *idx = parse_expr(ctx);
-                        (void)expect(ctx, TOKEN_TYPE_RIGHT_SQUARE);
-                        left = (expr *)expr_index_alloc(left, idx);
+                        if (!left) {
+                                left = (expr *)parse_arrayinit(ctx);
+                        } else {
+                                lexer_discard(ctx->l); // [
+                                expr *idx = parse_expr(ctx);
+                                (void)expect(ctx, TOKEN_TYPE_RIGHT_SQUARE);
+                                left = (expr *)expr_index_alloc(left, idx);
+                        }
                         left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_LEFT_PARENTHESIS: {
@@ -294,9 +338,8 @@ parse_primary_expr(parser_context *ctx)
                                 const token *id = ((expr_identifier *)left)->id;
                                 left = (expr *)parse_expr_struct(ctx, id);
                         } else {
-                                left = (expr *)parse_arrayinit(ctx);
+                                assert(0);
                         }
-                        left->loc = hd->loc;
                 } break;
                 case TOKEN_TYPE_KEYWORD: {
                         const token *kw = lexer_next(ctx->l);
@@ -510,7 +553,7 @@ parse_parameters(parser_context *ctx, int *variadic)
                                 *variadic = 1;
                                 break;
                         } else {
-                                forge_err("expected either `)` or `...`");
+                                forge_err_wargs("%sexpected either `)` or `...`", loc_err(id->loc));
                         }
                 }
 

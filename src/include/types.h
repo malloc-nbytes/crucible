@@ -33,8 +33,9 @@ typedef enum {
         TYPE_KIND_PTR,
         TYPE_KIND_PROC,
         TYPE_KIND_NULL,
+        TYPE_KIND_PROCPTR,
 
-        TYPE_KIND_ARRAY,
+        TYPE_KIND_LIST,
 
         TYPE_KIND_STRUCT,
 
@@ -45,6 +46,8 @@ typedef struct {
         type_kind kind;
         int sz;
 } type;
+
+DYN_ARRAY_TYPE(type *, type_array);
 
 typedef struct { type base; } type_i8;
 typedef struct { type base; } type_i16;
@@ -80,9 +83,16 @@ typedef struct { type base; } type_null;
 
 typedef struct {
         type base;
+        type_array param_types;
+        type *rettype;
+        int variadic;
+} type_procptr;
+
+typedef struct {
+        type base;
         type *elemty;
         int len;
-} type_array;
+} type_list;
 
 typedef struct {
         type base;
@@ -106,7 +116,7 @@ type_void *type_void_alloc(void);
 type_struct *type_struct_alloc(const char *id, const parameter_array *members, size_t sz);
 type_struct *type_struct_alloczero(const char *id);
 type_unknown *type_unknown_alloc(void);
-type_array *type_array_alloc(type *elemty, int len);
+type_list *type_list_alloc(type *elemty, int len);
 type_bool *type_bool_alloc(void);
 type_sizet *type_sizet_alloc(void);
 
@@ -119,6 +129,7 @@ type_proc *type_proc_alloc(
         int extern_
 );
 type_null *type_null_alloc(void);
+type_procptr *type_procptr_alloc(type_array param_types, type *rettype, int variadic);
 
 char *type_to_cstr(const type *t);
 int type_is_compat(type **t1, type **t2);
@@ -126,5 +137,7 @@ int type_to_int(const type *t);
 const char *type_kind_to_cstr(type_kind t);
 int type_is_unsigned(const type *t);
 type *type_get_lowest(type *t);
+
+void type_get_types_from_proc(const type_proc *proc, type_array *params, type **rettype);
 
 #endif // TYPES_H_INCLUDED

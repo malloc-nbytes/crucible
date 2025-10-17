@@ -2,11 +2,16 @@
 #include "mem.h"
 
 #include <forge/cstr.h>
+#include <forge/str.h>
 #include <forge/err.h>
 
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
+
+void type_get_types_from_proc(const type_proc  *proc,
+                              type_array       *params,
+                              type            **rettype);
 
 type_i32 *
 type_i32_alloc(void)
@@ -101,6 +106,20 @@ type_proc_alloc(const char            *id,
         return t;
 }
 
+type_procptr *
+type_procptr_alloc(type_array  param_types,
+                   type       *rettype,
+                   int         variadic)
+{
+        type_procptr *t = (type_procptr *)alloc(sizeof(type_procptr));
+        t->base.kind    = TYPE_KIND_PROCPTR;
+        t->base.sz      = 8;
+        t->param_types  = param_types;
+        t->rettype      = rettype;
+        t->variadic     = variadic;
+        return t;
+}
+
 type_null *
 type_null_alloc(void)
 {
@@ -114,8 +133,8 @@ type_unknown *
 type_unknown_alloc(void)
 {
         type_unknown *t = (type_unknown *)alloc(sizeof(type_unknown));
-        t->base.kind = TYPE_KIND_UNKNOWN;
-        t->base.sz   = 0;
+        t->base.kind    = TYPE_KIND_UNKNOWN;
+        t->base.sz      = 0;
         return t;
 }
 
@@ -152,11 +171,11 @@ type_struct_alloczero(const char *id)
         return t;
 }
 
-type_array *
-type_array_alloc(type *elemty, int len)
+type_list *
+type_list_alloc(type *elemty, int len)
 {
-        type_array *t = (type_array *)alloc(sizeof(type_array));
-        t->base.kind  = TYPE_KIND_ARRAY;
+        type_list *t = (type_list *)alloc(sizeof(type_list));
+        t->base.kind  = TYPE_KIND_LIST;
         t->base.sz    = 8;
         t->elemty     = elemty;
         t->len        = len;
@@ -199,17 +218,47 @@ type_to_cstr(const type *t)
         case TYPE_KIND_NORETURN: return "!";
         case TYPE_KIND_UNKNOWN:  return "<unknown>";
         case TYPE_KIND_STRUCT:   return forge_cstr_builder("<struct ", ((type_struct *)t)->id, ">", NULL);
-        case TYPE_KIND_ARRAY: {
-                const type_array *ar = (const type_array *)t;
+        case TYPE_KIND_LIST: {
+                const type_list *ar = (const type_list *)t;
                 char sz[32] = {0};
                 sprintf(sz, "%d", ar->len);
-                return forge_cstr_builder("<array [elemty=",
+                return forge_cstr_builder("<list [elemty=",
                                           type_to_cstr(ar->elemty),
                                           ", len=", sz,
                                           "]>", NULL);
         } break;
         case TYPE_KIND_BOOL:     return "bool";
         case TYPE_KIND_SIZET:    return "size_t";
+        case TYPE_KIND_PROC: {
+                type_array params = {0};
+                type *rettype = NULL;
+                type_get_types_from_proc((type_proc *)t, &params, &rettype);
+                forge_str res = forge_str_from("<proc(");
+                for (size_t i = 0; i < params.len; ++i) {
+                        if (i != 0) forge_str_concat(&res, ", ");
+                        forge_str_concat(&res, type_to_cstr(params.data[i]));
+                }
+                if (((type_proc *)t)->variadic) forge_str_concat(&res, ", ...");
+                forge_str_concat(&res, "): ");
+                forge_str_concat(&res, type_to_cstr(rettype));
+                forge_str_append(&res, '>');
+                return res.data;
+        } break;
+        case TYPE_KIND_PROCPTR: {
+                type_procptr *proc = (type_procptr *)t;
+                type_array params = proc->param_types;
+                type *rettype = proc->rettype;
+                forge_str res = forge_str_from("<procptr(");
+                for (size_t i = 0; i < params.len; ++i) {
+                        if (i != 0) forge_str_concat(&res, ", ");
+                        forge_str_concat(&res, type_to_cstr(params.data[i]));
+                }
+                if (((type_procptr *)t)->variadic) forge_str_concat(&res, ", ...");
+                forge_str_concat(&res, "): ");
+                forge_str_concat(&res, type_to_cstr(rettype));
+                forge_str_append(&res, '>');
+                return res.data;
+        }
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t->kind);
         } break;
@@ -236,15 +285,45 @@ type_kind_to_cstr(type_kind t)
         case TYPE_KIND_NORETURN: return "!";
         case TYPE_KIND_UNKNOWN:  return "<unknown>";
         case TYPE_KIND_STRUCT:   return "<struct>";
-        case TYPE_KIND_ARRAY:    return "<array>";
+        case TYPE_KIND_LIST:     return "<list>";
         case TYPE_KIND_BOOL:     return "bool";
         case TYPE_KIND_SIZET:    return "size_t";
+        case TYPE_KIND_PROC:     return "<proc>";
+        case TYPE_KIND_PROCPTR:  return "<procptr>";
         default: {
                 forge_err_wargs("type_to_cstr(): unknown type `%d`", (int)t);
         } break;
         }
 
         return NULL; // unreachable
+}
+
+void
+type_get_types_from_proc(const type_proc  *proc,
+                         type_array       *params,
+                         type            **rettype)
+{
+
+        // Note: absolutely hellish workaround because
+        //       this translation unit does not know
+        //       what is inside of a parameter array.
+        struct PARAM {
+                const token *id;
+                type *type;
+                void *resolved;
+        };
+
+        struct ARRAY {
+                struct PARAM *data;
+                size_t len;
+                size_t cap;
+        };
+
+        *params = dyn_array_empty(type_array);
+        for (size_t i = 0; i < ((struct ARRAY *)proc->params)->len; ++i) {
+                dyn_array_append(*params, ((struct ARRAY *)proc->params)->data[i].type);
+        }
+        *rettype = proc->rettype;
 }
 
 int
@@ -259,9 +338,47 @@ type_is_compat(type **t1, type **t2)
         type_kind t1kind = (*t1)->kind;
         type_kind t2kind = (*t2)->kind;
 
-        assert(t1kind != TYPE_KIND_PROC
-               && t2kind != TYPE_KIND_PROC
-               && "proc type checking is unimplemented");
+        /* assert(t1kind != TYPE_KIND_PROC */
+        /*        && t2kind != TYPE_KIND_PROC */
+        /*        && "proc type checking is unimplemented"); */
+
+        if ((t1kind == TYPE_KIND_PROC || t2kind == TYPE_KIND_PROC)
+            && (t1kind == TYPE_KIND_PROCPTR || t2kind == TYPE_KIND_PROCPTR)) {
+                type_array  ar1  = dyn_array_empty(type_array);
+                type_array  ar2  = dyn_array_empty(type_array);
+                type       *ret1 = NULL;
+                type       *ret2 = NULL;
+                int         var1 = 0;
+                int         var2 = 0;
+
+                if (t1kind == TYPE_KIND_PROC) {
+                        type_get_types_from_proc((type_proc *)(*t1), &ar1, &ret1);
+                        var1 = ((type_proc *)(*t1))->variadic;
+                } else if (t1kind == TYPE_KIND_PROCPTR) {
+                        ar1 = ((type_procptr *)(*t1))->param_types;
+                        ret1 = ((type_procptr *)(*t1))->rettype;
+                        var1 = ((type_procptr *)(*t1))->variadic;
+                }
+
+                if (t2kind == TYPE_KIND_PROC) {
+                        type_get_types_from_proc((type_proc *)(*t2), &ar2, &ret2);
+                        var2 = ((type_proc *)(*t2))->variadic;
+                } else if (t2kind == TYPE_KIND_PROCPTR) {
+                        ar2 = ((type_procptr *)(*t2))->param_types;
+                        ret2 = ((type_procptr *)(*t2))->rettype;
+                        var2 = ((type_procptr *)(*t2))->variadic;
+                }
+
+                if (ar1.len != ar2.len) return 0;
+                for (size_t i = 0; i < ar1.len; ++i) {
+                        if (!type_is_compat(&ar1.data[i], &ar2.data[i])) {
+                                return 0;
+                        }
+                }
+
+                if (!type_is_compat(&ret1, &ret2)) return 0;
+                return var1 == var2;
+        }
 
         if (t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_PTR) {
                 return type_is_compat(&((type_ptr *)(*t1))->to, &((type_ptr *)(*t2))->to);
@@ -270,9 +387,9 @@ type_is_compat(type **t1, type **t2)
         if (t1kind == TYPE_KIND_PTR && t2kind == TYPE_KIND_NULL) return 1;
         if (t2kind == TYPE_KIND_PTR && t1kind == TYPE_KIND_NULL) return 1;
 
-        if (t1kind == TYPE_KIND_ARRAY && t2kind == TYPE_KIND_ARRAY) {
-                type_array *ar1 = (type_array *)(*t1);
-                type_array *ar2 = (type_array *)(*t2);
+        if (t1kind == TYPE_KIND_LIST && t2kind == TYPE_KIND_LIST) {
+                type_list *ar1 = (type_list *)(*t1);
+                type_list *ar2 = (type_list *)(*t2);
                 return type_is_compat(&ar1->elemty, &ar2->elemty)
                         && ar1->len == ar2->len;
         }
@@ -351,8 +468,8 @@ type_get_lowest(type *t)
 {
         if (t->kind == TYPE_KIND_PTR) {
                 return type_get_lowest(((type_ptr *)t)->to);
-        } else if (t->kind == TYPE_KIND_ARRAY) {
-                return type_get_lowest(((type_array *)t)->elemty);
+        } else if (t->kind == TYPE_KIND_LIST) {
+                return type_get_lowest(((type_list *)t)->elemty);
         }
         return t;
 }

@@ -136,6 +136,13 @@ export proc _start(void): !
                         f = f+1;
                 }
 
+                if ((resi32 = procs::proc_ptr1_r1()) == 1) {
+                        ok();
+                        p = p+1;
+                } else {
+                        bad(resi32, 1);
+                        f = f+1;
+                }
         }
 
         { -- LOGICAL
@@ -230,7 +237,7 @@ export proc _start(void): !
         { -- PTRS
                 let resi32: i32 = 0;
                 let t1: i32 = 1;
-                let t2: [i32] = {1,2,3,4,5};
+                let t2: [i32] = [1,2,3,4,5];
 
                 if ((resi32 = ptrs::take_ptr1_r1(&t1)) == 1) {
                         ok();
