@@ -5,7 +5,7 @@ import helpers.log;
 export proc u8_from_array_r97(void): u8
 {
         log::id("chars::u8_from_array_r97");
-        let arr: [u8] = {'b', 'a', 'c'};
+        let arr: [u8] = ['b', 'a', 'c'];
         return arr[1];
 }
 

@@ -8,13 +8,14 @@ proc sum(a: i32, b: i32): i32
         return a+b;
 }
 
+proc fold(f: proc(i32, i32): i32): void
+{
+        f(1, 2);
+}
+
 export proc _start(void): !
 {
-        let ar: [proc(i32, i32): i32] = {sum, sum, sum};
-
-        for (let i: size_t = 0; i < 3; i += 1) {
-                cstdio::printf("%d\n", ar[i]((i32)i, (i32)i+1));
-        }
+        let ar: [i32] = [1,2,3];
 
         exit;
 }

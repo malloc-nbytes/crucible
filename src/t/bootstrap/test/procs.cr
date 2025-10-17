@@ -5,6 +5,18 @@ module procs where
 
 import helpers.log;
 
+proc __proc_ptr1(void): i32
+{
+        return 1;
+}
+
+export proc proc_ptr1_r1(void): i32
+{
+        log::id("procs::proc_ptr1_r1");
+        let f: proc(void): i32 = __proc_ptr1;
+        return __proc_ptr1();
+}
+
 ----------------
 proc __sum_with_procs1(void): i32 { return 2; }
 proc __sum_with_procs2(void): i32 { return 3; }
