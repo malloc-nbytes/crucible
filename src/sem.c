@@ -234,18 +234,34 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         // Let's assume that the left-hand-side it will always be a
         // a type of 'proc'.
         type *lhs_ty = ((expr *)e->lhs)->type;
-        if (lhs_ty->kind != TYPE_KIND_PROC) {
+        if (lhs_ty->kind != TYPE_KIND_PROC && lhs_ty->kind != TYPE_KIND_PROCPTR) {
                 pusherr(tbl, e->lhs->loc, "cannot perform a procedure call on type %s", type_to_cstr(lhs_ty));
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
 
-        type_proc *proc_ty = (type_proc *)lhs_ty;
+        int export = 0;
+        int variadic = 0;
+        type_array params = dyn_array_empty(type_array);
+        type *rettype = NULL;
 
-        if (tbl->context_switch && !proc_ty->export) {
+        if (lhs_ty->kind == TYPE_KIND_PROC) {
+                type_proc *proc_ty = (type_proc *)lhs_ty;
+                export = proc_ty->export;
+                variadic = proc_ty->variadic;
+                type_get_types_from_proc(proc_ty, &params, &rettype);
+        } else {
+                type_procptr *proc_ty = (type_procptr *)lhs_ty;
+                export = 0;
+                variadic = proc_ty->variadic;
+                params = proc_ty->param_types;
+                rettype = proc_ty->rettype;
+        }
+
+        if (tbl->context_switch && !export) {
                 pusherr(tbl, ((expr *)e)->loc,
                         "procedure `%s::%s()` is not marked as export",
-                        tbl->modname, proc_ty->id);
+                        tbl->modname, ((type_proc *)e->lhs->type)->id);
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 tbl->context_switch = 0;
                 return NULL;
@@ -253,20 +269,20 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         tbl->context_switch = 0;
 
         // Check number of arguments
-        if (e->args.len != proc_ty->params->len) {
-                if (e->args.len >= proc_ty->params->len && proc_ty->variadic) {
+        if (e->args.len != params.len) {
+                if (e->args.len >= params.len && variadic) {
                         goto ok;
                 }
 
                 pusherr(tbl, ((expr *)e)->loc,
                         "procedure requires %zu arguments but %zu were given",
-                        proc_ty->params->len, e->args.len);
+                        params.len, e->args.len);
         }
  ok:
 
         // This expression's return type is the return type
         // of the function that we are calling.
-        ((expr *)e)->type = proc_ty->rettype;
+        ((expr *)e)->type = rettype;
 
         // Go through each argument in the procedure call.
         for (size_t i = 0; i < e->args.len; ++i) {
@@ -276,8 +292,8 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 if (!arg->type) arg->accept(arg, v);
 
                 // Type check argument list
-                if (i < proc_ty->params->len) {
-                        type *expected = proc_ty->params->data[i].type;
+                if (i < params.len) {
+                        type *expected = params.data[i];
                         type *got = arg->type;
 
                         assert(expected);
@@ -306,11 +322,11 @@ visit_expr_mut(visitor *v, expr_mut *e)
             || e->op->ty == TOKEN_TYPE_MINUS_EQUALS
             || e->op->ty == TOKEN_TYPE_ASTERISK_EQUALS
             || e->op->ty == TOKEN_TYPE_FORWARDSLASH_EQUALS) {
-                if ((e->lhs->type->kind == TYPE_KIND_ARRAY
+                if ((e->lhs->type->kind == TYPE_KIND_LIST
                      || e->lhs->type->kind == TYPE_KIND_PTR)
                     && e->rhs->type->kind <= TYPE_KIND_NUMBER) {
                         coerce_integer_literal(tbl, e->rhs, TYPE_KIND_SIZET);
-                } else if ((e->rhs->type->kind == TYPE_KIND_ARRAY
+                } else if ((e->rhs->type->kind == TYPE_KIND_LIST
                             || e->rhs->type->kind == TYPE_KIND_PTR)
                            && e->lhs->type->kind <= TYPE_KIND_NUMBER) {
                         coerce_integer_literal(tbl, e->lhs, TYPE_KIND_SIZET);
@@ -458,7 +474,7 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
                 /* } */
         }
 
-        ((expr *)e)->type = (type *)type_array_alloc(elemty, (int)e->exprs.len);
+        ((expr *)e)->type = (type *)type_list_alloc(elemty, (int)e->exprs.len);
 
         return NULL;
 }
@@ -470,9 +486,9 @@ visit_expr_index(visitor *v, expr_index *e)
 
         e->lhs->accept(e->lhs, v);
 
-        if (e->lhs->type->kind != TYPE_KIND_ARRAY
+        if (e->lhs->type->kind != TYPE_KIND_LIST
             && e->lhs->type->kind != TYPE_KIND_PTR) {
-                pusherr(tbl, e->lhs->loc, "index operations are only permitted for arrays and pointers");
+                pusherr(tbl, e->lhs->loc, "index operations are only permitted for lists and pointers");
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
@@ -491,8 +507,8 @@ visit_expr_index(visitor *v, expr_index *e)
                 pusherr(tbl, e->idx->loc, "array indices are allowed only for size_t numbers");
         }
 
-        if (e->lhs->type->kind == TYPE_KIND_ARRAY) {
-                ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;
+        if (e->lhs->type->kind == TYPE_KIND_LIST) {
+                ((expr *)e)->type = ((type_list *)e->lhs->type)->elemty;
         } else {
                 ((expr *)e)->type = ((type_ptr *)e->lhs->type)->to;
         }
@@ -513,8 +529,8 @@ visit_expr_un(visitor *v, expr_un *e)
         } else if (e->op->ty == TOKEN_TYPE_ASTERISK) {
                 if (e->rhs->type->kind == TYPE_KIND_PTR) {
                         ((expr *)e)->type = ((type_ptr *)e->rhs->type)->to;
-                } else if (e->rhs->type->kind == TYPE_KIND_ARRAY) {
-                        ((expr *)e)->type = ((type_array *)e->rhs->type)->elemty;
+                } else if (e->rhs->type->kind == TYPE_KIND_LIST) {
+                        ((expr *)e)->type = ((type_list *)e->rhs->type)->elemty;
                 } else {
                         pusherr(tbl, e->op->loc, "cannot dereference type of `%s`",
                                 type_to_cstr(e->rhs->type));
@@ -604,10 +620,10 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         // Check for a zeroed array initializer. Set appropriate
         // lengths if necessary.
-        if (s->type->kind == TYPE_KIND_ARRAY
-            && s->e->type->kind == TYPE_KIND_ARRAY) {
-                type_array *let_ty   = (type_array *)s->type;
-                type_array *e_ty     = (type_array *)s->e->type;
+        if (s->type->kind == TYPE_KIND_LIST
+            && s->e->type->kind == TYPE_KIND_LIST) {
+                type_list *let_ty   = (type_list *)s->type;
+                type_list *e_ty     = (type_list *)s->e->type;
                 expr_arrayinit *init = (expr_arrayinit *)s->e;
 
                 if (init->zeroed && let_ty->len != -1/*array has length decl.*/) {
@@ -630,10 +646,10 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {
-                if (sym->ty->kind == TYPE_KIND_ARRAY) {
+                if (sym->ty->kind == TYPE_KIND_LIST) {
                         // Add the values of all type sizes for arrays.
-                        tbl->stack_offset += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
-                        tbl->proc.rsp += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
+                        tbl->stack_offset += ((type_list *)sym->ty)->elemty->sz * ((type_list *)sym->ty)->len;
+                        tbl->proc.rsp += ((type_list *)sym->ty)->elemty->sz * ((type_list *)sym->ty)->len;
                 }
                 tbl->proc.rsp += sym->ty->sz;
         }

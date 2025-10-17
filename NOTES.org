@@ -23,14 +23,14 @@
 - [X] booleans
 - [X] size_t
 - [ ] multi-imports =import std.binds.c.{stdio, stdlib}=
-- [ ] preprocessor
+- [-] preprocessor
   - [ ] defines
-  - [ ] macros
+  - [X] macros
   - [ ] macro functions
 - [ ] global variables
-- [ ] structs
-  - [ ] statement =struct P {}=
-  - [ ] literals =(obj) {.x = 1, .y = 2}=
+- [-] structs
+  - [X] statement =struct P {}=
+  - [X] literals =(obj) {.x = 1, .y = 2}=
   - [ ] members =p.x; p.y=
 - [ ] enums
   - [ ] statements =enum P {}=

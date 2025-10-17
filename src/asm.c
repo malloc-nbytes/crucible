@@ -765,11 +765,29 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 free_reg_literal(value);
         }
 
-        assert(e->lhs->type->kind == TYPE_KIND_PROC);
-        type_proc *proc_ty = (type_proc *)e->lhs->type;
+        int export = 0;
+        int variadic = 0;
+        type_array params = dyn_array_empty(type_array);
+        type *rettype = NULL;
+
+        assert(e->lhs->type->kind == TYPE_KIND_PROC || e->lhs->type->kind == TYPE_KIND_PROCPTR);
+        //type_proc *proc_ty = (type_proc *)e->lhs->type;
+
+        if (e->lhs->type->kind == TYPE_KIND_PROC) {
+                type_proc *proc_ty = (type_proc *)e->lhs->type;
+                export = proc_ty->export;
+                variadic = proc_ty->variadic;
+                type_get_types_from_proc(proc_ty, &params, &rettype);
+        } else {
+                type_procptr *proc_ty = (type_procptr *)e->lhs->type;
+                export = 0;
+                variadic = proc_ty->variadic;
+                params = proc_ty->param_types;
+                rettype = proc_ty->rettype;
+        }
 
         // Clear RAX for variadic procedures.
-        if (proc_ty->variadic) {
+        if (variadic) {
                 write_txt(ctx, "xor rax, rax", 1);
         }
 
@@ -785,12 +803,12 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         pop_inuse_regs(ctx);
 
         // Void return type case.
-        if (proc_ty->rettype->kind == TYPE_KIND_VOID
-            || proc_ty->rettype->kind == TYPE_KIND_NORETURN) {
+        if (rettype->kind == TYPE_KIND_VOID
+            || rettype->kind == TYPE_KIND_NORETURN) {
                 return "rax";
         }
 
-        return (void *)get_reg_from_size("rax", proc_ty->rettype->sz);
+        return (void *)get_reg_from_size("rax", rettype->sz);
 }
 
 static void *
@@ -928,7 +946,7 @@ visit_expr_mut(visitor *v, expr_mut *e)
         } break;
         case EXPR_KIND_INDEX: {
                 expr_index *idx_expr = (expr_index *)e->lhs;
-                size_t elemty_sz = ((type_array *)idx_expr->lhs->type)->elemty->sz;
+                size_t elemty_sz = ((type_list *)idx_expr->lhs->type)->elemty->sz;
                 const char *spec = szspec(elemty_sz);
                 const char *idxspec = szspec(idx_expr->idx->type->sz);
                 char *elemty_sz_cstr = int_to_cstr(elemty_sz);
@@ -1120,7 +1138,7 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
 {
         asm_context *ctx = (asm_context *)v->context;
 
-        type_array *ty = (type_array *)((expr *)e)->type;
+        type_list *ty = (type_list *)((expr *)e)->type;
         size_t szsum = ty->elemty->sz * ty->len; // Total size of the array in bytes
 
         // Zero the array if e->zeroed is true
@@ -1172,7 +1190,7 @@ visit_expr_index(visitor *v, expr_index *e)
         asm_context *ctx = (asm_context *)v->context;
 
         // TODO: Also allow for pointers.
-        size_t elemty_sz = ((type_array *)e->lhs->type)->elemty->sz;
+        size_t elemty_sz = ((type_list *)e->lhs->type)->elemty->sz;
         char *elemty_sz_cstr = int_to_cstr(elemty_sz);
         const char *spec = szspec(elemty_sz);
         const char *idxspec = szspec(e->idx->type->sz);
@@ -1231,7 +1249,7 @@ visit_expr_un(visitor *v, expr_un *e)
                 }
                 case EXPR_KIND_INDEX: {
                         expr_index *idx = (expr_index *)e->rhs;
-                        size_t elemty_sz = ((type_array *)idx->lhs->type)->elemty->sz;
+                        size_t elemty_sz = ((type_list *)idx->lhs->type)->elemty->sz;
                         char *elemty_sz_cstr = int_to_cstr(elemty_sz);
                         const char *idxspec = szspec(idx->idx->type->sz);
 
