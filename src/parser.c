@@ -146,6 +146,8 @@ parse_type(parser_context *ctx)
                 rettype = parse_type(ctx);
 
                 ty = (type *)type_procptr_alloc(params, rettype, variadic);
+        } else if (hd->ty == TOKEN_TYPE_IDENTIFIER) {
+                ty = (type *)type_custom_alloc(hd->lx);
         } else {
                 forge_err_wargs("unknown type: `%s`", hd->lx);
         }
@@ -819,6 +821,31 @@ parse_stmt_embed(parser_context *ctx)
         return stmt_embed_alloc(lns);
 }
 
+static stmt_enum *
+parse_stmt_enum(parser_context *ctx)
+{
+        token_array ids = dyn_array_empty(token_array);
+        expr_array exprs = dyn_array_empty(expr_array);
+
+        (void)expectkw(ctx, KWD_ENUM);
+        const token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+        (void)expect(ctx, TOKEN_TYPE_LEFT_CURLY);
+
+        while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
+                token *id = expect(ctx, TOKEN_TYPE_IDENTIFIER);
+                (void)expect(ctx, TOKEN_TYPE_EQUALS);
+                expr *e = parse_expr(ctx);
+                if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                        lexer_discard(ctx->l); // ,
+                } else {
+                        break;
+                }
+        }
+
+        (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
+        return stmt_enum_alloc(id, ids, exprs);
+}
+
 static stmt *
 parse_keyword_stmt(parser_context *ctx)
 {
@@ -854,6 +881,8 @@ parse_keyword_stmt(parser_context *ctx)
                 return (stmt *)parse_stmt_import(ctx);
         } else if (!strcmp(hd->lx, KWD_EMBED)) {
                 return (stmt *)parse_stmt_embed(ctx);
+        } else if (!strcmp(hd->lx, KWD_ENUM)) {
+                return (stmt *)parse_stmt_enum(ctx);
         } else {
                 assert(0);
         }

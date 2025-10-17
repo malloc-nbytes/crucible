@@ -36,6 +36,7 @@ typedef void *(*visit_stmt_module_sig)(visitor *v, stmt_module *s);
 typedef void *(*visit_stmt_import_sig)(visitor *v, stmt_import *s);
 typedef void *(*visit_stmt_embed_sig)(visitor *v, stmt_embed *s);
 typedef void *(*visit_stmt_empty_sig)(visitor *v, stmt_empty *s);
+typedef void *(*visit_stmt_enum_sig)(visitor *v, stmt_enum *s);
 
 typedef struct visitor {
         void *context;
@@ -73,6 +74,7 @@ typedef struct visitor {
         visit_stmt_import_sig      visit_stmt_import;
         visit_stmt_embed_sig       visit_stmt_embed;
         visit_stmt_empty_sig       visit_stmt_empty;
+        visit_stmt_enum_sig        visit_stmt_enum;
 } visitor;
 
 visitor *visitor_alloc(
@@ -109,7 +111,8 @@ visitor *visitor_alloc(
         visit_stmt_module_sig          visit_stmt_module,
         visit_stmt_import_sig          visit_stmt_import,
         visit_stmt_embed_sig           visit_stmt_embed,
-        visit_stmt_empty_sig           visit_stmt_empty
+        visit_stmt_empty_sig           visit_stmt_empty,
+        visit_stmt_enum_sig            visit_stmt_enum
 );
 
 void *accept_expr_bin(expr *e, visitor *v);
@@ -147,5 +150,8 @@ void *accept_stmt_module(stmt *s, visitor *v);
 void *accept_stmt_import(stmt *s, visitor *v);
 void *accept_stmt_embed(stmt *s, visitor *v);
 void *accept_stmt_empty(stmt *s, visitor *v);
+void *accept_stmt_enum(stmt *s, visitor *v);
+
+void *accept_stmt_unimplemented(stmt *s, visitor *v);
 
 #endif // VISITOR_H_INCLUDED

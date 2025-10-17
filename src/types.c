@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <string.h>
 
 void type_get_types_from_proc(const type_proc  *proc,
                               type_array       *params,
@@ -144,7 +145,16 @@ type_struct_alloc(const parameter_array *members, size_t sz)
         t->base.kind   = TYPE_KIND_STRUCT;
         t->base.sz     = sz;
         t->members     = members;
+        return t;
+}
 
+type_custom *
+type_custom_alloc(const char *id)
+{
+        type_custom *t = (type_custom *)alloc(sizeof(type_custom));
+        t->base.kind   = TYPE_KIND_CUSTOM;
+        t->base.sz     = -1;
+        t->id          = strdup(id);
         return t;
 }
 

@@ -382,3 +382,17 @@ stmt_empty_alloc(void)
         s->base.accept     = accept_stmt_empty;
         return s;
 }
+
+stmt_enum *
+stmt_enum_alloc(const token *id,
+                token_array  ids,
+                expr_array   exprs)
+{
+        stmt_enum *s       = alloc(sizeof(stmt_enum));
+        s->base.kind       = STMT_KIND_ENUM;
+        s->base.accept     = accept_stmt_enum;
+        s->id              = id;
+        s->ids             = ids;
+        s->exprs           = exprs;
+        return s;
+}

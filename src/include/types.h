@@ -37,6 +37,8 @@ typedef enum {
         TYPE_KIND_LIST,
 
         TYPE_KIND_STRUCT,
+        TYPE_KIND_ENUM,
+        TYPE_KIND_CUSTOM,
 
         TYPE_KIND_UNKNOWN,
 } type_kind;
@@ -96,6 +98,17 @@ typedef struct {
         const parameter_array *members;
 } type_struct;
 
+typedef struct {
+        type base;
+        token_array ids;
+        expr_array exprs;
+} type_enum;
+
+typedef struct {
+        type base;
+        const char *id;
+} type_custom;
+
 typedef struct { type base; } type_unknown;
 typedef struct { type base; } type_bool;
 typedef struct { type base; } type_sizet;
@@ -110,6 +123,7 @@ type_noreturn *type_noreturn_alloc(void);
 type_ptr *type_ptr_alloc(type *to);
 type_void *type_void_alloc(void);
 type_struct *type_struct_alloc(const parameter_array *members, size_t sz);
+type_custom *type_custom_alloc(const char *id);
 type_unknown *type_unknown_alloc(void);
 type_list *type_list_alloc(type *elemty, int len);
 type_bool *type_bool_alloc(void);

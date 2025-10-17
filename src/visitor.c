@@ -38,7 +38,8 @@ visitor_alloc(void                            *ctx,
               visit_stmt_module_sig           visit_stmt_module,
               visit_stmt_import_sig           visit_stmt_import,
               visit_stmt_embed_sig            visit_stmt_embed,
-              visit_stmt_empty_sig            visit_stmt_empty) {
+              visit_stmt_empty_sig            visit_stmt_empty,
+              visit_stmt_enum_sig             visit_stmt_enum) {
 
         visitor *v = (visitor *)alloc(sizeof(visitor));
 
@@ -77,6 +78,7 @@ visitor_alloc(void                            *ctx,
         v->visit_stmt_import          = visit_stmt_import;
         v->visit_stmt_embed           = visit_stmt_embed;
         v->visit_stmt_empty           = visit_stmt_empty;
+        v->visit_stmt_enum            = visit_stmt_enum;
 
         return v;
 }
@@ -378,4 +380,20 @@ accept_stmt_empty(stmt *s, visitor *v)
                 return v->visit_stmt_empty(v, (stmt_empty *)s);
         }
         return NULL;
+}
+
+void *
+accept_stmt_enum(stmt *s, visitor *v)
+{
+        if (v->visit_stmt_enum) {
+                return v->visit_stmt_enum(v, (stmt_enum *)s);
+        }
+        return NULL;
+}
+
+void *
+accept_stmt_unimplemented(stmt *s, visitor *v)
+{
+        forge_err_wargs("visitor accept function for %d is unimplemented", (int)s->kind);
+        return NULL; // unreachable
 }
