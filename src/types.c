@@ -217,6 +217,7 @@ type_to_cstr(const type *t)
                         if (i != 0) forge_str_concat(&res, ", ");
                         forge_str_concat(&res, type_to_cstr(params.data[i]));
                 }
+                if (((type_proc *)t)->variadic) forge_str_concat(&res, ", ...");
                 forge_str_concat(&res, "): ");
                 forge_str_concat(&res, type_to_cstr(rettype));
                 forge_str_append(&res, '>');
@@ -231,6 +232,7 @@ type_to_cstr(const type *t)
                         if (i != 0) forge_str_concat(&res, ", ");
                         forge_str_concat(&res, type_to_cstr(params.data[i]));
                 }
+                if (((type_procptr *)t)->variadic) forge_str_concat(&res, ", ...");
                 forge_str_concat(&res, "): ");
                 forge_str_concat(&res, type_to_cstr(rettype));
                 forge_str_append(&res, '>');
