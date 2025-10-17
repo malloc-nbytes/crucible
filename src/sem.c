@@ -343,6 +343,8 @@ visit_expr_struct(visitor *v, expr_struct *e)
 
         symtbl *tbl = (symtbl *)v->context;
 
+        e->base_stack_offset = tbl->stack_offset;
+
         const char *struct_id = e->id->lx;
 
         if (!sym_exists_in_scope(tbl, struct_id)) {
@@ -374,7 +376,7 @@ visit_expr_struct(visitor *v, expr_struct *e)
         }
 
         // Verify members and their expressions.
-        for (size_t i = 0; i < e->ids.len; ++i) {
+        for (size_t i = 0, sum = 0; i < e->ids.len; ++i) {
                 const char *got_id = e->ids.data[i]->lx;
                 const char *expected_id = struct_ty->members->data[i].id->lx;
                 if (strcmp(got_id, expected_id)) {
@@ -397,25 +399,16 @@ visit_expr_struct(visitor *v, expr_struct *e)
                                 "expected type `%s` but got `%s`",
                                 type_to_cstr(expected_ty), type_to_cstr(got_ty));
                 }
+
+                if (e->exprs.data[i]->kind == EXPR_KIND_STRUCT) {
+                        expr_struct *st = (expr_struct *)e->exprs.data[i];
+                        st->base_stack_offset = tbl->stack_offset + sum;
+                }
+
+                sum += e->exprs.data[i]->type->sz;
         }
 
         ((expr *)e)->type = struct_sym->ty;
-
-        e->resolved_syms = (sym_array *)alloc(sizeof(sym_array));
-        *e->resolved_syms = dyn_array_empty(sym_array);
-
-        size_t szsum = 0;
-        for (size_t i = 0; i < struct_ty->members->len; ++i) {
-                dyn_array_append(*e->resolved_syms, sym_dup(struct_ty->members->data[i].resolved));
-                //printf("BEFORE: %d\n", (*e->resolved_syms).data[i]->stack_offset);
-                //if (struct_ty->members->data[i].type->kind == TYPE_KIND_STRUCT) {
-                //        sym *other = get_sym_from_scope(tbl, ((type_struct *)struct_ty->members->data[i].type)->id);
-                //        type_struct *otherty = (type_struct *)other->ty;
-                //        (*e->resolved_syms).data[i]->stack_offset += other->ty->sz;
-                //}
-                (*e->resolved_syms).data[i]->stack_offset += tbl->stack_offset;
-                //printf("AFTER: %d\n", (*e->resolved_syms).data[i]->stack_offset);
-        }
 
         return NULL;
 }
@@ -987,7 +980,6 @@ visit_stmt_struct(visitor *v, stmt_struct *s)
                 }
 
                 sz += p->type->sz;
-                printf("HERE: %s, %d\n", p->id->lx, sz);
                 s->members.data[i].resolved = sym_alloc(tbl, p->id->lx, p->type, 0);
                 p->resolved->stack_offset = sz;
 

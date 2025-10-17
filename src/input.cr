@@ -9,19 +9,24 @@ struct S {
 
 struct Point {
         x: i32,
-        y: i32,
         s: S,
+        y: i32,
 }
 
 export proc _start(void): !
 {
+        -- let s: S = S {
+        --         .a = "hello",
+        --         .b = "world",
+        -- };
+
         let p: Point = Point {
                 .x = 1,
-                .y = 2,
                 .s = S {
                         .a = "foo",
                         .b = "bar",
                 },
+                .y = 2,
         };
 
         exit;

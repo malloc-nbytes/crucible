@@ -1095,22 +1095,22 @@ visit_expr_mut(visitor *v, expr_mut *e)
 static void *
 visit_expr_struct(visitor *v, expr_struct *e)
 {
+
         asm_context *ctx = (asm_context *)v->context;
-
-        for (size_t i = 0; i < e->resolved_syms->len; ++i) {
-                const sym *sym = e->resolved_syms->data[i];
-
-                if (sym->ty->kind != TYPE_KIND_STRUCT) {
-                        const char *spec = szspec(sym->ty->sz);
-                        char *offset = int_to_cstr(sym->stack_offset);
+        size_t szsum = 0;
+        for (size_t i = 0; i < e->ids.len; ++i) {
+                if (e->exprs.data[i]->type->kind != TYPE_KIND_STRUCT) {
                         char *value = e->exprs.data[i]->accept(e->exprs.data[i], v);
-
+                        const char *spec = szspec(e->exprs.data[i]->type->sz);
+                        int offset_i = e->exprs.data[i]->type->sz + e->base_stack_offset;
+                        char *offset = int_to_cstr(offset_i + szsum);
                         take_txt(ctx, forge_cstr_builder("mov ", spec, " [rbp-", offset, "], ", value, NULL), 1);
-
                         free_reg_literal(value);
                         free(offset);
+                        szsum += e->exprs.data[i]->type->sz;
                 } else {
-                        (void)e->exprs.data[i]->accept(e->exprs.data[i], v);
+                        e->exprs.data[i]->accept(e->exprs.data[i], v);
+                        szsum += e->exprs.data[i]->type->sz;
                 }
         }
 

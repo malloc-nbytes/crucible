@@ -116,9 +116,7 @@ typedef struct {
         const token *id;  // to be resolved in parser
         token_array ids;  // assert(ids.len == exprs.len)
         expr_array exprs; // assert(ids.len == exprs.len)
-
-        sym_array *resolved_syms; // assert(resolved_syms.len == ids.len == exprs.len)
-                                  // to be resolved in semantic analysis
+        int base_stack_offset;
 } expr_struct;
 
 typedef struct {
