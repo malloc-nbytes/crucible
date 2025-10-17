@@ -234,18 +234,34 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         // Let's assume that the left-hand-side it will always be a
         // a type of 'proc'.
         type *lhs_ty = ((expr *)e->lhs)->type;
-        if (lhs_ty->kind != TYPE_KIND_PROC) {
+        if (lhs_ty->kind != TYPE_KIND_PROC && lhs_ty->kind != TYPE_KIND_PROCPTR) {
                 pusherr(tbl, e->lhs->loc, "cannot perform a procedure call on type %s", type_to_cstr(lhs_ty));
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
 
-        type_proc *proc_ty = (type_proc *)lhs_ty;
+        int export = 0;
+        int variadic = 0;
+        type_array params = dyn_array_empty(type_array);
+        type *rettype = NULL;
 
-        if (tbl->context_switch && !proc_ty->export) {
+        if (lhs_ty->kind == TYPE_KIND_PROC) {
+                type_proc *proc_ty = (type_proc *)lhs_ty;
+                export = proc_ty->export;
+                variadic = proc_ty->variadic;
+                type_get_types_from_proc(proc_ty, &params, &rettype);
+        } else {
+                type_procptr *proc_ty = (type_procptr *)lhs_ty;
+                export = 0;
+                variadic = proc_ty->variadic;
+                params = proc_ty->param_types;
+                rettype = proc_ty->rettype;
+        }
+
+        if (tbl->context_switch && !export) {
                 pusherr(tbl, ((expr *)e)->loc,
                         "procedure `%s::%s()` is not marked as export",
-                        tbl->modname, proc_ty->id);
+                        tbl->modname, ((type_proc *)e->lhs->type)->id);
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 tbl->context_switch = 0;
                 return NULL;
@@ -253,20 +269,20 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         tbl->context_switch = 0;
 
         // Check number of arguments
-        if (e->args.len != proc_ty->params->len) {
-                if (e->args.len >= proc_ty->params->len && proc_ty->variadic) {
+        if (e->args.len != params.len) {
+                if (e->args.len >= params.len && variadic) {
                         goto ok;
                 }
 
                 pusherr(tbl, ((expr *)e)->loc,
                         "procedure requires %zu arguments but %zu were given",
-                        proc_ty->params->len, e->args.len);
+                        params.len, e->args.len);
         }
  ok:
 
         // This expression's return type is the return type
         // of the function that we are calling.
-        ((expr *)e)->type = proc_ty->rettype;
+        ((expr *)e)->type = rettype;
 
         // Go through each argument in the procedure call.
         for (size_t i = 0; i < e->args.len; ++i) {
@@ -276,8 +292,8 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 if (!arg->type) arg->accept(arg, v);
 
                 // Type check argument list
-                if (i < proc_ty->params->len) {
-                        type *expected = proc_ty->params->data[i].type;
+                if (i < params.len) {
+                        type *expected = params.data[i];
                         type *got = arg->type;
 
                         assert(expected);

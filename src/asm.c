@@ -765,11 +765,29 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
                 free_reg_literal(value);
         }
 
-        assert(e->lhs->type->kind == TYPE_KIND_PROC);
-        type_proc *proc_ty = (type_proc *)e->lhs->type;
+        int export = 0;
+        int variadic = 0;
+        type_array params = dyn_array_empty(type_array);
+        type *rettype = NULL;
+
+        assert(e->lhs->type->kind == TYPE_KIND_PROC || e->lhs->type->kind == TYPE_KIND_PROCPTR);
+        //type_proc *proc_ty = (type_proc *)e->lhs->type;
+
+        if (e->lhs->type->kind == TYPE_KIND_PROC) {
+                type_proc *proc_ty = (type_proc *)e->lhs->type;
+                export = proc_ty->export;
+                variadic = proc_ty->variadic;
+                type_get_types_from_proc(proc_ty, &params, &rettype);
+        } else {
+                type_procptr *proc_ty = (type_procptr *)e->lhs->type;
+                export = 0;
+                variadic = proc_ty->variadic;
+                params = proc_ty->param_types;
+                rettype = proc_ty->rettype;
+        }
 
         // Clear RAX for variadic procedures.
-        if (proc_ty->variadic) {
+        if (variadic) {
                 write_txt(ctx, "xor rax, rax", 1);
         }
 
@@ -785,12 +803,12 @@ visit_expr_proccall(visitor *v, expr_proccall *e)
         pop_inuse_regs(ctx);
 
         // Void return type case.
-        if (proc_ty->rettype->kind == TYPE_KIND_VOID
-            || proc_ty->rettype->kind == TYPE_KIND_NORETURN) {
+        if (rettype->kind == TYPE_KIND_VOID
+            || rettype->kind == TYPE_KIND_NORETURN) {
                 return "rax";
         }
 
-        return (void *)get_reg_from_size("rax", proc_ty->rettype->sz);
+        return (void *)get_reg_from_size("rax", rettype->sz);
 }
 
 static void *

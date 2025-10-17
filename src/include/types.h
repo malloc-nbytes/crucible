@@ -132,4 +132,6 @@ const char *type_kind_to_cstr(type_kind t);
 int type_is_unsigned(const type *t);
 type *type_get_lowest(type *t);
 
+void type_get_types_from_proc(const type_proc *proc, type_array *params, type **rettype);
+
 #endif // TYPES_H_INCLUDED

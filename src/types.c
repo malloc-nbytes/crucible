@@ -8,9 +8,9 @@
 #include <assert.h>
 #include <stddef.h>
 
-static void get_types_from_proc(const type_proc  *proc,
-                                type_array       *params,
-                                type            **rettype);
+void type_get_types_from_proc(const type_proc  *proc,
+                              type_array       *params,
+                              type            **rettype);
 
 type_i32 *
 type_i32_alloc(void)
@@ -211,7 +211,7 @@ type_to_cstr(const type *t)
         case TYPE_KIND_PROC: {
                 type_array params = {0};
                 type *rettype = NULL;
-                get_types_from_proc((type_proc *)t, &params, &rettype);
+                type_get_types_from_proc((type_proc *)t, &params, &rettype);
                 forge_str res = forge_str_from("<proc(");
                 for (size_t i = 0; i < params.len; ++i) {
                         if (i != 0) forge_str_concat(&res, ", ");
@@ -275,10 +275,10 @@ type_kind_to_cstr(type_kind t)
         return NULL; // unreachable
 }
 
-static void
-get_types_from_proc(const type_proc  *proc,
-                    type_array       *params,
-                    type            **rettype)
+void
+type_get_types_from_proc(const type_proc  *proc,
+                         type_array       *params,
+                         type            **rettype)
 {
 
         // Note: absolutely hellish workaround because
@@ -329,7 +329,7 @@ type_is_compat(type **t1, type **t2)
                 int         var2 = 0;
 
                 if (t1kind == TYPE_KIND_PROC) {
-                        get_types_from_proc((type_proc *)(*t1), &ar1, &ret1);
+                        type_get_types_from_proc((type_proc *)(*t1), &ar1, &ret1);
                         var1 = ((type_proc *)(*t1))->variadic;
                 } else if (t1kind == TYPE_KIND_PROCPTR) {
                         ar1 = ((type_procptr *)(*t1))->param_types;
@@ -338,7 +338,7 @@ type_is_compat(type **t1, type **t2)
                 }
 
                 if (t2kind == TYPE_KIND_PROC) {
-                        get_types_from_proc((type_proc *)(*t2), &ar2, &ret2);
+                        type_get_types_from_proc((type_proc *)(*t2), &ar2, &ret2);
                         var2 = ((type_proc *)(*t2))->variadic;
                 } else if (t2kind == TYPE_KIND_PROCPTR) {
                         ar2 = ((type_procptr *)(*t2))->param_types;
