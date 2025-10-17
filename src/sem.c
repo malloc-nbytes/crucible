@@ -306,11 +306,11 @@ visit_expr_mut(visitor *v, expr_mut *e)
             || e->op->ty == TOKEN_TYPE_MINUS_EQUALS
             || e->op->ty == TOKEN_TYPE_ASTERISK_EQUALS
             || e->op->ty == TOKEN_TYPE_FORWARDSLASH_EQUALS) {
-                if ((e->lhs->type->kind == TYPE_KIND_ARRAY
+                if ((e->lhs->type->kind == TYPE_KIND_LIST
                      || e->lhs->type->kind == TYPE_KIND_PTR)
                     && e->rhs->type->kind <= TYPE_KIND_NUMBER) {
                         coerce_integer_literal(tbl, e->rhs, TYPE_KIND_SIZET);
-                } else if ((e->rhs->type->kind == TYPE_KIND_ARRAY
+                } else if ((e->rhs->type->kind == TYPE_KIND_LIST
                             || e->rhs->type->kind == TYPE_KIND_PTR)
                            && e->lhs->type->kind <= TYPE_KIND_NUMBER) {
                         coerce_integer_literal(tbl, e->lhs, TYPE_KIND_SIZET);
@@ -458,7 +458,7 @@ visit_expr_arrayinit(visitor *v, expr_arrayinit *e)
                 /* } */
         }
 
-        ((expr *)e)->type = (type *)type_array_alloc(elemty, (int)e->exprs.len);
+        ((expr *)e)->type = (type *)type_list_alloc(elemty, (int)e->exprs.len);
 
         return NULL;
 }
@@ -470,9 +470,9 @@ visit_expr_index(visitor *v, expr_index *e)
 
         e->lhs->accept(e->lhs, v);
 
-        if (e->lhs->type->kind != TYPE_KIND_ARRAY
+        if (e->lhs->type->kind != TYPE_KIND_LIST
             && e->lhs->type->kind != TYPE_KIND_PTR) {
-                pusherr(tbl, e->lhs->loc, "index operations are only permitted for arrays and pointers");
+                pusherr(tbl, e->lhs->loc, "index operations are only permitted for lists and pointers");
                 ((expr *)e)->type = (type *)type_unknown_alloc();
                 return NULL;
         }
@@ -491,8 +491,8 @@ visit_expr_index(visitor *v, expr_index *e)
                 pusherr(tbl, e->idx->loc, "array indices are allowed only for size_t numbers");
         }
 
-        if (e->lhs->type->kind == TYPE_KIND_ARRAY) {
-                ((expr *)e)->type = ((type_array *)e->lhs->type)->elemty;
+        if (e->lhs->type->kind == TYPE_KIND_LIST) {
+                ((expr *)e)->type = ((type_list *)e->lhs->type)->elemty;
         } else {
                 ((expr *)e)->type = ((type_ptr *)e->lhs->type)->to;
         }
@@ -513,8 +513,8 @@ visit_expr_un(visitor *v, expr_un *e)
         } else if (e->op->ty == TOKEN_TYPE_ASTERISK) {
                 if (e->rhs->type->kind == TYPE_KIND_PTR) {
                         ((expr *)e)->type = ((type_ptr *)e->rhs->type)->to;
-                } else if (e->rhs->type->kind == TYPE_KIND_ARRAY) {
-                        ((expr *)e)->type = ((type_array *)e->rhs->type)->elemty;
+                } else if (e->rhs->type->kind == TYPE_KIND_LIST) {
+                        ((expr *)e)->type = ((type_list *)e->rhs->type)->elemty;
                 } else {
                         pusherr(tbl, e->op->loc, "cannot dereference type of `%s`",
                                 type_to_cstr(e->rhs->type));
@@ -604,10 +604,10 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         // Check for a zeroed array initializer. Set appropriate
         // lengths if necessary.
-        if (s->type->kind == TYPE_KIND_ARRAY
-            && s->e->type->kind == TYPE_KIND_ARRAY) {
-                type_array *let_ty   = (type_array *)s->type;
-                type_array *e_ty     = (type_array *)s->e->type;
+        if (s->type->kind == TYPE_KIND_LIST
+            && s->e->type->kind == TYPE_KIND_LIST) {
+                type_list *let_ty   = (type_list *)s->type;
+                type_list *e_ty     = (type_list *)s->e->type;
                 expr_arrayinit *init = (expr_arrayinit *)s->e;
 
                 if (init->zeroed && let_ty->len != -1/*array has length decl.*/) {
@@ -630,10 +630,10 @@ visit_stmt_let(visitor *v, stmt_let *s)
 
         // Increase the procedures RSP register subtraction amount.
         if (tbl->proc.inproc) {
-                if (sym->ty->kind == TYPE_KIND_ARRAY) {
+                if (sym->ty->kind == TYPE_KIND_LIST) {
                         // Add the values of all type sizes for arrays.
-                        tbl->stack_offset += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
-                        tbl->proc.rsp += ((type_array *)sym->ty)->elemty->sz * ((type_array *)sym->ty)->len;
+                        tbl->stack_offset += ((type_list *)sym->ty)->elemty->sz * ((type_list *)sym->ty)->len;
+                        tbl->proc.rsp += ((type_list *)sym->ty)->elemty->sz * ((type_list *)sym->ty)->len;
                 }
                 tbl->proc.rsp += sym->ty->sz;
         }
