@@ -824,7 +824,7 @@ parse_stmt(parser_context *ctx)
         loc loc = lexer_peek(ctx->l, 0)->loc;
         stmt *s = NULL;
 
-        if (kwds_iskw(lexer_peek(ctx->l, 0)->lx)) {
+        if (kwds_iskw(lexer_peek(ctx->l, 0)->lx) && strcmp(lexer_peek(ctx->l, 0)->lx, KWD_CAST)) {
                 s = parse_keyword_stmt(ctx);
                 s->loc = loc;
                 return s;

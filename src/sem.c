@@ -393,18 +393,19 @@ visit_expr_struct(visitor *v, expr_struct *e)
                 // Typecheck
                 type *got_ty = e->exprs.data[i]->type;
                 type *expected_ty = struct_ty->members->data[i].type;
-
                 if (!type_is_compat(&got_ty, &expected_ty)) {
                         pusherr(tbl, e->ids.data[i]->loc,
                                 "expected type `%s` but got `%s`",
                                 type_to_cstr(expected_ty), type_to_cstr(got_ty));
                 }
 
+                // Update the base offset of the other struct.
                 if (e->exprs.data[i]->kind == EXPR_KIND_STRUCT) {
                         expr_struct *st = (expr_struct *)e->exprs.data[i];
                         st->base_stack_offset = tbl->stack_offset + sum;
                 }
 
+                // Keep running count of the sum of type sizes.
                 sum += e->exprs.data[i]->type->sz;
         }
 

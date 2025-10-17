@@ -1109,7 +1109,7 @@ visit_expr_struct(visitor *v, expr_struct *e)
                         free(offset);
                         szsum += e->exprs.data[i]->type->sz;
                 } else {
-                        e->exprs.data[i]->accept(e->exprs.data[i], v);
+                        (void)e->exprs.data[i]->accept(e->exprs.data[i], v);
                         szsum += e->exprs.data[i]->type->sz;
                 }
         }
