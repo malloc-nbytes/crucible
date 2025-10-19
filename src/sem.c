@@ -97,6 +97,14 @@ sym_alloc(symtbl     *tbl,
 }
 
 static void
+check_toplvl(symtbl *tbl, const stmt *s)
+{
+        if (!tbl->proc.inproc) {
+                pusherr(tbl, s->loc, "invalid statement at top-level");
+        }
+}
+
+static void
 coerce_integer_literal(symtbl    *tbl,
                        expr      *e,
                        type_kind  to)
@@ -685,6 +693,8 @@ visit_stmt_block(visitor *v, stmt_block *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
+        check_toplvl(tbl, (stmt *)s);
+
         push_scope(tbl);
 
         // Iterate over all statements in the block.
@@ -786,6 +796,8 @@ visit_stmt_return(visitor *v, stmt_return *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
+        check_toplvl(tbl, (stmt *)s);
+
         if (tbl->proc.inproc) {
                 if (tbl->proc.type->kind == TYPE_KIND_NORETURN) {
                         pusherr(tbl, ((stmt *)s)->loc, "cannot return in procedure returning `!`");
@@ -812,6 +824,10 @@ visit_stmt_return(visitor *v, stmt_return *s)
 static void *
 visit_stmt_exit(visitor *v, stmt_exit *s)
 {
+        symtbl *tbl = (symtbl *)v->context;
+
+        check_toplvl(tbl, (stmt *)s);
+
         if (s->e) {
                 s->e->accept(s->e, v);
         }
@@ -843,6 +859,10 @@ visit_stmt_extern_proc(visitor *v, stmt_extern_proc *s)
 static void *
 visit_stmt_if(visitor *v, stmt_if *s)
 {
+        symtbl *tbl = (symtbl *)v->context;
+
+        check_toplvl(tbl, (stmt *)s);
+
         s->e->accept(s->e, v);
         s->then->accept(s->then, v);
 
@@ -858,6 +878,8 @@ visit_stmt_while(visitor *v, stmt_while *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
+        check_toplvl(tbl, (stmt *)s);
+
         s->e->accept(s->e, v);
         tbl->loop = (void *)s;
         s->body->accept(s->body, v);
@@ -869,6 +891,8 @@ static void *
 visit_stmt_for(visitor *v, stmt_for *s)
 {
         symtbl *tbl = (symtbl *)v->context;
+
+        check_toplvl(tbl, (stmt *)s);
 
         push_scope(tbl);
         s->init->accept(s->init, v);
@@ -887,9 +911,9 @@ visit_stmt_for(visitor *v, stmt_for *s)
 void *
 visit_stmt_break(visitor *v, stmt_break *s)
 {
-        NOOP(v);
-
         symtbl *tbl = (symtbl *)v->context;
+
+        check_toplvl(tbl, (stmt *)s);
 
         if (!tbl->loop) {
                 pusherr(tbl, ((stmt *)s)->loc, "cannot use `break` when outside of a loop");
@@ -907,6 +931,8 @@ visit_stmt_continue(visitor *v, stmt_continue *s)
         NOOP(v);
 
         symtbl *tbl = (symtbl *)v->context;
+
+        check_toplvl(tbl, (stmt *)s);
 
         if (!tbl->loop) {
                 pusherr(tbl, ((stmt *)s)->loc, "cannot use `continue` when outside of a loop");
@@ -988,6 +1014,8 @@ static void *
 visit_stmt_embed(visitor *v, stmt_embed *s)
 {
         symtbl *tbl = (symtbl *)v->context;
+
+        check_toplvl(tbl, (stmt *)s);
 
         for (size_t i = 0; i < s->lns.len; ++i) {
                 const char *ln = s->lns.data[i]->lx;
