@@ -971,14 +971,15 @@ visit_stmt_import(visitor *v, stmt_import *s)
 {
         symtbl *tbl = (symtbl *)v->context;
 
-        char    *src        = read_file_from_searchpaths(&s->filepath, &((stmt *)s)->loc);
-        lexer    l          = lexer_create(src, s->filepath);
-        program *p          = parser_create_program(&l);
-        symtbl  *import_tbl = sem_analysis(p);
+        for (size_t i = 0; i < s->filepaths.len; ++i) {
+                char    *src        = read_file_from_searchpaths(&s->filepaths.data[i], &((stmt *)s)->loc);
+                lexer    l          = lexer_create(src, s->filepaths.data[i]);
+                program *p          = parser_create_program(&l);
+                symtbl  *import_tbl = sem_analysis(p);
 
-        dyn_array_append(tbl->imports, import_tbl);
-
-        s->resolved_modname = import_tbl->modname;
+                dyn_array_append(tbl->imports, import_tbl);
+                dyn_array_append(s->resolved_modnames, import_tbl->modname);
+        }
 
         return NULL;
 }

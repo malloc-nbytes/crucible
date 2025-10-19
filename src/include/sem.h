@@ -20,7 +20,7 @@ DYN_ARRAY_TYPE(sym *, sym_array);
 
 typedef struct symtbl {
         const char *src_filepath;
-        const char *modname;
+        char *modname;
         program *program;
 
         smap_array scope;

@@ -86,6 +86,10 @@ static str_array g_already_assembled = dyn_array_empty(str_array);
 static void
 assemble(asm_context *ctx)
 {
+        int (*_cmd)(const char *) = (g_config.flags & FLAG_TYPE_VERBOSE) == 0
+                ? cmd_s
+                : cmd;
+
         /* char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", g_config.filepath, ".asm -o ", */
         /*                                 g_config.outname, ".o", NULL); */
 
@@ -102,13 +106,13 @@ assemble(asm_context *ctx)
 
         char *nasm = forge_cstr_builder("nasm -f elf64 -g -F dwarf ", basename, ".asm -o ",
                                         basename, ".o", NULL);
-        cmd_s(nasm);
+        _cmd(nasm);
 
         dyn_array_append(g_already_assembled, strdup(src_filepath));
 
         char *rm_asm = forge_cstr_builder("rm ", basename, ".asm", NULL);
         if ((g_config.flags & FLAG_TYPE_ASM) == 0) {
-                cmd_s(rm_asm);
+                _cmd(rm_asm);
         }
 
         free(nasm);
@@ -256,15 +260,6 @@ alloc_reg(int sz)
 static int
 alloc_param_regs(int sz)
 {
-        /* static const char *param_regs[] = { */
-        /*         "rdi", "edi", "di", "dil",  // Index 12-15 */
-        /*         "rsi", "esi", "si", "sil",  // Index 8-11 */
-        /*         "rdx", "edx", "dx", "dl",   // Index 4-7 */
-        /*         "rcx", "ecx", "cx", "cl",   // Index 0-3 */
-        /*         "r8",  "r8d", "r8w", "r8b", // Index 16-19 */
-        /*         "r9",  "r9d", "r9w", "r9b"  // Index 20-23 */
-        /* }; */
-
         static const size_t param_reg_indices[] = {12, 8, 4, 0, 16, 20};
         static const size_t param_reg_count = sizeof(param_reg_indices)/sizeof(*param_reg_indices);
         int col;
@@ -1477,7 +1472,7 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                 dyn_array_append(ctx->globals, s->id->lx);
         }
 
-        if (!strcmp(s->id->lx, "_start")) {
+        if (!strcmp(s->id->lx, "_start") || !strcmp(s->id->lx, "main")) {
                 take_txt(ctx, forge_cstr_builder(s->id->lx, ":", NULL), 1);
         } else {
                 const char *modname = ctx->tbl->modname;
@@ -1768,35 +1763,39 @@ visit_stmt_import(visitor *v, stmt_import *s)
         asm_context *ctx = (asm_context *)v->context;
         symtbl *import_tbl = NULL;
 
-        for (size_t i = 0; i < ctx->tbl->imports.len; ++i) {
-                if (!strcmp(s->filepath, ctx->tbl->imports.data[i]->src_filepath)) {
-                        import_tbl = ctx->tbl->imports.data[i];
-                        break;
+        for (size_t i = 0; i < s->filepaths.len; ++i) {
+                const char *filepath = s->filepaths.data[i];
+
+                for (size_t j = 0; j < ctx->tbl->imports.len; ++j) {
+                        if (!strcmp(filepath, ctx->tbl->imports.data[j]->src_filepath)) {
+                                import_tbl = ctx->tbl->imports.data[j];
+                                break;
+                        }
+                }
+
+                assert(import_tbl);
+
+                str_array obj_filepaths = asm_gen(import_tbl->program, import_tbl);
+
+                for (size_t j = 0; j < obj_filepaths.len; ++j) {
+                        dyn_array_append(ctx->obj_filepaths, obj_filepaths.data[j]);
+                }
+
+                for (size_t j = 0; j < import_tbl->export_syms.len; ++j) {
+                        const sym *sym = import_tbl->export_syms.data[j];
+                        const type *type = sym->ty;
+                        char *exp = NULL;
+
+                        if (type->kind == TYPE_KIND_PROC && ((type_proc *)type)->extern_) {
+                                // Case for importing a module with 'extern export proc...'.
+                                exp = forge_cstr_builder(sym->id, NULL);
+                        } else {
+                                exp = forge_cstr_builder(s->resolved_modnames.data[i], "_", sym->id, NULL);
+                        }
+                        dyn_array_append(ctx->externs, exp);
                 }
         }
 
-        assert(import_tbl);
-
-        str_array obj_filepaths = asm_gen(import_tbl->program, import_tbl);
-
-        for (size_t i = 0; i < obj_filepaths.len; ++i) {
-                dyn_array_append(ctx->obj_filepaths, obj_filepaths.data[i]);
-        }
-
-        for (size_t i = 0; i < import_tbl->export_syms.len; ++i) {
-                // TODO HERE
-                const sym *sym = import_tbl->export_syms.data[i];
-                const type *type = sym->ty;
-                char *exp = NULL;
-
-                if (type->kind == TYPE_KIND_PROC && ((type_proc *)type)->extern_) {
-                        // Case for importing a module with 'extern export proc...'.
-                        exp = forge_cstr_builder(sym->id, NULL);
-                } else {
-                        exp = forge_cstr_builder(s->resolved_modname, "_", sym->id, NULL);
-                }
-                dyn_array_append(ctx->externs, exp);
-        }
 
         return NULL;
 }
@@ -1910,7 +1909,7 @@ write_globals(asm_context *ctx)
 {
         for (size_t i = 0; i < ctx->globals.len; ++i) {
                 write_txt(ctx, "global ", 0);
-                if (strcmp(ctx->globals.data[i], "_start")) {
+                if (strcmp(ctx->globals.data[i], "_start") && strcmp(ctx->globals.data[i], "main")) {
                         write_txt(ctx, ctx->tbl->modname, 0);
                         write_txt(ctx, "_", 0);
                 }
