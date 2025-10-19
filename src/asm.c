@@ -260,15 +260,6 @@ alloc_reg(int sz)
 static int
 alloc_param_regs(int sz)
 {
-        /* static const char *param_regs[] = { */
-        /*         "rdi", "edi", "di", "dil",  // Index 12-15 */
-        /*         "rsi", "esi", "si", "sil",  // Index 8-11 */
-        /*         "rdx", "edx", "dx", "dl",   // Index 4-7 */
-        /*         "rcx", "ecx", "cx", "cl",   // Index 0-3 */
-        /*         "r8",  "r8d", "r8w", "r8b", // Index 16-19 */
-        /*         "r9",  "r9d", "r9w", "r9b"  // Index 20-23 */
-        /* }; */
-
         static const size_t param_reg_indices[] = {12, 8, 4, 0, 16, 20};
         static const size_t param_reg_count = sizeof(param_reg_indices)/sizeof(*param_reg_indices);
         int col;
