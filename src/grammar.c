@@ -353,14 +353,13 @@ stmt_module_alloc(const token *modname)
 }
 
 stmt_import *
-stmt_import_alloc(char *filepath, int local)
+stmt_import_alloc(str_array filepaths)
 {
-        stmt_import *s      = alloc(sizeof(stmt_import));
-        s->base.kind        = STMT_KIND_IMPORT;
-        s->base.accept      = accept_stmt_import;
-        s->filepath         = filepath;
-        s->local            = local;
-        s->resolved_modname = NULL;
+        stmt_import *s       = alloc(sizeof(stmt_import));
+        s->base.kind         = STMT_KIND_IMPORT;
+        s->base.accept       = accept_stmt_import;
+        s->filepaths         = filepaths;
+        s->resolved_modnames = dyn_array_empty(str_array);
         return s;
 }
 

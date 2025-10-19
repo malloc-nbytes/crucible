@@ -1772,35 +1772,39 @@ visit_stmt_import(visitor *v, stmt_import *s)
         asm_context *ctx = (asm_context *)v->context;
         symtbl *import_tbl = NULL;
 
-        for (size_t i = 0; i < ctx->tbl->imports.len; ++i) {
-                if (!strcmp(s->filepath, ctx->tbl->imports.data[i]->src_filepath)) {
-                        import_tbl = ctx->tbl->imports.data[i];
-                        break;
+        for (size_t i = 0; i < s->filepaths.len; ++i) {
+                const char *filepath = s->filepaths.data[i];
+
+                for (size_t j = 0; j < ctx->tbl->imports.len; ++j) {
+                        if (!strcmp(filepath, ctx->tbl->imports.data[j]->src_filepath)) {
+                                import_tbl = ctx->tbl->imports.data[j];
+                                break;
+                        }
+                }
+
+                assert(import_tbl);
+
+                str_array obj_filepaths = asm_gen(import_tbl->program, import_tbl);
+
+                for (size_t j = 0; j < obj_filepaths.len; ++j) {
+                        dyn_array_append(ctx->obj_filepaths, obj_filepaths.data[j]);
+                }
+
+                for (size_t j = 0; j < import_tbl->export_syms.len; ++j) {
+                        const sym *sym = import_tbl->export_syms.data[j];
+                        const type *type = sym->ty;
+                        char *exp = NULL;
+
+                        if (type->kind == TYPE_KIND_PROC && ((type_proc *)type)->extern_) {
+                                // Case for importing a module with 'extern export proc...'.
+                                exp = forge_cstr_builder(sym->id, NULL);
+                        } else {
+                                exp = forge_cstr_builder(s->resolved_modnames.data[i], "_", sym->id, NULL);
+                        }
+                        dyn_array_append(ctx->externs, exp);
                 }
         }
 
-        assert(import_tbl);
-
-        str_array obj_filepaths = asm_gen(import_tbl->program, import_tbl);
-
-        for (size_t i = 0; i < obj_filepaths.len; ++i) {
-                dyn_array_append(ctx->obj_filepaths, obj_filepaths.data[i]);
-        }
-
-        for (size_t i = 0; i < import_tbl->export_syms.len; ++i) {
-                // TODO HERE
-                const sym *sym = import_tbl->export_syms.data[i];
-                const type *type = sym->ty;
-                char *exp = NULL;
-
-                if (type->kind == TYPE_KIND_PROC && ((type_proc *)type)->extern_) {
-                        // Case for importing a module with 'extern export proc...'.
-                        exp = forge_cstr_builder(sym->id, NULL);
-                } else {
-                        exp = forge_cstr_builder(s->resolved_modname, "_", sym->id, NULL);
-                }
-                dyn_array_append(ctx->externs, exp);
-        }
 
         return NULL;
 }

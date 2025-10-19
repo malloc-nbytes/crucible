@@ -7,7 +7,7 @@
 
 typedef struct {
         stmt_array stmts;
-        const char *modname;
+        char *modname;
         const char *src_filepath;
 } program;
 
