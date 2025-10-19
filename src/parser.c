@@ -7,6 +7,9 @@
 #include <forge/utils.h>
 #include <forge/err.h>
 #include <forge/str.h>
+#include <forge/cstr.h>
+#include <forge/io.h>
+#include <forge/cmd.h>
 
 #include <assert.h>
 #include <string.h>
@@ -16,7 +19,7 @@
 typedef struct {
         lexer *l;
         int in_global;
-        const char *module;
+        char *module;
 } parser_context;
 
 static stmt *parse_stmt(parser_context *ctx);
@@ -754,35 +757,96 @@ parse_stmt_module(parser_context *ctx)
         return stmt_module_alloc(modname);
 }
 
+static str_array
+walkdir(const char *path,
+        str_array  *out_paths)
+{
+        if (forge_io_is_dir(path)) {
+                char **files = ls(path);
+                for (size_t i = 0; files[i]; ++i) {
+                        if (!strcmp(files[i], "..") || !strcmp(files[i], ".")) continue;
+
+                        char *fullpath = forge_cstr_builder(path, files[i], NULL);
+
+                        if (forge_io_is_dir(fullpath)) {
+                                char *old = fullpath;
+                                fullpath = forge_cstr_builder(old, "/", NULL);
+                                free(old);
+                                walkdir(fullpath, out_paths);
+                        } else if (!strcmp(forge_io_file_ext(fullpath), "cr")) {
+                                dyn_array_append(*out_paths, fullpath);
+                        }
+                }
+        }
+}
+
 static stmt_import *
 parse_stmt_import(parser_context *ctx)
 {
-        char *filepath = NULL;
-        int local = 0;
-
         lexer_discard(ctx->l); // import
 
-        token *path = expect_or(ctx, TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_STRING_LITERAL);
+        token *basepath = expect_or(ctx, TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_STRING_LITERAL);
+        str_array filepaths = dyn_array_empty(str_array);
 
-        if (path->ty == TOKEN_TYPE_IDENTIFIER) {
-                forge_str buf = forge_str_from(path->lx);
-
-                while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_SEMICOLON) {
-                        token *next = expect_or(ctx, TOKEN_TYPE_IDENTIFIER, TOKEN_TYPE_PERIOD);
-                        forge_str_concat(&buf, next->ty == TOKEN_TYPE_PERIOD ? "/" : next->lx);
-                }
-
-                forge_str_concat(&buf, ".cr");
-
-                filepath = buf.data;
-        } else {
-                local = 1;
-                filepath = strdup(path->lx);
+        if (basepath->ty == TOKEN_TYPE_STRING_LITERAL) {
+                dyn_array_append(filepaths, strdup(basepath->lx));
+                goto done;
         }
 
-        (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+        forge_str buf = forge_str_create();
 
-        return stmt_import_alloc(filepath, local);
+        if (basepath->ty == TOKEN_TYPE_IDENTIFIER) {
+                while (basepath->ty != TOKEN_TYPE_SEMICOLON) {
+                        switch (basepath->ty) {
+                        case TOKEN_TYPE_IDENTIFIER: {
+                                forge_str_concat(&buf, basepath->lx);
+                        } break;
+                        case TOKEN_TYPE_PERIOD: {
+                                forge_str_append(&buf, '/');
+                        } break;
+                        case TOKEN_TYPE_LEFT_CURLY: {
+                                str_array multis = dyn_array_empty(str_array);
+                                while (LSP(ctx->l, 0)->ty != TOKEN_TYPE_RIGHT_CURLY) {
+                                        dyn_array_append(multis, expect(ctx, TOKEN_TYPE_IDENTIFIER)->lx);
+                                        if (LSP(ctx->l, 0)->ty == TOKEN_TYPE_COMMA) {
+                                                lexer_discard(ctx->l); // ,
+                                        } else {
+                                                break;
+                                        }
+                                }
+                                (void)expect(ctx, TOKEN_TYPE_RIGHT_CURLY);
+                                for (size_t i = 0; i < multis.len; ++i) {
+                                        char *path = forge_cstr_builder(buf.data, multis.data[i], ".cr", NULL);
+                                        dyn_array_append(filepaths, path);
+                                }
+                                dyn_array_free(multis);
+                                (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+                                goto done;
+                        } break;
+                        case TOKEN_TYPE_ASTERISK: {
+                                str_array walked = dyn_array_empty(str_array);
+                                walkdir(buf.data, &walked);
+                                for (size_t i = 0; i < walked.len; ++i) {
+                                        char *path = forge_cstr_builder(walked.data[i], NULL);
+                                        dyn_array_append(filepaths, path);
+                                }
+                                dyn_array_free(walked);
+                                (void)expect(ctx, TOKEN_TYPE_SEMICOLON);
+                                goto done;
+                        } break;
+                        default: forge_err_wargs("%sunexpected token `%s`", loc_err(basepath->loc), basepath->lx);
+                        }
+                        basepath = lexer_next(ctx->l);
+                        if (basepath->ty == TOKEN_TYPE_SEMICOLON) {
+                                forge_str_concat(&buf, ".cr");
+                                dyn_array_append(filepaths, strdup(buf.data));
+                                forge_str_clear(&buf);
+                        }
+                }
+        }
+
+ done:
+        return stmt_import_alloc(filepaths);
 }
 
 static stmt *

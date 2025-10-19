@@ -7,7 +7,6 @@ export proc set(src: u8*, val: u8, n: size_t): void
         }
 }
 
--- void *memcpy(void dest[restrict .n], const void src[restrict .n], size_t n);
 export proc copy(dst: u8*, src: u8*, n: size_t): void
 {
         for (let i: size_t = 0; i < n; i += 1) {

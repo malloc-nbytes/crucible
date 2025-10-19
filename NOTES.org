@@ -40,11 +40,17 @@
 
 ** Critical
 
-The following code prints garbage.
+The following clobbers the register being used to call the function.
 
 #+begin_src
-let x: u8 = 97;
-cstdio::printf("%d\n", x);
+proc f(a: i32, b: i32, c: i32, d: i32, s: proc(void):void): void {}
+proc a(void): void {}
+export proc _start(void): !
+{
+        let _a: proc(void): void = a;
+        f(1,2,3,4,_a);
+        exit;
+}
 #+end_src
 
 ** Misc.
