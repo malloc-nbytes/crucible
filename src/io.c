@@ -10,8 +10,10 @@ load_file(const char *path)
         char   *buf;
         size_t  size;
 
-        if ((f = fopen(path, "rb")) == NULL)
-                return NULL;
+        if ((f = fopen(path, "rb")) == NULL) {
+                perror("fopen");
+                exit(1);
+        }
 
         fseek(f, 0, SEEK_END);
         size = ftell(f);
@@ -21,7 +23,7 @@ load_file(const char *path)
 
         if (fread(buf, 1, size, f) != size) {
                 perror("fread");
-                return NULL;
+                exit(1);
         }
 
         fclose(f);
