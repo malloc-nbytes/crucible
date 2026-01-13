@@ -107,7 +107,7 @@ noteol(int c)
 static int
 issym(int c)
 {
-        return isident(c)
+        return !isident(c)
                 && !ignorable(c)
                 && c != '"'
                 && c != '\'';
@@ -128,6 +128,24 @@ init_opmap(void) {
         opmap_insert(&g_opmap, "-", TK_MINUS);
         opmap_insert(&g_opmap, "*", TK_ASTERISK);
         opmap_insert(&g_opmap, "/", TK_FORWARDSLASH);
+}
+
+token_kind *
+determineop(const char *s, size_t *len)
+{
+        assert(*len < 256);
+        char buf[256] = {0};
+
+        while (*len > 0) {
+                memset(buf, 0, 256);
+                strncpy(buf, s, *len);
+                if (opmap_contains(&g_opmap, buf)) {
+                        return opmap_get(&g_opmap, buf);
+                }
+                --(*len);
+        }
+
+        return NULL;
 }
 
 void
@@ -185,7 +203,7 @@ lex_file(const char *path)
                         ++r;
                         ++i;
                 } else if (isident(ch) && !isdigit(ch)) {
-                        size_t len = consume_while(src+i, issym);
+                        size_t len = consume_while(src+i, isident);
                         token *t   = token_alloc(src+i, len, TK_ID,
                                                  r, c, l.fp, &l.a);
                         append(&l, t);
@@ -208,7 +226,13 @@ lex_file(const char *path)
                 } else if (ch == '\'') {
                         assert(0);
                 } else {
-                        assert(0);
+                        size_t len = consume_while(src+i, issym);
+                        token_kind *k = determineop(src+i, &len);
+                        assert(k);
+                        token *t = token_alloc(src+i, len, *k, r, c, l.fp, &l.a);
+                        append(&l, t);
+                        i += len;
+                        c += len;
                 }
         }
 
