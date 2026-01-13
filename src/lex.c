@@ -24,10 +24,10 @@ token_alloc(const char *st,
         token *t;
 
         t      = arena_alloc(a, sizeof(token));
-        t->lx  = strv_from(st, len);
         t->k   = k;
         t->n   = NULL;
         t->loc = loc_create(fp, r, c);
+        t->lx  = strv_from(st, len);
 
         return t;
 }
@@ -136,7 +136,7 @@ lex_file(const char *path)
                 .a  = {0},
         };
 
-        arena_init(&l.a, 256);
+        arena_init(&l.a, ARENA_DEFAULT_ALLOC_SIZE*sizeof(token));
 
         while (src[i]) {
                 char ch = src[i];

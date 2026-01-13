@@ -1,5 +1,6 @@
 #include "mem.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -55,6 +56,10 @@ arena_init(arena  *a,
 void *
 arena_alloc(arena *a, size_t size)
 {
+        assert(a->offset <= a->cap);
+        assert(a->buf != NULL);
+        assert(a->cap >= ARENA_DEFAULT_ALLOC_SIZE);
+
         size_t  aligned;
         size_t  new_offset;
         void   *p;
