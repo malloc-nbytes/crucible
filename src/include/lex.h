@@ -25,7 +25,12 @@ typedef struct {
         token *hd;
         token *tl;
         const char *fp;
+        char *src;
         arena a;
 } lexer;
+
+lexer lex_file(const char *path);
+void lexer_show(const lexer *l);
+void lexer_free(lexer *l);
 
 #endif // LEX_H_INCLUDED

@@ -1,5 +1,6 @@
 #include "ds/strv.h"
 
+#include <assert.h>
 #include <string.h>
 
 strv
@@ -28,4 +29,19 @@ strv_cmp2(strv        s0,
         if (strlen(s1) != s0.len)
                 return 0;
         return strncmp(s0.st, s1, s0.len);
+}
+
+const char *
+strv_scstr(strv s)
+{
+        constexpr size_t MAX_LEN      = 256;
+        static char      buf[MAX_LEN] = {0};
+
+        assert(s.len < MAX_LEN);
+
+        (void)memcpy(buf, s.st, s.len);
+
+        buf[s.len] = 0;
+
+        return buf;
 }
