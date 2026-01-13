@@ -1,8 +1,5 @@
 /* src/include/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define to 1 if you have the 'forge' library (-lforge). */
-#undef HAVE_LIBFORGE
-
 /* Name of package */
 #undef PACKAGE
 
