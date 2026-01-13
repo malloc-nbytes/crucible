@@ -14,7 +14,7 @@ alignup(size_t n)
 static arena_blk *
 arena_blk_new(size_t cap)
 {
-        arena_blk *b = (arena_blk *)s_malloc(NULL, sizeof(*b));
+        arena_blk *b = (arena_blk *)s_malloc(sizeof(*b));
         b->buf       = s_calloc(cap, 1);
         b->cap       = cap;
         b->offset    = 0;
@@ -33,8 +33,10 @@ s_realloc(void *b, size_t sz)
 }
 
 void *
-s_malloc(void *p, size_t b)
+s_malloc(size_t b)
 {
+        void *p;
+
         if (!(p = malloc(b))) {
                 perror("malloc");
                 exit(1);

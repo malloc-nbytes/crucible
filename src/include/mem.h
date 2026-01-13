@@ -22,7 +22,7 @@ typedef struct {
 } arena;
 
 void *s_realloc(void *b, size_t sz);
-void *s_malloc(void *p, size_t b);
+void *s_malloc(size_t b);
 void *s_calloc(size_t bytes, size_t fill);
 
 void arena_init(arena *a, size_t bytes);
