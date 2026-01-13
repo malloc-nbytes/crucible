@@ -3,6 +3,7 @@
 #include "mem.h"
 #include "loc.h"
 #include "ds/strv.h"
+#include "ds/map.h"
 
 #include <ctype.h>
 #include <assert.h>
@@ -10,7 +11,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static const char *g_EOF = "EOF";
+MAP_TYPE(const char *, token_kind, opmap);
+
+static const char *g_EOF   = "EOF";
+static opmap       g_opmap = {0};
+
+static unsigned
+opmap_hash(const char **s)
+{
+        return **s;
+}
+
+static int
+opmap_cmp(const char **s0,
+          const char **s1)
+{
+        return strcmp(*s0, *s1);
+}
 
 static token *
 token_alloc(const char *st,
@@ -90,10 +107,27 @@ noteol(int c)
 static int
 issym(int c)
 {
-        return !isident(c)
+        return isident(c)
                 && !ignorable(c)
                 && c != '"'
                 && c != '\'';
+}
+
+static void
+init_opmap(void) {
+        g_opmap = opmap_create(opmap_hash, opmap_cmp);
+        opmap_insert(&g_opmap, "(", TK_LPAREN);
+        opmap_insert(&g_opmap, ")", TK_RPAREN);
+        opmap_insert(&g_opmap, ";", TK_SEMI);
+        opmap_insert(&g_opmap, "{", TK_LBRACKET);
+        opmap_insert(&g_opmap, "}", TK_RBRACKET);
+        opmap_insert(&g_opmap, "[", TK_LSQR);
+        opmap_insert(&g_opmap, "]", TK_RSQR);
+        opmap_insert(&g_opmap, "=", TK_EQ);
+        opmap_insert(&g_opmap, "+", TK_PLUS);
+        opmap_insert(&g_opmap, "-", TK_MINUS);
+        opmap_insert(&g_opmap, "*", TK_ASTERISK);
+        opmap_insert(&g_opmap, "/", TK_FORWARDSLASH);
 }
 
 void
@@ -128,15 +162,17 @@ lex_file(const char *path)
         r   = 1;
         c   = 1;
         i   = 0;
-        l = (lexer) {
-                .hd = NULL,
-                .tl = NULL,
-                .fp = path,
+        l   = (lexer) {
+                .hd  = NULL,
+                .tl  = NULL,
+                .fp  = path,
                 .src = src,
-                .a  = {0},
+                .a   = {0},
         };
 
         arena_init(&l.a, ARENA_DEFAULT_ALLOC_SIZE*sizeof(token));
+
+        init_opmap();
 
         while (src[i]) {
                 char ch = src[i];

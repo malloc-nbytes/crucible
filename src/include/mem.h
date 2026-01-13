@@ -10,10 +10,15 @@
 #endif
 #define ARENA_ALIGN_MASK (ARENA_ALIGN_SIZE-1)
 
-typedef struct {
+typedef struct arena_blk {
         uint8_t *buf;
         size_t cap;
         size_t offset;
+        struct arena_blk *n;
+} arena_blk;
+
+typedef struct {
+        arena_blk *hd;
 } arena;
 
 void *s_realloc(void *b, size_t sz);

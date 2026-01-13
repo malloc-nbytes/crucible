@@ -11,6 +11,17 @@ alignup(size_t n)
         return (n + ARENA_ALIGN_MASK) & ~ARENA_ALIGN_MASK;
 }
 
+static arena_blk *
+arena_blk_new(size_t cap)
+{
+        arena_blk *b = (arena_blk *)s_malloc(NULL, sizeof(*b));
+        b->buf       = s_calloc(cap, 1);
+        b->cap       = cap;
+        b->offset    = 0;
+        b->n         = NULL;
+        return b;
+}
+
 void *
 s_realloc(void *b, size_t sz)
 {
@@ -45,35 +56,43 @@ s_calloc(size_t bytes, size_t fill)
 }
 
 void
-arena_init(arena  *a,
-           size_t  bytes)
+arena_init(arena *a, size_t bytes)
 {
-        a->buf    = (uint8_t *)s_calloc(bytes, 1);
-        a->cap    = bytes;
-        a->offset = 0;
+        assert(bytes > 0);
+        a->hd = arena_blk_new(bytes);
 }
 
 void *
 arena_alloc(arena *a, size_t size)
 {
-        assert(a->offset <= a->cap);
-        assert(a->buf != NULL);
-        assert(a->cap >= ARENA_DEFAULT_ALLOC_SIZE);
+        assert(a);
+        assert(a->hd);
 
-        size_t  aligned;
-        size_t  new_offset;
-        void   *p;
+        size_t aligned = alignup(size);
 
-        aligned    = alignup(size);
-        new_offset = a->offset + aligned;
+        arena_blk *b = a->hd;
 
-        if (new_offset > a->cap) {
-                a->cap *= 2;
-                a->buf = (uint8_t *)s_realloc(a->buf, a->cap);
+        // Find a block with enough space
+        while (b) {
+                if (b->offset + aligned <= b->cap)
+                        break;
+                if (!b->n)
+                        break;
+                b = b->n;
         }
 
-        p         = a->buf + a->offset;
-        a->offset = new_offset;
+        // Need a new block
+        if (b->offset + aligned > b->cap) {
+                size_t cap = b->cap * 2;
+                if (cap < aligned)
+                        cap = aligned;
+
+                b->n = arena_blk_new(cap);
+                b = b->n;
+        }
+
+        void *p = b->buf + b->offset;
+        b->offset += aligned;
 
         return p;
 }
@@ -81,27 +100,27 @@ arena_alloc(arena *a, size_t size)
 void *
 arena_allocz(arena *a, size_t size)
 {
-        void *p;
-
-        if (p = arena_alloc(a, size))
-                memset(p, 0, size);
-
+        void *p = arena_alloc(a, size);
+        memset(p, 0, size);
         return p;
 }
 
 void
 arena_clear(arena *a)
 {
-        a->offset = 0;
+        for (arena_blk *b = a->hd; b; b = b->n)
+                b->offset = 0;
 }
 
 void
 arena_free(arena *a)
 {
-        if (a->buf)
-                free(a->buf);
-
-        a->buf    = NULL;
-        a->cap    = 0;
-        a->offset = 0;
+        arena_blk *b = a->hd;
+        while (b) {
+                arena_blk *next = b->n;
+                free(b->buf);
+                free(b);
+                b = next;
+        }
+        a->hd = NULL;
 }

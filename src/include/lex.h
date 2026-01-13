@@ -12,6 +12,17 @@ typedef enum {
         TK_INTLIT,
         TK_LPAREN,
         TK_RPAREN,
+        TK_SEMI,
+        TK_LBRACKET,
+        TK_RBRACKET,
+        TK_LSQR,
+        TK_RSQR,
+        TK_EQ,
+        TK_PLUS,
+        TK_MINUS,
+        TK_ASTERISK,
+        TK_FORWARDSLASH,
+
 } token_kind;
 
 typedef struct token {
