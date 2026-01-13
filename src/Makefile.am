@@ -1,6 +1,6 @@
 bin_PROGRAMS = cruc cruc-debug-build
 
-cruc_SOURCES = main.c loc.c
+cruc_SOURCES = main.c loc.c io.c lex.c mem.c
 cruc_CFLAGS = -O2 -I$(top_srcdir)/src/include
 cruc_LDADD = -lforge
 
