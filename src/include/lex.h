@@ -24,6 +24,7 @@ typedef struct token {
 typedef struct {
         token *hd;
         token *tl;
+        const char *fp;
         arena a;
 } lexer;
 

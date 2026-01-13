@@ -9,4 +9,8 @@ typedef struct {
         size_t c;
 } loc;
 
+loc loc_create(const char *fp,
+               size_t      r,
+               size_t      c);
+
 #endif // LOC_H_INCLUDED
