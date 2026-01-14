@@ -63,7 +63,6 @@ parse_primary_expr(parse_context *ctx)
 
         left = NULL;
 
-        assert(0);
         while (1) {
                 const token *hd = lexer_peek(ctx->l, 0);
                 if (!hd) return left;
@@ -71,11 +70,16 @@ parse_primary_expr(parse_context *ctx)
                 switch (hd->k) {
                 case TK_ID: {
                         const token *i = lexer_next(ctx->l);
+                        left = (expr *)expr_id_alloc(i, &ctx->a);
                 } break;
                 case TK_INTLIT: {
+                        const token *i = lexer_next(ctx->l);
+                        left = (expr *)expr_intlit_alloc(atoi(strv_scstr(i->lx)), &ctx->a);
                 } break;
                 default: return left;
                 }
+
+                left->loc = hd->loc;
         }
 
         // unreachable
