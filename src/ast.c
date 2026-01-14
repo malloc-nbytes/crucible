@@ -24,14 +24,11 @@ visit_stmt_let(visitor *v, stmt_let *s)
         ast_context *ctx = (ast_context *)v->ctx;
 
         spaces(ctx);
-        printf("LET %s = {\n", strv_scstr(s->id));
+        printf("LET %s = ", strv_scstr(s->id));
 
         ++ctx->depth;
         s->e->accept(s->e, v);
         --ctx->depth;
-
-        spaces(ctx);
-        printf("}\n");
 
         return NULL;
 }
@@ -39,8 +36,8 @@ visit_stmt_let(visitor *v, stmt_let *s)
 static void *
 visit_expr_id(visitor *v, expr_id *e)
 {
-        NOOP(v, e);
-        TODO("");
+        ast_context *ctx = (ast_context *)v->ctx;
+        printf("ID(%s)", strv_scstr(e->i->lx));
         return NULL;
 }
 
@@ -64,16 +61,15 @@ static void *
 visit_expr_intlit(visitor *v, expr_intlit *e)
 {
         ast_context *ctx = (ast_context *)v->ctx;
-        spaces(ctx);
-        printf("INT: %d\n", e->i);
+        printf("INT(%d)", e->i);
         return NULL;
 }
 
 void
 ast_dump(stmt_array stmts)
 {
-        ast_context ctx;
-        visitor *v;
+        ast_context  ctx;
+        visitor     *v;
 
         ctx = (ast_context) {
                 .depth = 0,
@@ -88,5 +84,6 @@ ast_dump(stmt_array stmts)
 
         for (size_t i = 0; i < stmts.len; ++i) {
                 stmts.data[i]->accept(stmts.data[i], v);
+                putchar('\n');
         }
 }
