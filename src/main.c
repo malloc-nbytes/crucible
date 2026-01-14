@@ -13,6 +13,8 @@ usage(void)
 int
 main(void)
 {
+        (void)usage;
+
         lexer l = lex_file("input.cr");
         lexer_show(&l);
 

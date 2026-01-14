@@ -132,7 +132,7 @@ init_opmap(void) {
         opmap_insert(&g_opmap, ":", TK_COLON);
 }
 
-token_kind *
+static token_kind *
 determineop(const char *s, size_t *len)
 {
         assert(*len < 256);
@@ -147,6 +147,35 @@ determineop(const char *s, size_t *len)
                 --(*len);
         }
 
+        return NULL;
+}
+
+const char *
+tk_to_cstr(token_kind k)
+{
+        switch (k) {
+        case TK_EOF: return "EOF";
+        case TK_KWD: return "keyword";
+        case TK_ID: return "identifier";
+        case TK_STRLIT: return "string literal";
+        case TK_INTLIT: return "integer literal";
+        case TK_LPAREN: return "(";
+        case TK_RPAREN: return ")";
+        case TK_SEMI: return ";";
+        case TK_LBRACKET: return "{";
+        case TK_RBRACKET: return "}";
+        case TK_LSQR: return "[";
+        case TK_RSQR: return "]";
+        case TK_EQ: return "=";
+        case TK_PLUS: return "+";
+        case TK_MINUS: return "-";
+        case TK_ASTERISK: return "*";
+        case TK_FORWARDSLASH: return "/";
+        case TK_COLON: return ":";
+        default: assert(0);
+        }
+
+        // unreachable
         return NULL;
 }
 

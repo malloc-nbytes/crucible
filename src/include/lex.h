@@ -46,5 +46,6 @@ void lexer_show(const lexer *l);
 token *lexer_peek(const lexer *l, size_t p);
 token *lexer_next(lexer *l);
 void lexer_free(lexer *l);
+const char *tk_to_cstr(token_kind k);
 
 #endif // LEX_H_INCLUDED

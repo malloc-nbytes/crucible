@@ -12,7 +12,7 @@ typedef struct {
         err err;
 } parse_context;
 
-token *
+static token *
 expectkw(parse_context *ctx,
          const char    *kwd)
 {
@@ -23,12 +23,34 @@ expectkw(parse_context *ctx,
                 return NULL;
         }
 
-        if (hd->k != TK_KWD) {
+        if (hd->k != TK_KWD || strv_cmp2(hd->lx, kwd)) {
                 ctx->err = err_create(format("expected keyword `%s' but got `%s'",
                                              kwd, strv_scstr(hd->lx)),
                                       hd->loc);
                 return NULL;
         }
+
+        return hd;
+}
+
+static token *
+expect(parse_context *ctx, token_kind k)
+{
+        token *hd;
+
+        if (!(hd = lexer_next(ctx->l))) {
+                ctx->err = err_create("out of tokens", (loc){.r=0,.c=0});
+                return NULL;
+        }
+
+        if (hd->k != k) {
+                ctx->err = err_create(format("expected `%s' but got `%s'",
+                                             tk_to_cstr(k), strv_scstr(hd->lx)),
+                                      hd->loc);
+                return NULL;
+        }
+
+        return hd;
 }
 
 static stmt_let *
