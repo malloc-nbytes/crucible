@@ -22,7 +22,15 @@ expr_intlit_alloc(int i, arena *a)
 }
 
 stmt_let *
-stmt_let_alloc(arena *a)
+stmt_let_alloc(strv   id,
+               type  *type,
+               expr  *e,
+               arena *a)
 {
-        assert(0);
+        stmt_let *s = (stmt_let *)arena_alloc(a, sizeof(stmt_let));
+        s->id = id;
+        s->type = type;
+        s->e = e;
+        SETBASE(s, STMT_KIND_LET, accept_stmt_let);
+        return s;
 }

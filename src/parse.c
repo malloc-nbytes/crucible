@@ -2,6 +2,7 @@
 #include "err.h"
 #include "kwd.h"
 #include "cstr.h"
+#include "mem.h"
 
 #include <assert.h>
 
@@ -9,6 +10,7 @@
 
 typedef struct {
         lexer *l;
+        arena a;
         err err;
 } parse_context;
 
@@ -53,11 +55,52 @@ expect(parse_context *ctx, token_kind k)
         return hd;
 }
 
+static expr *
+parse_expr(parse_context *ctx)
+{
+        assert(0);
+}
+
+static type *
+parse_type(parse_context *ctx)
+{
+        (void)ctx;
+        assert(0);
+        return NULL;
+}
+
 static stmt_let *
 parse_stmt_let(parse_context *ctx)
 {
+        token *idstr;
+        strv  id;
+        type *type;
+        expr *e;
+
         if (!expectkw(ctx, KWD_LET))
                 return NULL;
+
+        if (!(idstr = expect(ctx, TK_ID)))
+                return NULL;
+
+        id = idstr->lx;
+
+        if (!expect(ctx, TK_COLON))
+                return NULL;
+
+        if (!(type = parse_type(ctx)))
+                return NULL;
+
+        if (!expect(ctx, TK_EQ))
+                return NULL;
+
+        if (!expect(ctx, TK_SEMI))
+                return NULL;
+
+        if (!(e = parse_expr(ctx)))
+                return NULL;
+
+        return stmt_let_alloc(id, type, e, &ctx->a);
 }
 
 static stmt *
@@ -67,9 +110,8 @@ parse_kwd_stmt(parse_context *ctx)
 
         kwd = ctx->l->hd->lx;
 
-        if (!strv_cmp2(kwd, KWD_LET)) {
+        if (!strv_cmp2(kwd, KWD_LET))
                 return (stmt *)parse_stmt_let(ctx);
-        }
 
         assert(0);
         return NULL;
@@ -96,12 +138,15 @@ stmt_array
 parse(lexer *l)
 {
         parse_context ctx;
-        stmt_array stmts;
+        stmt_array    stmts;
 
         ctx = (parse_context) {
-                .l = l,
+                .l   = l,
+                .a   = {0},
                 .err = {0},
         };
+
+        arena_init(&ctx.a, ARENA_DEFAULT_ALLOC_SIZE);
 
         while (SP(ctx.l, 0)->k != TK_EOF) {
                 stmt *s = parse_stmt(&ctx);

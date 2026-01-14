@@ -1,4 +1,5 @@
 #include "lex.h"
+#include "parse.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +18,7 @@ main(void)
 
         lexer l = lex_file("input.cr");
         lexer_show(&l);
+        parse(&l);
 
         return 0;
 }

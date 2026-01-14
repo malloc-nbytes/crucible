@@ -10,11 +10,11 @@
 typedef struct visitor visitor;
 
 typedef enum {
-        STMT_KIND_PROC,
+        STMT_KIND_LET = 0,
 } stmt_kind;
 
 typedef enum {
-        EXPR_KIND_INTLIT,
+        EXPR_KIND_INTLIT = 0,
 } expr_kind;
 
 typedef struct expr {
@@ -44,5 +44,7 @@ typedef struct {
 } stmt_let;
 
 expr_intlit *expr_intlit_alloc(int i, arena *a);
+
+stmt_let *stmt_let_alloc(strv id, type *type, expr *e, arena *a);
 
 #endif // GRAMMAR_H_INCLUDED
