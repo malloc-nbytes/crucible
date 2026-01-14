@@ -4,6 +4,7 @@
 #include "loc.h"
 #include "type.h"
 #include "mem.h"
+#include "lex.h"
 #include "ds/strv.h"
 #include "ds/array.h"
 
@@ -15,6 +16,8 @@ typedef enum {
 
 typedef enum {
         EXPR_KIND_INTLIT = 0,
+        EXPR_KIND_BIN,
+        EXPR_KIND_UN,
 } expr_kind;
 
 typedef struct expr {
@@ -27,6 +30,19 @@ typedef struct {
         expr base;
         int i;
 } expr_intlit;
+
+typedef struct {
+        expr base;
+        expr *lhs;
+        const token *op;
+        expr *rhs;
+} expr_bin;
+
+typedef struct {
+        expr base;
+        const token *op;
+        expr *rhs;
+} expr_un;
 
 typedef struct stmt {
         stmt_kind kind;
@@ -44,7 +60,15 @@ typedef struct {
 } stmt_let;
 
 expr_intlit *expr_intlit_alloc(int i, arena *a);
+expr_bin *expr_bin_alloc(expr        *lhs,
+                         const token *op,
+                         expr        *rhs,
+                         arena       *a);
+expr_un *expr_un_alloc(const token *op, expr *rhs, arena *a);
 
-stmt_let *stmt_let_alloc(strv id, type *type, expr *e, arena *a);
+stmt_let *stmt_let_alloc(strv   id,
+                         type  *type,
+                         expr  *e,
+                         arena *a);
 
 #endif // GRAMMAR_H_INCLUDED

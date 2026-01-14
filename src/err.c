@@ -14,5 +14,5 @@ err_create(char *msg, loc loc)
 void
 err_print(err err)
 {
-        fprintf(stderr, "%s%s", loc_err(err.loc), err.msg);
+        fprintf(stderr, "%s%s\n", loc_err(err.loc), err.msg);
 }

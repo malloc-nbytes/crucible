@@ -12,3 +12,14 @@ iskwd(const char *s)
         }
         return 0;
 }
+
+int
+isty(const char *s)
+{
+        const char *tys[] = TY_CPL;
+        for (size_t i = 0; i < sizeof(tys)/sizeof(*tys); ++i) {
+                if (!strcmp(s, tys[i]))
+                        return 1;
+        }
+        return 0;
+}

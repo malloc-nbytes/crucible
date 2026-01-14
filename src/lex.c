@@ -129,7 +129,26 @@ init_opmap(void) {
         opmap_insert(&g_opmap, "-", TK_MINUS);
         opmap_insert(&g_opmap, "*", TK_ASTERISK);
         opmap_insert(&g_opmap, "/", TK_FORWARDSLASH);
+        opmap_insert(&g_opmap, "%", TK_PERCENT);
+        opmap_insert(&g_opmap, "!", TK_BANG);
+        opmap_insert(&g_opmap, "&", TK_AMPERSAND);
         opmap_insert(&g_opmap, ":", TK_COLON);
+        opmap_insert(&g_opmap, "&&", TK_DOUBLE_AMPERSAND);
+        opmap_insert(&g_opmap, "||", TK_DOUBLE_PIPE);
+        opmap_insert(&g_opmap, "+=", TK_PLUS_EQ);
+        opmap_insert(&g_opmap, "-=", TK_MINUS_EQ);
+        opmap_insert(&g_opmap, "*=", TK_ASTERISK_EQ);
+        opmap_insert(&g_opmap, "/=", TK_FORWARDSLASH_EQ);
+        opmap_insert(&g_opmap, "%=", TK_PERCENT_EQ);
+        opmap_insert(&g_opmap, "&=", TK_AMPERSAND_EQ);
+        opmap_insert(&g_opmap, "|=", TK_PIPE_EQ);
+        opmap_insert(&g_opmap, "^=", TK_UPTICK_EQ);
+        opmap_insert(&g_opmap, "==", TK_DOUBLE_EQ);
+        opmap_insert(&g_opmap, ">=", TK_GREATERTHAN_EQ);
+        opmap_insert(&g_opmap, ">", TK_GREATERTHAN);
+        opmap_insert(&g_opmap, "<=", TK_LESSTHAN_EQ);
+        opmap_insert(&g_opmap, "<", TK_LESSTHAN);
+        opmap_insert(&g_opmap, "!=", TK_BANG_EQ);
 }
 
 static token_kind *

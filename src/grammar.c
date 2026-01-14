@@ -16,8 +16,32 @@ expr_intlit *
 expr_intlit_alloc(int i, arena *a)
 {
         expr_intlit *e = (expr_intlit *)arena_alloc(a, sizeof(expr_intlit));
-        e->i = i;
+        e->i           = i;
         SETBASE(e, EXPR_KIND_INTLIT, accept_expr_intlit);
+        return e;
+}
+
+expr_bin *
+expr_bin_alloc(expr        *lhs,
+               const token *op,
+               expr        *rhs,
+               arena       *a)
+{
+        expr_bin *e = (expr_bin *)arena_alloc(a, sizeof(expr_bin));
+        e->lhs      = lhs;
+        e->op       = op;
+        e->rhs      = rhs;
+        SETBASE(e, EXPR_KIND_BIN, accept_expr_bin);
+        return e;
+}
+
+expr_un *
+expr_un_alloc(const token *op, expr *rhs, arena *a)
+{
+        expr_un *e = (expr_un *)arena_alloc(a, sizeof(expr_un));
+        e->op      = op;
+        e->rhs     = rhs;
+        SETBASE(e, EXPR_KIND_UN, accept_expr_un);
         return e;
 }
 
