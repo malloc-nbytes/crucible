@@ -55,15 +55,15 @@ expr_id_alloc(const token *i, arena *a)
 }
 
 stmt_let *
-stmt_let_alloc(strv   id,
-               type  *type,
-               expr  *e,
-               arena *a)
+stmt_let_alloc(const token *id,
+               type        *type,
+               expr        *e,
+               arena       *a)
 {
         stmt_let *s = (stmt_let *)arena_alloc(a, sizeof(stmt_let));
-        s->id = id;
-        s->type = type;
-        s->e = e;
+        s->id       = id;
+        s->type     = type;
+        s->e        = e;
         SETBASE(s, STMT_KIND_LET, accept_stmt_let);
         return s;
 }

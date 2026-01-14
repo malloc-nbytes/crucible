@@ -1,7 +1,7 @@
 #include "parse.h"
 #include "err.h"
 #include "kwd.h"
-#include "cstr.h"
+#include "utils.h"
 #include "mem.h"
 
 #include <assert.h>
@@ -257,18 +257,15 @@ parse_type(parse_context *ctx)
 static stmt_let *
 parse_stmt_let(parse_context *ctx)
 {
-        token *idt;
-        strv   id;
+        token *id;
         type  *type;
         expr  *e;
 
         if (!expectkw(ctx, KWD_LET))
                 return NULL;
 
-        if (!(idt = expect(ctx, TK_ID)))
+        if (!(id = expect(ctx, TK_ID)))
                 return NULL;
-
-        id = idt->lx;
 
         if (!expect(ctx, TK_COLON))
                 return NULL;
@@ -342,6 +339,9 @@ parse(lexer *l)
 
         if (ctx.err.msg) {
                 err_print(ctx.err);
+                lexer_free(l);
+                arena_free(&ctx.a);
+                array_free(stmts);
                 exit(1);
         }
 

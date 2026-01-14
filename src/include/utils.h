@@ -29,4 +29,6 @@
                 exit(1);                                                \
         } while (0)
 
+char *format(const char *fmt, ...);
+
 #endif // UTILS_H_INCLUDED

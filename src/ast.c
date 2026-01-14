@@ -24,7 +24,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
         ast_context *ctx = (ast_context *)v->ctx;
 
         spaces(ctx);
-        printf("LET %s = ", strv_scstr(s->id));
+        printf("LET %s = ", strv_scstr(s->id->lx));
 
         ++ctx->depth;
         s->e->accept(s->e, v);
@@ -36,7 +36,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
 static void *
 visit_expr_id(visitor *v, expr_id *e)
 {
-        ast_context *ctx = (ast_context *)v->ctx;
+        NOOP(v);
         printf("ID(%s)", strv_scstr(e->i->lx));
         return NULL;
 }
@@ -60,7 +60,7 @@ visit_expr_bin(visitor *v, expr_bin *e)
 static void *
 visit_expr_intlit(visitor *v, expr_intlit *e)
 {
-        ast_context *ctx = (ast_context *)v->ctx;
+        NOOP(v);
         printf("INT(%d)", e->i);
         return NULL;
 }

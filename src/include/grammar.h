@@ -60,22 +60,19 @@ ARRAY_TYPE(stmt *, stmt_array);
 
 typedef struct {
         stmt base;
-        strv id;
+        const token *id;
         type *type;
         expr *e;
 } stmt_let;
 
 expr_intlit *expr_intlit_alloc(int i, arena *a);
-expr_bin *expr_bin_alloc(expr        *lhs,
-                         const token *op,
-                         expr        *rhs,
-                         arena       *a);
+expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs, arena *a);
 expr_un *expr_un_alloc(const token *op, expr *rhs, arena *a);
 expr_id *expr_id_alloc(const token *i, arena *a);
 
-stmt_let *stmt_let_alloc(strv   id,
-                         type  *type,
-                         expr  *e,
-                         arena *a);
+stmt_let *stmt_let_alloc(const token *id,
+                         type        *type,
+                         expr        *e,
+                         arena       *a);
 
 #endif // GRAMMAR_H_INCLUDED
