@@ -5,6 +5,7 @@
 #include "type.h"
 #include "mem.h"
 #include "ds/strv.h"
+#include "ds/array.h"
 
 typedef struct visitor visitor;
 
@@ -32,6 +33,8 @@ typedef struct stmt {
         void *(*accept)(struct stmt *, visitor *);
         loc loc;
 } stmt;
+
+ARRAY_TYPE(stmt *, stmt_array);
 
 typedef struct {
         stmt base;

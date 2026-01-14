@@ -13,4 +13,6 @@ loc loc_create(const char *fp,
                size_t      r,
                size_t      c);
 
+char *loc_err(loc loc);
+
 #endif // LOC_H_INCLUDED

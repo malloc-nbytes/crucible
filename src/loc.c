@@ -15,10 +15,10 @@ loc_create(const char *fp,
         };
 }
 
-const char *
+char *
 loc_err(loc loc)
 {
-        static char buf[512] = {0};
+        char buf[512] = {0};
         snprintf(buf, sizeof(buf), "%s:%zu:%zu: error: ", loc.fp, loc.r, loc.c);
-        return buf;
+        return strdup(buf);
 }

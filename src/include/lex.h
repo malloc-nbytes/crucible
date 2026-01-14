@@ -7,6 +7,7 @@
 
 typedef enum {
         TK_EOF = 0,
+        TK_KWD,
         TK_ID,
         TK_STRLIT,
         TK_INTLIT,
@@ -22,7 +23,7 @@ typedef enum {
         TK_MINUS,
         TK_ASTERISK,
         TK_FORWARDSLASH,
-
+        TK_COLON,
 } token_kind;
 
 typedef struct token {
@@ -42,6 +43,8 @@ typedef struct {
 
 lexer lex_file(const char *path);
 void lexer_show(const lexer *l);
+token *lexer_peek(const lexer *l, size_t p);
+token *lexer_next(lexer *l);
 void lexer_free(lexer *l);
 
 #endif // LEX_H_INCLUDED

@@ -2,6 +2,7 @@
 #include "io.h"
 #include "mem.h"
 #include "loc.h"
+#include "kwd.h"
 #include "ds/strv.h"
 #include "ds/map.h"
 
@@ -128,6 +129,7 @@ init_opmap(void) {
         opmap_insert(&g_opmap, "-", TK_MINUS);
         opmap_insert(&g_opmap, "*", TK_ASTERISK);
         opmap_insert(&g_opmap, "/", TK_FORWARDSLASH);
+        opmap_insert(&g_opmap, ":", TK_COLON);
 }
 
 token_kind *
@@ -158,6 +160,29 @@ lexer_show(const lexer *l)
                        it->loc.r, it->loc.c, it->loc.fp);
                 it = it->n;
         }
+}
+
+token *
+lexer_peek(const lexer *l,
+           size_t       p)
+{
+        token *it = l->hd;
+        for (size_t i = 0; it && i < p; ++i)
+                it = it->n;
+        return it;
+}
+
+token *
+lexer_next(lexer *l)
+{
+        token *t;
+
+        if (!l->hd)
+                return NULL;
+
+        t     = l->hd;
+        l->hd = l->hd->n;
+        return t;
 }
 
 void
@@ -206,6 +231,8 @@ lex_file(const char *path)
                         size_t len = consume_while(src+i, isident);
                         token *t   = token_alloc(src+i, len, TK_ID,
                                                  r, c, l.fp, &l.a);
+                        if (iskwd(strv_scstr(t->lx)))
+                                t->k = TK_KWD;
                         append(&l, t);
                         i += len;
                         c += len;
