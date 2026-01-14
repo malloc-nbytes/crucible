@@ -279,10 +279,10 @@ parse_stmt_let(parse_context *ctx)
         if (!expect(ctx, TK_EQ))
                 return NULL;
 
-        if (!expect(ctx, TK_SEMI))
+        if (!(e = parse_expr(ctx)))
                 return NULL;
 
-        if (!(e = parse_expr(ctx)))
+        if (!expect(ctx, TK_SEMI))
                 return NULL;
 
         return stmt_let_alloc(id, type, e, &ctx->a);
@@ -325,7 +325,8 @@ parse(lexer *l)
         parse_context ctx;
         stmt_array    stmts;
 
-        ctx = (parse_context) {
+        stmts = array_empty(stmt_array);
+        ctx   = (parse_context) {
                 .l   = l,
                 .a   = {0},
                 .err = {0},
@@ -335,10 +336,7 @@ parse(lexer *l)
 
         while (SP(ctx.l, 0)->k != TK_EOF) {
                 stmt *s = parse_stmt(&ctx);
-                if (s) {
-                        printf("HERE: %d\n", s->kind);
-                        array_append(stmts, s);
-                }
+                if (s) array_append(stmts, s);
                 else   break;
         }
 
