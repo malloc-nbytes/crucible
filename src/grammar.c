@@ -45,6 +45,15 @@ expr_un_alloc(const token *op, expr *rhs, arena *a)
         return e;
 }
 
+expr_id *
+expr_id_alloc(const token *i, arena *a)
+{
+        expr_id *e = (expr_id *)arena_alloc(a, sizeof(expr_id));
+        e->i       = i;
+        SETBASE(e, EXPR_KIND_ID, accept_expr_id);
+        return e;
+}
+
 stmt_let *
 stmt_let_alloc(strv   id,
                type  *type,

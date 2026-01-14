@@ -6,6 +6,7 @@ visitor_alloc(void                  *ctx,
               visit_expr_intlit_sig  visit_expr_intlit,
               visit_expr_bin_sig     visit_expr_bin,
               visit_expr_un_sig      visit_expr_un,
+              visit_expr_id_sig      visit_expr_id,
               visit_stmt_let_sig     visit_stmt_let)
 {
         visitor *v           = (visitor *)s_malloc(sizeof(visitor));
@@ -13,6 +14,7 @@ visitor_alloc(void                  *ctx,
         v->visit_expr_intlit = visit_expr_intlit;
         v->visit_expr_bin    = visit_expr_bin;
         v->visit_expr_un     = visit_expr_un;
+        v->visit_expr_id     = visit_expr_id;
         v->visit_stmt_let    = visit_stmt_let;
         return v;
 }
@@ -30,4 +32,5 @@ visitor_alloc(void                  *ctx,
 ACCEPT_IMPL(expr, intlit);
 ACCEPT_IMPL(expr, bin);
 ACCEPT_IMPL(expr, un);
+ACCEPT_IMPL(expr, id);
 ACCEPT_IMPL(stmt, let);

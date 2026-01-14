@@ -18,6 +18,7 @@ typedef enum {
         EXPR_KIND_INTLIT = 0,
         EXPR_KIND_BIN,
         EXPR_KIND_UN,
+        EXPR_KIND_ID,
 } expr_kind;
 
 typedef struct expr {
@@ -37,6 +38,11 @@ typedef struct {
         const token *op;
         expr *rhs;
 } expr_bin;
+
+typedef struct {
+        expr base;
+        const token *i;
+} expr_id;
 
 typedef struct {
         expr base;
@@ -65,6 +71,7 @@ expr_bin *expr_bin_alloc(expr        *lhs,
                          expr        *rhs,
                          arena       *a);
 expr_un *expr_un_alloc(const token *op, expr *rhs, arena *a);
+expr_id *expr_id_alloc(const token *i, arena *a);
 
 stmt_let *stmt_let_alloc(strv   id,
                          type  *type,

@@ -59,7 +59,27 @@ expect(parse_context *ctx, token_kind k)
 static expr *
 parse_primary_expr(parse_context *ctx)
 {
+        expr *left;
+
+        left = NULL;
+
         assert(0);
+        while (1) {
+                const token *hd = lexer_peek(ctx->l, 0);
+                if (!hd) return left;
+
+                switch (hd->k) {
+                case TK_ID: {
+                        const token *i = lexer_next(ctx->l);
+                } break;
+                case TK_INTLIT: {
+                } break;
+                default: return left;
+                }
+        }
+
+        // unreachable
+        return left;
 }
 
 static expr *
