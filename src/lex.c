@@ -1,4 +1,5 @@
 #include "lex.h"
+#include "utils.h"
 #include "io.h"
 #include "mem.h"
 #include "loc.h"
@@ -243,6 +244,8 @@ lexer_free(lexer *l)
 lexer
 lex_file(const char *path)
 {
+        NOOP(noteol, notsquote);
+
         char   *src;
         lexer   l;
         size_t  r;

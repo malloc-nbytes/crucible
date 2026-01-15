@@ -241,6 +241,10 @@ parse_type(parse_context *ctx)
 
         if (!strv_cmp2(lx, TY_I32)) {
                 ty = (type *)type_i32_alloc(&ctx->a);
+        } else if (!strv_cmp2(lx, TY_VOID)) {
+                ty = (type *)type_void_alloc(&ctx->a);
+        } else if (hd->k == TK_BANG) {
+                ty = (type *)type_never_alloc(&ctx->a);
         } else {
                 assert(0);
         }
@@ -285,6 +289,14 @@ parse_stmt_let(parse_context *ctx)
         return stmt_let_alloc(id, type, e, &ctx->a);
 }
 
+static stmt_proc *
+parse_stmt_proc(parse_context *ctx)
+{
+        if (!expectkw(ctx, KWD_PROC))
+                return NULL;
+        assert(0);
+}
+
 static stmt *
 parse_kwd_stmt(parse_context *ctx)
 {
@@ -294,6 +306,8 @@ parse_kwd_stmt(parse_context *ctx)
 
         if (!strv_cmp2(kwd, KWD_LET))
                 return (stmt *)parse_stmt_let(ctx);
+        else if (!strv_cmp2(kwd, KWD_PROC))
+                return (stmt *)parse_stmt_proc(ctx);
 
         assert(0);
         return NULL;

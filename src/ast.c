@@ -34,6 +34,14 @@ visit_stmt_let(visitor *v, stmt_let *s)
 }
 
 static void *
+visit_stmt_proc(visitor *v, stmt_proc *s)
+{
+        NOOP(v, s);
+        TODO("");
+        return NULL;
+}
+
+static void *
 visit_expr_id(visitor *v, expr_id *e)
 {
         NOOP(v);
@@ -80,7 +88,8 @@ ast_dump(stmt_array stmts)
                           visit_expr_bin,
                           visit_expr_un,
                           visit_expr_id,
-                          visit_stmt_let);
+                          visit_stmt_let,
+                          visit_stmt_proc);
 
         for (size_t i = 0; i < stmts.len; ++i) {
                 stmts.data[i]->accept(stmts.data[i], v);

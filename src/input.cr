@@ -1,2 +1,3 @@
-let a: i32 = b;
-let d: i32 = 3;
+proc _start(void): ! {
+        let x: i32 = 1;
+}

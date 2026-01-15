@@ -12,6 +12,17 @@
                 g->base.accept = a;             \
         } while (0)
 
+tyid *
+tyid_alloc(type        *type,
+           const token *id,
+           arena       *a)
+{
+        tyid *t = (tyid *)arena_alloc(a, sizeof(tyid));
+        t->type = type;
+        t->id   = id;
+        return t;
+}
+
 expr_intlit *
 expr_intlit_alloc(int i, arena *a)
 {
@@ -65,5 +76,21 @@ stmt_let_alloc(const token *id,
         s->type     = type;
         s->e        = e;
         SETBASE(s, STMT_KIND_LET, accept_stmt_let);
+        return s;
+}
+
+stmt_proc *
+stmt_proc_alloc(const token *id,
+                tyid_array   params,
+                type        *rtype,
+                stmt        *blk,
+                arena       *a)
+{
+        stmt_proc *s = (stmt_proc *)arena_alloc(a, sizeof(stmt_proc));
+        s->id        = id;
+        s->params    = params;
+        s->rtype     = rtype;
+        s->blk       = blk;
+        SETBASE(s, STMT_KIND_PROC, accept_stmt_proc);
         return s;
 }
