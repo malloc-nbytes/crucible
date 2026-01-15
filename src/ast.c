@@ -53,7 +53,7 @@ visit_stmt_let(visitor *v, stmt_let *s)
         ast_context *ctx = (ast_context *)v->ctx;
 
         spaces(ctx);
-        printf("LET %s: %s = ", strv_scstr(s->id->lx), type_to_cstr(s->type));
+        printf("LET %s: %s<%d> = ", strv_scstr(s->id->lx), type_to_cstr(s->type), s->type->id);
 
         ++ctx->depth;
         s->e->accept(s->e, v);
@@ -78,15 +78,17 @@ visit_stmt_proc(visitor *v, stmt_proc *s)
                         printf(", ");
 
                 const char *id;
+                const type *type;
                 const char *t;
 
-                id = strv_scstr(s->params.data[i]->id->lx);
-                t  = type_to_cstr(s->params.data[i]->type);
+                id   = strv_scstr(s->params.data[i]->id->lx);
+                type = s->params.data[i]->type;
+                t    = type_to_cstr(type);
 
-                printf("%s: %s", id, t);
+                printf("%s: %s<%d>", id, t, type->id);
         }
 
-        printf("): %s", type_to_cstr(s->rtype));
+        printf("): %s<%d>", type_to_cstr(s->rtype), s->rtype->id);
 
         if (s->blk->kind == STMT_KIND_BLK)
                 putchar('\n');
