@@ -10,7 +10,8 @@ visitor_alloc(void                  *ctx,
               visit_stmt_let_sig     visit_stmt_let,
               visit_stmt_proc_sig    visit_stmt_proc,
               visit_stmt_blk_sig     visit_stmt_blk,
-              visit_stmt_return_sig  visit_stmt_return)
+              visit_stmt_return_sig  visit_stmt_return,
+              visit_stmt_exit_sig    visit_stmt_exit)
 {
         visitor *v           = (visitor *)s_malloc(sizeof(visitor));
         v->ctx               = ctx;
@@ -23,6 +24,7 @@ visitor_alloc(void                  *ctx,
         v->visit_stmt_proc   = visit_stmt_proc;
         v->visit_stmt_blk    = visit_stmt_blk;
         v->visit_stmt_return = visit_stmt_return;
+        v->visit_stmt_exit   = visit_stmt_exit;
 
         return v;
 }
@@ -46,3 +48,4 @@ ACCEPT_IMPL(stmt, let);
 ACCEPT_IMPL(stmt, proc);
 ACCEPT_IMPL(stmt, blk);
 ACCEPT_IMPL(stmt, return);
+ACCEPT_IMPL(stmt, exit);

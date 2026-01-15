@@ -20,6 +20,20 @@ spaces(ast_context *ctx)
 }
 
 static void *
+visit_stmt_exit(visitor *v, stmt_exit *s)
+{
+        ast_context *ctx = (ast_context *)v->ctx;
+
+        spaces(ctx);
+
+        printf("EXIT ");
+        s->e->accept(s->e, v);
+        putchar('\n');
+
+        return NULL;
+}
+
+static void *
 visit_stmt_return(visitor *v, stmt_return *s)
 {
         ast_context *ctx = (ast_context *)v->ctx;
@@ -29,6 +43,8 @@ visit_stmt_return(visitor *v, stmt_return *s)
         printf("RETURN ");
         s->e->accept(s->e, v);
         putchar('\n');
+
+        return NULL;
 }
 
 static void *
@@ -155,7 +171,8 @@ ast_dump(stmt_array stmts)
                           visit_stmt_let,
                           visit_stmt_proc,
                           visit_stmt_blk,
-                          visit_stmt_return);
+                          visit_stmt_return,
+                          visit_stmt_exit);
 
         for (size_t i = 0; i < stmts.len; ++i) {
                 stmts.data[i]->accept(stmts.data[i], v);

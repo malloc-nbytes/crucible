@@ -8,6 +8,7 @@
 #define KWD_FOR    "for"
 #define KWD_PROC   "proc"
 #define KWD_RETURN "return"
+#define KWD_EXIT   "exit"
 
 #define KWD_CPL {                               \
                 KWD_IF,                         \
@@ -17,6 +18,7 @@
                 KWD_FOR,                        \
                 KWD_PROC,                       \
                 KWD_RETURN,                     \
+                KWD_EXIT,                       \
         }
 
 #define TY_I8   "i8"

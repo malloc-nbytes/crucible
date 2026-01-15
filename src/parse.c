@@ -410,6 +410,23 @@ parse_stmt_return(parse_context *ctx)
         return stmt_return_alloc(e, &ctx->a);
 }
 
+static stmt_exit *
+parse_stmt_exit(parse_context *ctx)
+{
+        expr *e;
+
+        if (!expectkw(ctx, KWD_EXIT))
+                return NULL;
+
+        if (!(e = parse_expr(ctx)))
+                return NULL;
+
+        if (!expect(ctx, TK_SEMI))
+                return NULL;
+
+        return stmt_exit_alloc(e, &ctx->a);
+}
+
 static stmt *
 parse_kwd_stmt(parse_context *ctx)
 {
@@ -426,6 +443,8 @@ parse_kwd_stmt(parse_context *ctx)
                 return (stmt *)parse_stmt_proc(ctx);
         else if (!strv_cmp2(kwd, KWD_RETURN))
                 return (stmt *)parse_stmt_return(ctx);
+        else if (!strv_cmp2(kwd, KWD_EXIT))
+                return (stmt *)parse_stmt_exit(ctx);
 
         ctx->err = err_create(format("illegal keyword starting at `%s'",
                                      strv_scstr(kwd)), hd->loc);

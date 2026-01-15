@@ -112,3 +112,12 @@ stmt_return_alloc(expr *e, arena *a)
         SETBASE(s, STMT_KIND_RETURN, accept_stmt_return);
         return s;
 }
+
+stmt_exit *
+stmt_exit_alloc(expr *e, arena *a)
+{
+        stmt_exit *s = (stmt_exit *)arena_alloc(a, sizeof(stmt_exit));
+        s->e         = e;
+        SETBASE(s, STMT_KIND_EXIT, accept_stmt_exit);
+        return s;
+}
