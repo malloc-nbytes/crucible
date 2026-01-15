@@ -134,6 +134,7 @@ init_opmap(void) {
         opmap_insert(&g_opmap, "!", TK_BANG);
         opmap_insert(&g_opmap, "&", TK_AMPERSAND);
         opmap_insert(&g_opmap, ":", TK_COLON);
+        opmap_insert(&g_opmap, ",", TK_COMMA);
         opmap_insert(&g_opmap, "&&", TK_DOUBLE_AMPERSAND);
         opmap_insert(&g_opmap, "||", TK_DOUBLE_PIPE);
         opmap_insert(&g_opmap, "+=", TK_PLUS_EQ);
@@ -192,6 +193,7 @@ tk_to_cstr(token_kind k)
         case TK_ASTERISK: return "*";
         case TK_FORWARDSLASH: return "/";
         case TK_COLON: return ":";
+        case TK_COMMA: return ",";
         default: assert(0);
         }
 

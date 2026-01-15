@@ -314,6 +314,11 @@ parse_proc_params(parse_context *ctx,
                         goto bad;
 
                 array_append(*params, idty_alloc(id, type, &ctx->a));
+
+                if (SP(ctx->l, 0)->k == TK_COMMA)
+                        (void)expect(ctx, TK_COMMA);
+                else
+                        break;
         }
 
         if (!expect(ctx, TK_RPAREN))
@@ -388,19 +393,42 @@ parse_stmt_proc(parse_context *ctx)
         return stmt_proc_alloc(id, params, rtype, blk, &ctx->a);
 }
 
+static stmt_return *
+parse_stmt_return(parse_context *ctx)
+{
+        expr *e;
+
+        if (!expectkw(ctx, KWD_RETURN))
+                return NULL;
+
+        if (!(e = parse_expr(ctx)))
+                return NULL;
+
+        if (!expect(ctx, TK_SEMI))
+                return NULL;
+
+        return stmt_return_alloc(e, &ctx->a);
+}
+
 static stmt *
 parse_kwd_stmt(parse_context *ctx)
 {
-        strv kwd;
+        token *hd;
+        strv   kwd;
 
-        kwd = ctx->l->hd->lx;
+        assert((hd = lexer_peek(ctx->l, 0)));
+
+        kwd = hd->lx;
 
         if (!strv_cmp2(kwd, KWD_LET))
                 return (stmt *)parse_stmt_let(ctx);
         else if (!strv_cmp2(kwd, KWD_PROC))
                 return (stmt *)parse_stmt_proc(ctx);
+        else if (!strv_cmp2(kwd, KWD_RETURN))
+                return (stmt *)parse_stmt_return(ctx);
 
-        assert(0);
+        ctx->err = err_create(format("illegal keyword starting at `%s'",
+                                     strv_scstr(kwd)), hd->loc);
         return NULL;
 }
 
@@ -409,13 +437,13 @@ parse_stmt(parse_context *ctx)
 {
         token *hd;
 
-        if (!(hd = lexer_peek(ctx->l, 0))) {
-                ctx->err = err_create("out of tokens", (loc){.r=0,.c=0});
-                return NULL;
-        }
+        assert((hd = lexer_peek(ctx->l, 0)));
 
         if (hd->k == TK_KWD)
                 return parse_kwd_stmt(ctx);
+
+        if (hd->k == TK_LBRACK)
+                return (stmt *)parse_stmt_blk(ctx);
 
         ctx->err = err_create(format("illegal statement starting at `%s'",
                                      strv_scstr(hd->lx)), hd->loc);

@@ -1,5 +1,7 @@
 #include "type.h"
 
+#include <assert.h>
+
 type_void *
 type_void_alloc(arena *a)
 {
@@ -28,4 +30,17 @@ type_never_alloc(arena *a)
         t = arena_alloc(a, sizeof(type_never));
         t->base.kind = TYPE_KIND_NEVER;
         return t;
+}
+
+const char *
+type_to_cstr(const type *t)
+{
+        switch (t->kind) {
+        case TYPE_KIND_VOID:  return "void";
+        case TYPE_KIND_I32:   return "i32";
+        case TYPE_KIND_NEVER: return "never";
+        default: assert(0);
+        }
+        assert(0);
+        return NULL;
 }

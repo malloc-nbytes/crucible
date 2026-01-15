@@ -10,17 +10,11 @@
 
 typedef struct visitor visitor;
 
-typedef struct {
-        type *type;
-        const token *id;
-} idty;
-
-ARRAY_TYPE(idty *, idty_array);
-
 typedef enum {
         STMT_KIND_LET = 0,
         STMT_KIND_PROC,
         STMT_KIND_BLK,
+        STMT_KIND_RETURN,
 } stmt_kind;
 
 typedef enum {
@@ -65,7 +59,13 @@ typedef struct stmt {
         loc loc;
 } stmt;
 
+typedef struct {
+        type *type;
+        const token *id;
+} idty;
+
 ARRAY_TYPE(stmt *, stmt_array);
+ARRAY_TYPE(idty *, idty_array);
 
 typedef struct {
         stmt base;
@@ -87,6 +87,11 @@ typedef struct {
         stmt_array stmts;
 } stmt_blk;
 
+typedef struct {
+        stmt base;
+        expr *e;
+} stmt_return;
+
 idty *idty_alloc(const token *id, type *type, arena *a);
 expr_intlit *expr_intlit_alloc(int i, arena *a);
 expr_bin *expr_bin_alloc(expr *lhs, const token *op, expr *rhs, arena *a);
@@ -99,5 +104,6 @@ stmt_let *stmt_let_alloc(const token *id,
                          arena       *a);
 stmt_proc *stmt_proc_alloc(const token *id, idty_array params, type *rtype, stmt *blk, arena *a);
 stmt_blk *stmt_blk_alloc(stmt_array stmts, arena *a);
+stmt_return *stmt_return_alloc(expr *e, arena *a);
 
 #endif // GRAMMAR_H_INCLUDED

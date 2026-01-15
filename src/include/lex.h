@@ -27,6 +27,7 @@ typedef enum {
         TK_BANG,
         TK_AMPERSAND,
         TK_COLON,
+        TK_COMMA,
         TK_DOUBLE_AMPERSAND,
         TK_DOUBLE_PIPE,
         TK_PLUS_EQ,

@@ -103,3 +103,12 @@ stmt_blk_alloc(stmt_array stmts, arena *a)
         SETBASE(s, STMT_KIND_BLK, accept_stmt_blk);
         return s;
 }
+
+stmt_return *
+stmt_return_alloc(expr *e, arena *a)
+{
+        stmt_return *s = (stmt_return *)arena_alloc(a, sizeof(stmt_return));
+        s->e           = e;
+        SETBASE(s, STMT_KIND_RETURN, accept_stmt_return);
+        return s;
+}

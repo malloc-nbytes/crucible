@@ -1,12 +1,13 @@
 #ifndef KWD_H_INCLUDED
 #define KWD_H_INCLUDED
 
-#define KWD_IF    "if"
-#define KWD_ELSE  "else"
-#define KWD_LET   "let"
-#define KWD_WHILE "while"
-#define KWD_FOR   "for"
-#define KWD_PROC  "proc"
+#define KWD_IF     "if"
+#define KWD_ELSE   "else"
+#define KWD_LET    "let"
+#define KWD_WHILE  "while"
+#define KWD_FOR    "for"
+#define KWD_PROC   "proc"
+#define KWD_RETURN "return"
 
 #define KWD_CPL {                               \
                 KWD_IF,                         \
@@ -15,6 +16,7 @@
                 KWD_WHILE,                      \
                 KWD_FOR,                        \
                 KWD_PROC,                       \
+                KWD_RETURN,                     \
         }
 
 #define TY_I8   "i8"

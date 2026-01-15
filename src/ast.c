@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "visitor.h"
 #include "utils.h"
+#include "type.h"
 #include "ds/strv.h"
 
 #include <assert.h>
@@ -19,16 +20,30 @@ spaces(ast_context *ctx)
 }
 
 static void *
+visit_stmt_return(visitor *v, stmt_return *s)
+{
+        ast_context *ctx = (ast_context *)v->ctx;
+
+        spaces(ctx);
+
+        printf("RETURN ");
+        s->e->accept(s->e, v);
+        putchar('\n');
+}
+
+static void *
 visit_stmt_let(visitor *v, stmt_let *s)
 {
         ast_context *ctx = (ast_context *)v->ctx;
 
         spaces(ctx);
-        printf("LET %s = ", strv_scstr(s->id->lx));
+        printf("LET %s: %s = ", strv_scstr(s->id->lx), type_to_cstr(s->type));
 
         ++ctx->depth;
         s->e->accept(s->e, v);
         --ctx->depth;
+
+        printf("\n");
 
         return NULL;
 }
@@ -36,16 +51,54 @@ visit_stmt_let(visitor *v, stmt_let *s)
 static void *
 visit_stmt_proc(visitor *v, stmt_proc *s)
 {
-        NOOP(v, s);
-        TODO("");
+        ast_context *ctx = (ast_context *)v->ctx;
+
+        spaces(ctx);
+
+        printf("PROC %s(", strv_scstr(s->id->lx));
+
+        for (size_t i = 0; i < s->params.len; ++i) {
+                if (i != 0)
+                        printf(", ");
+
+                const char *id;
+                const char *t;
+
+                id = strv_scstr(s->params.data[i]->id->lx);
+                t  = type_to_cstr(s->params.data[i]->type);
+
+                printf("%s: %s", id, t);
+        }
+
+        printf("): %s", type_to_cstr(s->rtype));
+
+        if (s->blk->kind == STMT_KIND_BLK)
+                putchar('\n');
+        else
+                printf(" = ");
+
+        s->blk->accept(s->blk, v);
+
         return NULL;
 }
 
 static void *
 visit_stmt_blk(visitor *v, stmt_blk *s)
 {
-        NOOP(v, s);
-        TODO("");
+        ast_context *ctx = (ast_context *)v->ctx;
+
+        spaces(ctx);
+        printf("{\n");
+
+        ++ctx->depth;
+        for (size_t i = 0; i < s->stmts.len; ++i) {
+                s->stmts.data[i]->accept(s->stmts.data[i], v);
+        }
+        --ctx->depth;
+
+        spaces(ctx);
+        printf("}\n");
+
         return NULL;
 }
 
@@ -68,8 +121,11 @@ visit_expr_un(visitor *v, expr_un *e)
 static void *
 visit_expr_bin(visitor *v, expr_bin *e)
 {
-        NOOP(v, e);
-        TODO("");
+        putchar('(');
+        e->lhs->accept(e->lhs, v);
+        printf(" %s ", strv_scstr(e->op->lx));
+        e->rhs->accept(e->rhs, v);
+        putchar(')');
         return NULL;
 }
 
@@ -98,10 +154,10 @@ ast_dump(stmt_array stmts)
                           visit_expr_id,
                           visit_stmt_let,
                           visit_stmt_proc,
-                          visit_stmt_blk);
+                          visit_stmt_blk,
+                          visit_stmt_return);
 
         for (size_t i = 0; i < stmts.len; ++i) {
                 stmts.data[i]->accept(stmts.data[i], v);
-                putchar('\n');
         }
 }

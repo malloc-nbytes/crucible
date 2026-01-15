@@ -23,5 +23,6 @@ typedef struct { type base; } type_never;
 type_void *type_void_alloc(arena *a);
 type_i32 *type_i32_alloc(arena *a);
 type_never *type_never_alloc(arena *a);
+const char *type_to_cstr(const type *t);
 
 #endif // TYPE_H_INCLUDED
