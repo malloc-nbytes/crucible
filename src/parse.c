@@ -316,7 +316,6 @@ parse_stmt_proc(parse_context *ctx)
         type        *rtype;
         stmt        *blk;
 
-
         if (!expectkw(ctx, KWD_PROC))
                 return NULL;
 

@@ -18,7 +18,7 @@ int
 strv_cmp1(strv s0, strv s1)
 {
         if (s0.len != s1.len)
-                return 0;
+                return s0.len > s1.len ? s0.len-s1.len : s1.len - s0.len;
         return strncmp(s0.st, s1.st, s0.len);
 }
 
@@ -26,8 +26,9 @@ int
 strv_cmp2(strv        s0,
           const char *s1)
 {
-        if (strlen(s1) != s0.len)
-                return 0;
+        size_t s1n = strlen(s1);
+        if (s1n != s0.len)
+                return s1n > s0.len ? s1n-s0.len : s0.len-s1n;
         return strncmp(s0.st, s1, s0.len);
 }
 

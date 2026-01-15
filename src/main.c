@@ -18,6 +18,7 @@ main(void)
         (void)usage;
 
         lexer l = lex_file("input.cr");
+        lexer_show(&l);
         ast_dump(parse(&l));
 
         return 0;
