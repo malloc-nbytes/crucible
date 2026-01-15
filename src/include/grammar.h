@@ -5,6 +5,8 @@
 #include "type.h"
 #include "mem.h"
 #include "lex.h"
+#include "symbol.h"
+#include "operator.h"
 #include "ds/strv.h"
 #include "ds/array.h"
 
@@ -29,6 +31,9 @@ typedef struct expr {
         expr_kind kind;
         void *(*accept)(struct expr *, visitor *);
         loc loc;
+
+        type *type; // final checked type
+        int is_lvalue; // asssignable?
 } expr;
 
 typedef struct {
@@ -41,11 +46,15 @@ typedef struct {
         expr *lhs;
         const token *op;
         expr *rhs;
+
+        operator *resolved_op;
 } expr_bin;
 
 typedef struct {
         expr base;
         const token *i;
+
+        symbol *sym; // resolved symbol
 } expr_id;
 
 typedef struct {
@@ -58,11 +67,15 @@ typedef struct stmt {
         stmt_kind kind;
         void *(*accept)(struct stmt *, visitor *);
         loc loc;
+
+        int reachable; // control-flow analysis
 } stmt;
 
 typedef struct {
         type *type;
         const token *id;
+
+        symbol *sym;
 } idty;
 
 ARRAY_TYPE(stmt *, stmt_array);
@@ -73,6 +86,8 @@ typedef struct {
         const token *id;
         type *type;
         expr *e;
+
+        symbol *sym; // variable symbol
 } stmt_let;
 
 typedef struct {
@@ -81,21 +96,31 @@ typedef struct {
         idty_array params;
         type *rtype;
         stmt *blk;
+
+        symbol *sym; // procedure symbol
+        scope *scope; // parameter + local scope
+        int returns_value; // control-flow result
 } stmt_proc;
 
 typedef struct {
         stmt base;
         stmt_array stmts;
+
+        scope *scope;
 } stmt_blk;
 
 typedef struct {
         stmt base;
         expr *e;
+
+        stmt_proc *proc; // enclosing procedure
 } stmt_return;
 
 typedef struct {
         stmt base;
         expr *e;
+
+        stmt_proc *proc; // enclosing procedure
 } stmt_exit;
 
 idty *idty_alloc(const token *id, type *type, arena *a);

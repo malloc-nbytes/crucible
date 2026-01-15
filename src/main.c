@@ -43,7 +43,6 @@ args(int argc, char *argv[])
         while (it) {
                 char   *s  = it->s;
                 size_t  h  = it->h;
-                char   *eq = it->eq;
 
                 if (h == 1) {
                         sprintf(errb, "`-%s' one hyphen options are unimplemented", s);

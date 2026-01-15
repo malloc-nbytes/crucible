@@ -14,7 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-MAP_TYPE(const char *, token_kind, opmap);
+MAP_DECL(const char *, token_kind, opmap);
+MAP_IMPL(const char *, token_kind, opmap);
 
 static const char *g_EOF   = "EOF";
 static opmap       g_opmap = {0};

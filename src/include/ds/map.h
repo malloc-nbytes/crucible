@@ -6,7 +6,7 @@
 
 #define MAP_DEFAULT_CAPACITY 2048
 
-#define MAP_TYPE(ktype, vtype, mapname) \
+#define MAP_DECL(ktype, vtype, mapname) \
         typedef unsigned (*mapname##_hash_sig)(ktype *); \
         typedef int      (*mapname##_cmp_sig)(ktype *, ktype *); \
         \
@@ -16,7 +16,7 @@
                 struct __mapname##_node *n; \
         } __mapname##_node; \
         \
-        typedef struct { \
+        typedef struct mapname { \
                 struct { \
                         __mapname##_node **data; \
                         size_t len; \
@@ -31,8 +31,11 @@
         void mapname##_destroy(mapname *map); \
         void mapname##_insert(mapname *map, ktype k, vtype v); \
         int mapname##_contains(mapname *map, ktype k); \
-        vtype *mapname##_get(mapname *map, ktype k); \
-        \
+        vtype *mapname##_get(mapname *map, ktype k);
+
+#define MAP_IMPL(ktype, vtype, mapname) \
+        typedef unsigned (*mapname##_hash_sig)(ktype *); \
+        typedef int      (*mapname##_cmp_sig)(ktype *, ktype *); \
         mapname \
         mapname##_create(mapname##_hash_sig hash, \
                          mapname##_cmp_sig cmp) \

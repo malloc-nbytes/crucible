@@ -7,41 +7,45 @@
 
 #define SET_DEFAULT_CAPACITY 256
 
-#define SET_TYPE(type, setname) \
-        typedef unsigned (*##setname##_hash_sig)(type *); \
-        typedef int      (*##setname##_cmp_sig)(type *, type *); \
-        typedef void     (*##setname##_vfree_sig)(type *); \
+#define SET_DECL(type, setname) \
+        typedef unsigned (*setname##_hash_sig)(type *); \
+        typedef int      (*setname##_cmp_sig)(type *, type *); \
+        typedef void     (*setname##_vfree_sig)(type *); \
         \
         typedef struct __##setname##_node { \
                 type v; \
                 struct __##setname##_node *n; \
         } __##setname##_node; \
         \
-        typedef struct { \
+        typedef struct setname { \
                 struct { \
                         __##setname##_node **data; \
                         size_t len; \
                         size_t cap; \
                         size_t sz; \
                 } tbl; \
-                ##setname##_hash_sig hash; \
-                ##setname##_cmp_sig cmp; /*returns 0 on equal*/   \
-                ##setname##_vfree_sig vfree; \
+                setname##_hash_sig hash; \
+                setname##_cmp_sig cmp; /*returns 0 on equal*/   \
+                setname##_vfree_sig vfree; \
         } setname; \
         \
-        setname setname##_create(##setname##_hash_sig hash, ##setname##_cmp_sig cmp, ##setname##_vfree_sig vfree); \
+        setname setname##_create(setname##_hash_sig hash, setname##_cmp_sig cmp, setname##_vfree_sig vfree); \
         void    setname##_insert(setname *s, type v); \
         void    setname##_remove(setname *s, type v); \
         int     setname##_contains(const setname *s, type v); \
         void    setname##_destroy(setname *s); \
         void    setname##_print(const setname *s, void (*show)(type *t)); \
         size_t  setname##_size(const setname *s); \
-        type  **setname##_iter(const setname *s); \
-        \
+        type  **setname##_iter(const setname *s);
+
+#define SET_IMPL(type, setname) \
+        typedef unsigned (*setname##_hash_sig)(type *); \
+        typedef int      (*setname##_cmp_sig)(type *, type *); \
+        typedef void     (*setname##_vfree_sig)(type *); \
         setname \
-        setname##_create(##setname##_hash_sig hash, \
-                         ##setname##_cmp_sig cmp, \
-                         ##setname##_vfree_sig vfree) \
+        setname##_create(setname##_hash_sig hash, \
+                         setname##_cmp_sig cmp, \
+                         setname##_vfree_sig vfree) \
         { \
                 assert(hash); \
                 assert(cmp); \

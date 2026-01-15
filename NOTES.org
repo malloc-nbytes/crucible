@@ -1,67 +1,18 @@
-* TODO [79%]
-- [X] while loops
-- [X] mut statements
-- [X] convert =type_to_int(type)= to =type->sz=
-- [X] for loops
-- [X] break statements
-- [X] continue statements
-- [X] fix procedures with the same name but different namespaces (multiple definition error in linker)
-- [X] imports
-- [X] move build system to autotools
-- [X] allow search paths and a flag '--nostd'
-- [X] more mutation operators (+=, -=, etc).
-- [X] casting
-- [X] 'address of' operator =&var=
-- [X] 'dereference operator =*var=
-- [X] empty statements
-- [X] null
-- [X] arrays
-  - [X] indexing operator =[i]=
-  - [X] literals ={1, 2, 3}=
-  - [X] pointer arithmetic =ar + i=
-  - [X] allow for empty arrays =let ar: [i32; 5] = {};=
-- [X] booleans
-- [X] size_t
-- [ ] multi-imports =import std.binds.c.{stdio, stdlib}=
-- [-] preprocessor
-  - [ ] defines
-  - [X] macros
-  - [ ] macro functions
-- [ ] global variables
-- [-] structs
-  - [X] statement =struct P {}=
-  - [X] literals =(obj) {.x = 1, .y = 2}=
-  - [ ] members =p.x; p.y=
-- [ ] enums
-  - [ ] statements =enum P {}=
-  - [ ] members =P.I1; P.I2=
+#+TITLE: NOTES
 
-* Bugs
+* IR
 
-** Critical
+- [SSA][https://en.wikipedia.org/wiki/Static_single-assignment_form]
+- [RTL][https://en.wikipedia.org/wiki/Register_transfer_language]
 
-The following clobbers the register being used to call the function.
+* Semantic Analysis
 
-#+begin_src
-proc f(a: i32, b: i32, c: i32, d: i32, s: proc(void):void): void {}
-proc a(void): void {}
-export proc _start(void): !
-{
-        let _a: proc(void): void = a;
-        f(1,2,3,4,_a);
-        exit;
-}
-#+end_src
-
-** Misc.
-
-The following has incorrect size specifications.
-
-#+begin_src
-export proc or2_r1(void): i32
-{
-        log::id("logical::or2_r1");
-        return (i32)(0 || 1);
-}
-#+end_src
+AST (unresolved)
+ ├─ Pass 1: Definition collection
+ ├─ Pass 2: Name resolution
+ ├─ Pass 3: Type resolution (types of types)
+ ├─ Pass 4: Expression type checking
+ ├─ Pass 5: Control-flow & semantic legality
+ ├─ Pass 6: Layout, ABI, and finalization
+AST (fully typed & resolved)
 
