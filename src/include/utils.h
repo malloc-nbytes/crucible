@@ -1,6 +1,8 @@
 #ifndef UTILS_H_INCLUDED
 #define UTILS_H_INCLUDED
 
+#include <stdio.h>
+
 #define _NOOP_1(x) ((void)(x))
 #define _NOOP_2(x, y) ((void)(x), (void)(y))
 #define _NOOP_3(x, y, z) ((void)(x), (void)(y), (void)(z))
