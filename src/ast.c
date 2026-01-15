@@ -174,6 +174,8 @@ ast_dump(stmt_array stmts)
                           visit_stmt_return,
                           visit_stmt_exit);
 
+        printf("=== DUMP OF AST ===\n");
+
         for (size_t i = 0; i < stmts.len; ++i) {
                 stmts.data[i]->accept(stmts.data[i], v);
         }

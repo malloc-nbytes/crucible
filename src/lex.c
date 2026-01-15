@@ -4,6 +4,7 @@
 #include "mem.h"
 #include "loc.h"
 #include "kwd.h"
+#include "glconf.h"
 #include "ds/strv.h"
 #include "ds/map.h"
 
@@ -204,6 +205,8 @@ tk_to_cstr(token_kind k)
 void
 lexer_show(const lexer *l)
 {
+        printf("=== DUMP OF LEXER `%s' ===\n", l->fp);
+
         token *it = l->hd;
         while (it) {
                 printf("{ %d, %s, %zu, %zu, %s }\n",
@@ -317,6 +320,9 @@ lex_file(const char *path)
         }
 
         append(&l, token_alloc(g_EOF, strlen(g_EOF), TK_EOF, r, c, l.fp, &l.a));
+
+        if (g_glconf.flags & FT_DUMP_LEXER)
+                lexer_show(&l);
 
         return l;
 }

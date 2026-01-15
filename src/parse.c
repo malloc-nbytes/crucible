@@ -3,6 +3,8 @@
 #include "kwd.h"
 #include "utils.h"
 #include "mem.h"
+#include "ast.h"
+#include "glconf.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -497,6 +499,9 @@ parse(lexer *l)
                 array_free(stmts);
                 exit(1);
         }
+
+        if (g_glconf.flags & FT_DUMP_AST)
+                ast_dump(stmts);
 
         return stmts;
 }
