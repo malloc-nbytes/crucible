@@ -72,11 +72,12 @@ parse_primary_expr(parse_context *ctx)
                 switch (hd->k) {
                 case TK_ID: {
                         const token *i = lexer_next(ctx->l);
-                        left = (expr *)expr_id_alloc(i, &ctx->a);
+                        left           = (expr *)expr_id_alloc(i, &ctx->a);
                 } break;
                 case TK_INTLIT: {
-                        const token *i = lexer_next(ctx->l);
-                        left = (expr *)expr_intlit_alloc(atoi(strv_scstr(i->lx)), &ctx->a);
+                        const token *i   = lexer_next(ctx->l);
+                        int          val = atoi(strv_scstr(i->lx));
+                        left             = (expr *)expr_intlit_alloc(val, &ctx->a);
                 } break;
                 default: return left;
                 }
@@ -343,8 +344,12 @@ parse_stmt_blk(parse_context *ctx)
                 array_append(stmts, s);
         }
 
+        if (!expect(ctx, TK_RBRACK))
+                goto bad;
+
         return stmt_blk_alloc(stmts, &ctx->a);
  bad:
+        array_free(stmts);
         return NULL;
 }
 
@@ -412,7 +417,8 @@ parse_stmt(parse_context *ctx)
         if (hd->k == TK_KWD)
                 return parse_kwd_stmt(ctx);
 
-        assert(0);
+        ctx->err = err_create(format("illegal statement starting at `%s'",
+                                     strv_scstr(hd->lx)), hd->loc);
         return NULL;
 }
 
