@@ -2,6 +2,8 @@
 #include "parse.h"
 #include "ast.h"
 #include "argument.h"
+#include "semantic.h"
+#include "utils.h"
 #include "glconf.h"
 
 #include <stdio.h>
@@ -91,7 +93,9 @@ main(int argc, char *argv[])
         args(argc, argv);
 
         lexer l = lex_file(g_glconf.source);
-        (void)parse(&l);
+        parse_context parse_ctx = parse(&l);
+        scope toplvl_scope = semantic_toplvl_pass1(&parse_ctx);
+        NOOP(toplvl_scope);
 
         cleanup();
 
