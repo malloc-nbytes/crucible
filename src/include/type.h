@@ -14,37 +14,35 @@ typedef enum {
         TYPE_KIND_PTR,
 } type_kind;
 
-typedef struct {
+typedef struct type {
         type_kind kind;
         uint32_t id;
         size_t size;
         size_t align;
+
+        union {
+                struct { struct type *to; } ptr;
+        };
 } type;
 
 ARRAY_TYPE(type *, type_array);
 
-/* typedef struct type { */
-/*         type_kind kind; */
-/*         uint32_t id; */
-/*         size_t size; */
-/*         size_t align; */
-
-/*         union { */
-/*                 struct { type *to; } ptr; */
-/*         }; */
-/* } type; */
-
-typedef struct { type base; } type_void;
-typedef struct { type base; } type_i32;
-typedef struct { type base; } type_never;
 typedef struct {
-        type base;
-        type *to;
-} type_ptr;
+    arena *arena;
+    uint32_t next_id;
 
-type_void *type_void_alloc(arena *a);
-type_i32 *type_i32_alloc(arena *a);
-type_never *type_never_alloc(arena *a);
+    type *t_void;
+    type *t_i32;
+    type *t_never;
+
+    // cache for compound types
+    type_array ptr_types;
+} type_context;
+
+void type_context_init(type_context *ctx, arena *a);
+type *type_void(type_context *ctx);
+type *type_i32(type_context *ctx);
+type *type_never(type_context *ctx);
 const char *type_to_cstr(const type *t);
 
 #endif // TYPE_H_INCLUDED

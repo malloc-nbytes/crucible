@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 
-#define OPT_2HY_DUMP_LEXER "dump-lexer"
-#define OPT_2HY_DUMP_AST   "dump-ast"
+#define OPT_2HY_SHOW_LEXER "show-lexer"
+#define OPT_2HY_SHOW_AST   "show-ast"
 
 typedef enum {
-        FT_DUMP_LEXER = 1 << 0,
-        FT_DUMP_AST   = 1 << 1,
+        FT_SHOW_LEXER = 1 << 0,
+        FT_SHOW_AST   = 1 << 1,
 } flag_type;
 
 extern struct {

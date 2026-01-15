@@ -322,7 +322,7 @@ lex_file(const char *path)
 
         append(&l, token_alloc(g_EOF, strlen(g_EOF), TK_EOF, r, c, l.fp, &l.a));
 
-        if (g_glconf.flags & FT_DUMP_LEXER)
+        if (g_glconf.flags & FT_SHOW_LEXER)
                 lexer_show(&l);
 
         return l;

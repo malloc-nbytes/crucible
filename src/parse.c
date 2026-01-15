@@ -1,5 +1,4 @@
 #include "parse.h"
-#include "err.h"
 #include "kwd.h"
 #include "utils.h"
 #include "mem.h"
@@ -10,12 +9,6 @@
 #include <stdio.h>
 
 #define SP(l, n) lexer_peek(l, n) && lexer_peek(l, n)
-
-typedef struct {
-        lexer *l;
-        arena a;
-        err err;
-} parse_context;
 
 static stmt *parse_stmt(parse_context *ctx);
 
@@ -245,13 +238,15 @@ parse_type(parse_context *ctx)
         /* } */
 
         if (!strv_cmp2(lx, TY_I32))
-                ty = (type *)type_i32_alloc(&ctx->a);
+                ty = (type *)type_i32(&ctx->t_ctx);
         else if (!strv_cmp2(lx, TY_VOID))
-                ty = (type *)type_void_alloc(&ctx->a);
+                ty = (type *)type_void(&ctx->t_ctx);
         else if (hd->k == TK_BANG)
-                ty = (type *)type_never_alloc(&ctx->a);
-        else
-                assert(0);
+                ty = (type *)type_never(&ctx->t_ctx);
+        else {
+                ctx->err = err_create(format("illegal type `%s'", strv_scstr(lx)), hd->loc);
+                return NULL;
+        }
 
         // Handles all pointer types (ex: u8**).
         /* while (LSP(ctx->l, 0)->ty == TOKEN_TYPE_ASTERISK) { */
@@ -471,7 +466,7 @@ parse_stmt(parse_context *ctx)
         return NULL;
 }
 
-stmt_array
+parse_context
 parse(lexer *l)
 {
         parse_context ctx;
@@ -479,12 +474,14 @@ parse(lexer *l)
 
         stmts = array_empty(stmt_array);
         ctx   = (parse_context) {
-                .l   = l,
-                .a   = {0},
-                .err = {0},
+                .l     = l,
+                .a     = {0},
+                .err   = {0},
+                .t_ctx = {0},
         };
 
         arena_init(&ctx.a, ARENA_DEFAULT_ALLOC_SIZE);
+        type_context_init(&ctx.t_ctx, &ctx.a);
 
         while (SP(ctx.l, 0)->k != TK_EOF) {
                 stmt *s = parse_stmt(&ctx);
@@ -500,8 +497,8 @@ parse(lexer *l)
                 exit(1);
         }
 
-        if (g_glconf.flags & FT_DUMP_AST)
+        if (g_glconf.flags & FT_SHOW_AST)
                 ast_dump(stmts);
 
-        return stmts;
+        return ctx;
 }

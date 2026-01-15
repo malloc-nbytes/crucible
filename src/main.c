@@ -18,10 +18,10 @@ usage(void)
 static int
 handle_arg2(const char *s)
 {
-        if (!strcmp(s, OPT_2HY_DUMP_LEXER))
-                g_glconf.flags |= FT_DUMP_LEXER;
-        else if (!strcmp(s, OPT_2HY_DUMP_AST))
-                g_glconf.flags |= FT_DUMP_AST;
+        if (!strcmp(s, OPT_2HY_SHOW_LEXER))
+                g_glconf.flags |= FT_SHOW_LEXER;
+        else if (!strcmp(s, OPT_2HY_SHOW_AST))
+                g_glconf.flags |= FT_SHOW_AST;
         else
                 return 0;
         return 1;
