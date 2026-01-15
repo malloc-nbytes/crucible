@@ -103,8 +103,8 @@ parse_unary_expr(parse_context *ctx)
                     || cur->k == TK_BANG
                     || cur->k == TK_ASTERISK
                     || cur->k == TK_AMPERSAND)) {
-                token *op = lexer_next(ctx->l);
-                expr *rhs = (expr *)parse_unary_expr(ctx);
+                token *op          = lexer_next(ctx->l);
+                expr  *rhs         = (expr *)parse_unary_expr(ctx);
                 ((expr *)rhs)->loc = op->loc;
                 return (expr *)expr_un_alloc(op, rhs, &ctx->a);
         }
@@ -114,17 +114,17 @@ parse_unary_expr(parse_context *ctx)
 static expr *
 parse_multiplicitate_expr(parse_context *ctx)
 {
-        expr *lhs = parse_unary_expr(ctx);
+        expr  *lhs = parse_unary_expr(ctx);
         token *cur = lexer_peek(ctx->l, 0);
         while (cur && (cur->k == TK_ASTERISK
                        || cur->k == TK_FORWARDSLASH
                        || cur->k == TK_PERCENT)) {
-                token *op = lexer_next(ctx->l);
-                expr *rhs = parse_unary_expr(ctx);
-                expr_bin *bin = expr_bin_alloc(lhs, op, rhs, &ctx->a);
+                token    *op       = lexer_next(ctx->l);
+                expr     *rhs      = parse_unary_expr(ctx);
+                expr_bin *bin      = expr_bin_alloc(lhs, op, rhs, &ctx->a);
                 ((expr *)bin)->loc = lhs->loc;
-                lhs = (expr *)bin;
-                cur = lexer_peek(ctx->l, 0);
+                lhs                = (expr *)bin;
+                cur                = lexer_peek(ctx->l, 0);
         }
         return lhs;
 }
@@ -132,16 +132,16 @@ parse_multiplicitate_expr(parse_context *ctx)
 static expr *
 parse_additive_expr(parse_context *ctx)
 {
-        expr *lhs = parse_multiplicitate_expr(ctx);
+        expr  *lhs = parse_multiplicitate_expr(ctx);
         token *cur = lexer_peek(ctx->l, 0);
         while (cur && (cur->k == TK_PLUS
                        || cur->k == TK_MINUS)) {
-                token *op = lexer_next(ctx->l);
-                expr *rhs = parse_multiplicitate_expr(ctx);
-                expr_bin *bin = expr_bin_alloc(lhs, op, rhs, &ctx->a);
+                token    *op       = lexer_next(ctx->l);
+                expr     *rhs      = parse_multiplicitate_expr(ctx);
+                expr_bin *bin      = expr_bin_alloc(lhs, op, rhs, &ctx->a);
                 ((expr *)bin)->loc = lhs->loc;
-                lhs = (expr *)bin;
-                cur = lexer_peek(ctx->l, 0);
+                lhs                = (expr *)bin;
+                cur                = lexer_peek(ctx->l, 0);
         }
         return lhs;
 }
@@ -149,7 +149,7 @@ parse_additive_expr(parse_context *ctx)
 static expr *
 parse_equalitative_expr(parse_context *ctx)
 {
-        expr *lhs = parse_additive_expr(ctx);
+        expr  *lhs = parse_additive_expr(ctx);
         token *cur = lexer_peek(ctx->l, 0);
         while (cur && (cur->k == TK_DOUBLE_EQ
                        || cur->k == TK_GREATERTHAN_EQ
@@ -157,12 +157,12 @@ parse_equalitative_expr(parse_context *ctx)
                        || cur->k == TK_LESSTHAN_EQ
                        || cur->k == TK_LESSTHAN
                        || cur->k == TK_BANG_EQ)) {
-                token *op = lexer_next(ctx->l);
-                expr *rhs = parse_additive_expr(ctx);
-                expr_bin *bin = expr_bin_alloc(lhs, op, rhs, &ctx->a);
+                token    *op       = lexer_next(ctx->l);
+                expr     *rhs      = parse_additive_expr(ctx);
+                expr_bin *bin      = expr_bin_alloc(lhs, op, rhs, &ctx->a);
                 ((expr *)bin)->loc = lhs->loc;
-                lhs = (expr *)bin;
-                cur = lexer_peek(ctx->l, 0);
+                lhs                = (expr *)bin;
+                cur                = lexer_peek(ctx->l, 0);
         }
         return lhs;
 }
@@ -170,16 +170,16 @@ parse_equalitative_expr(parse_context *ctx)
 static expr *
 parse_logical_expr(parse_context *ctx)
 {
-        expr *lhs = parse_equalitative_expr(ctx);
+        expr  *lhs = parse_equalitative_expr(ctx);
         token *cur = lexer_peek(ctx->l, 0);
         while (cur && (cur->k == TK_DOUBLE_AMPERSAND
                        || cur->k == TK_DOUBLE_PIPE)) {
-                token *op = lexer_next(ctx->l);
-                expr *rhs = parse_equalitative_expr(ctx);
-                expr_bin *bin = expr_bin_alloc(lhs, op, rhs, &ctx->a);
+                token    *op       = lexer_next(ctx->l);
+                expr     *rhs      = parse_equalitative_expr(ctx);
+                expr_bin *bin      = expr_bin_alloc(lhs, op, rhs, &ctx->a);
                 ((expr *)bin)->loc = lhs->loc;
-                lhs = (expr *)bin;
-                cur = lexer_peek(ctx->l, 0);
+                lhs                = (expr *)bin;
+                cur                = lexer_peek(ctx->l, 0);
         }
         return lhs;
 }
@@ -202,8 +202,8 @@ parse_assignment_expr(parse_context *ctx)
         case TK_PIPE_EQ:
         case TK_UPTICK_EQ:
         case TK_EQ: {
-                const token *op = lexer_next(ctx->l);
-                expr *rhs = parse_assignment_expr(ctx);
+                const token *op  = lexer_next(ctx->l);
+                expr        *rhs = parse_assignment_expr(ctx);
                 return (expr *)expr_bin_alloc(lhs, op, rhs, &ctx->a);
         }
         default:
@@ -291,12 +291,36 @@ parse_stmt_let(parse_context *ctx)
 }
 
 static int
-parse_proc_params(parse_context *ctx, tyid_array *params)
+parse_proc_params(parse_context *ctx,
+                  idty_array    *params)
 {
-        *params = array_empty(tyid_array);
+        *params = array_empty(idty_array);
 
-        NOOP(ctx);
-        TODO("");
+        if (!expect(ctx, TK_LPAREN))
+                goto bad;
+
+        while (SP(ctx->l, 0)->k != TK_RPAREN) {
+                const token *id;
+                type        *type;
+
+                if (!(id = expect(ctx, TK_ID)))
+                        goto bad;
+
+                if (!expect(ctx, TK_COLON))
+                        goto bad;
+
+                if (!(type = parse_type(ctx)))
+                        goto bad;
+
+                array_append(*params, idty_alloc(id, type, &ctx->a));
+        }
+
+        if (!expect(ctx, TK_RPAREN))
+                goto bad;
+
+        return 1;
+ bad:
+        array_free(*params);
         return 0;
 }
 
@@ -312,7 +336,7 @@ static stmt_proc *
 parse_stmt_proc(parse_context *ctx)
 {
         const token *id;
-        tyid_array   params;
+        idty_array   params;
         type        *rtype;
         stmt        *blk;
 

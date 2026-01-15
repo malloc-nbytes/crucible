@@ -12,12 +12,12 @@
                 g->base.accept = a;             \
         } while (0)
 
-tyid *
-tyid_alloc(type        *type,
-           const token *id,
+idty *
+idty_alloc(const token *id,
+           type        *type,
            arena       *a)
 {
-        tyid *t = (tyid *)arena_alloc(a, sizeof(tyid));
+        idty *t = (idty *)arena_alloc(a, sizeof(idty));
         t->type = type;
         t->id   = id;
         return t;
@@ -81,7 +81,7 @@ stmt_let_alloc(const token *id,
 
 stmt_proc *
 stmt_proc_alloc(const token *id,
-                tyid_array   params,
+                idty_array   params,
                 type        *rtype,
                 stmt        *blk,
                 arena       *a)
