@@ -327,8 +327,24 @@ parse_proc_params(parse_context *ctx,
 static stmt_blk *
 parse_stmt_blk(parse_context *ctx)
 {
-        NOOP(ctx);
-        TODO("");
+        stmt_array stmts;
+
+        stmts = array_empty(stmt_array);
+
+        if (!expect(ctx, TK_LBRACK))
+                goto bad;
+
+        while (SP(ctx->l, 0)->k != TK_RBRACK) {
+                stmt *s;
+
+                if (!(s = parse_stmt(ctx)))
+                        goto bad;
+
+                array_append(stmts, s);
+        }
+
+        return stmt_blk_alloc(stmts, &ctx->a);
+ bad:
         return NULL;
 }
 

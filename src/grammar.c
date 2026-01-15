@@ -94,3 +94,12 @@ stmt_proc_alloc(const token *id,
         SETBASE(s, STMT_KIND_PROC, accept_stmt_proc);
         return s;
 }
+
+stmt_blk *
+stmt_blk_alloc(stmt_array stmts, arena *a)
+{
+        stmt_blk *s = (stmt_blk *)arena_alloc(a, sizeof(stmt_blk));
+        s->stmts    = stmts;
+        SETBASE(s, STMT_KIND_BLK, accept_stmt_blk);
+        return s;
+}

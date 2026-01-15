@@ -121,8 +121,8 @@ init_opmap(void) {
         opmap_insert(&g_opmap, "(", TK_LPAREN);
         opmap_insert(&g_opmap, ")", TK_RPAREN);
         opmap_insert(&g_opmap, ";", TK_SEMI);
-        opmap_insert(&g_opmap, "{", TK_LBRACKET);
-        opmap_insert(&g_opmap, "}", TK_RBRACKET);
+        opmap_insert(&g_opmap, "{", TK_LBRACK);
+        opmap_insert(&g_opmap, "}", TK_RBRACK);
         opmap_insert(&g_opmap, "[", TK_LSQR);
         opmap_insert(&g_opmap, "]", TK_RSQR);
         opmap_insert(&g_opmap, "=", TK_EQ);
@@ -182,8 +182,8 @@ tk_to_cstr(token_kind k)
         case TK_LPAREN: return "(";
         case TK_RPAREN: return ")";
         case TK_SEMI: return ";";
-        case TK_LBRACKET: return "{";
-        case TK_RBRACKET: return "}";
+        case TK_LBRACK: return "{";
+        case TK_RBRACK: return "}";
         case TK_LSQR: return "[";
         case TK_RSQR: return "]";
         case TK_EQ: return "=";

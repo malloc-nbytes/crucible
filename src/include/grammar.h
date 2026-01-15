@@ -98,5 +98,6 @@ stmt_let *stmt_let_alloc(const token *id,
                          expr        *e,
                          arena       *a);
 stmt_proc *stmt_proc_alloc(const token *id, idty_array params, type *rtype, stmt *blk, arena *a);
+stmt_blk *stmt_blk_alloc(stmt_array stmts, arena *a);
 
 #endif // GRAMMAR_H_INCLUDED
