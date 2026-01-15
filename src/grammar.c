@@ -28,10 +28,12 @@ expr_intlit *
 expr_intlit_alloc(int i, arena *a)
 {
         expr_intlit *e = (expr_intlit *)arena_alloc(a, sizeof(expr_intlit));
-        e->i           = i;
         SETBASE(e, EXPR_KIND_INTLIT, accept_expr_intlit);
-        e->base.type = NULL;
+
+        e->i              = i;
+        e->base.type      = NULL;
         e->base.is_lvalue = 0;
+
         return e;
 }
 
@@ -42,11 +44,12 @@ expr_bin_alloc(expr        *lhs,
                arena       *a)
 {
         expr_bin *e = (expr_bin *)arena_alloc(a, sizeof(expr_bin));
-        e->lhs      = lhs;
-        e->op       = op;
-        e->rhs      = rhs;
         SETBASE(e, EXPR_KIND_BIN, accept_expr_bin);
-        e->base.type = NULL;
+
+        e->lhs            = lhs;
+        e->op             = op;
+        e->rhs            = rhs;
+        e->base.type      = NULL;
         e->base.is_lvalue = 0;
         return e;
 }
@@ -55,10 +58,11 @@ expr_un *
 expr_un_alloc(const token *op, expr *rhs, arena *a)
 {
         expr_un *e = (expr_un *)arena_alloc(a, sizeof(expr_un));
-        e->op      = op;
-        e->rhs     = rhs;
         SETBASE(e, EXPR_KIND_UN, accept_expr_un);
-        e->base.type = NULL;
+
+        e->op             = op;
+        e->rhs            = rhs;
+        e->base.type      = NULL;
         e->base.is_lvalue = 0;
         return e;
 }
@@ -67,10 +71,11 @@ expr_id *
 expr_id_alloc(const token *i, arena *a)
 {
         expr_id *e = (expr_id *)arena_alloc(a, sizeof(expr_id));
-        e->i       = i;
-        e->sym     = NULL;
         SETBASE(e, EXPR_KIND_ID, accept_expr_id);
-        e->base.type = NULL;
+
+        e->i              = i;
+        e->sym            = NULL;
+        e->base.type      = NULL;
         e->base.is_lvalue = 0;
         return e;
 }
@@ -82,11 +87,11 @@ stmt_let_alloc(const token *id,
                arena       *a)
 {
         stmt_let *s = (stmt_let *)arena_alloc(a, sizeof(stmt_let));
-        s->id       = id;
-        s->type     = type;
-        s->e        = e;
         SETBASE(s, STMT_KIND_LET, accept_stmt_let);
-        s->sym = NULL;
+        s->id             = id;
+        s->type           = type;
+        s->e              = e;
+        s->sym            = NULL;
         s->base.reachable = 0;
         return s;
 }
@@ -99,17 +104,17 @@ stmt_proc_alloc(const token *id,
                 arena       *a)
 {
         stmt_proc *s = (stmt_proc *)arena_alloc(a, sizeof(stmt_proc));
-        s->id        = id;
-        s->params    = params;
-        s->rtype     = rtype;
-        s->blk       = blk;
         SETBASE(s, STMT_KIND_PROC, accept_stmt_proc);
 
-        s->sym = NULL;
-        //s->scope
-        s->returns_value = 0;
-
+        s->id             = id;
+        s->params         = params;
+        s->rtype          = rtype;
+        s->blk            = blk;
+        s->sym            = NULL;
+        s->scope          = NULL;
+        s->returns_value  = 0;
         s->base.reachable = 1;
+
         return s;
 }
 
@@ -117,8 +122,9 @@ stmt_blk *
 stmt_blk_alloc(stmt_array stmts, arena *a)
 {
         stmt_blk *s = (stmt_blk *)arena_alloc(a, sizeof(stmt_blk));
-        s->stmts    = stmts;
         SETBASE(s, STMT_KIND_BLK, accept_stmt_blk);
+
+        s->stmts          = stmts;
         s->base.reachable = 0;
         return s;
 }
@@ -127,10 +133,11 @@ stmt_return *
 stmt_return_alloc(expr *e, arena *a)
 {
         stmt_return *s = (stmt_return *)arena_alloc(a, sizeof(stmt_return));
-        s->e           = e;
         SETBASE(s, STMT_KIND_RETURN, accept_stmt_return);
+
+        s->e              = e;
         s->base.reachable = 0;
-        s->proc = NULL;
+        s->proc           = NULL;
         return s;
 }
 
@@ -138,9 +145,10 @@ stmt_exit *
 stmt_exit_alloc(expr *e, arena *a)
 {
         stmt_exit *s = (stmt_exit *)arena_alloc(a, sizeof(stmt_exit));
-        s->e         = e;
         SETBASE(s, STMT_KIND_EXIT, accept_stmt_exit);
+
+        s->e              = e;
         s->base.reachable = 0;
-        s->proc = NULL;
+        s->proc           = NULL;
         return s;
 }
