@@ -20,6 +20,7 @@ ARRAY_TYPE(tyid *, tyid_array);
 typedef enum {
         STMT_KIND_LET = 0,
         STMT_KIND_PROC,
+        STMT_KIND_BLK,
 } stmt_kind;
 
 typedef enum {
@@ -80,6 +81,11 @@ typedef struct {
         type *rtype;
         stmt *blk;
 } stmt_proc;
+
+typedef struct {
+        stmt base;
+        stmt_array stmts;
+} stmt_blk;
 
 tyid *tyid_alloc(type *type, const token *id, arena *a);
 expr_intlit *expr_intlit_alloc(int i, arena *a);

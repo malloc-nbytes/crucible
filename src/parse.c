@@ -15,6 +15,8 @@ typedef struct {
         err err;
 } parse_context;
 
+static stmt *parse_stmt(parse_context *ctx);
+
 static token *
 expectkw(parse_context *ctx,
          const char    *kwd)
@@ -239,15 +241,14 @@ parse_type(parse_context *ctx)
         /*         return ty; */
         /* } */
 
-        if (!strv_cmp2(lx, TY_I32)) {
+        if (!strv_cmp2(lx, TY_I32))
                 ty = (type *)type_i32_alloc(&ctx->a);
-        } else if (!strv_cmp2(lx, TY_VOID)) {
+        else if (!strv_cmp2(lx, TY_VOID))
                 ty = (type *)type_void_alloc(&ctx->a);
-        } else if (hd->k == TK_BANG) {
+        else if (hd->k == TK_BANG)
                 ty = (type *)type_never_alloc(&ctx->a);
-        } else {
+        else
                 assert(0);
-        }
 
         // Handles all pointer types (ex: u8**).
         /* while (LSP(ctx->l, 0)->ty == TOKEN_TYPE_ASTERISK) { */
@@ -289,12 +290,58 @@ parse_stmt_let(parse_context *ctx)
         return stmt_let_alloc(id, type, e, &ctx->a);
 }
 
+static int
+parse_proc_params(parse_context *ctx, tyid_array *params)
+{
+        *params = array_empty(tyid_array);
+
+        NOOP(ctx);
+        TODO("");
+        return 0;
+}
+
+static stmt_blk *
+parse_stmt_blk(parse_context *ctx)
+{
+        NOOP(ctx);
+        TODO("");
+        return NULL;
+}
+
 static stmt_proc *
 parse_stmt_proc(parse_context *ctx)
 {
+        const token *id;
+        tyid_array   params;
+        type        *rtype;
+        stmt        *blk;
+
+
         if (!expectkw(ctx, KWD_PROC))
                 return NULL;
-        assert(0);
+
+        if (!(id = expect(ctx, TK_ID)))
+                return NULL;
+
+        if (!parse_proc_params(ctx, &params))
+                return NULL;
+
+        if (!expect(ctx, TK_COLON))
+                return NULL;
+
+        if (!(rtype = parse_type(ctx)))
+                return NULL;
+
+        if (SP(ctx->l, 0)->k == TK_EQ) {
+                (void)expect(ctx, TK_EQ);
+                if (!(blk = parse_stmt(ctx)))
+                        return NULL;
+        }
+
+        else if (!(blk = (stmt *)parse_stmt_blk(ctx)))
+                return NULL;
+
+        return stmt_proc_alloc(id, params, rtype, blk, &ctx->a);
 }
 
 static stmt *
