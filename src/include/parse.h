@@ -11,6 +11,7 @@ typedef struct {
         arena a;
         err err;
         type_context t_ctx;
+        stmt_array stmts;
 } parse_context;
 
 parse_context parse(lexer *l);

@@ -470,14 +470,13 @@ parse_context
 parse(lexer *l)
 {
         parse_context ctx;
-        stmt_array    stmts;
 
-        stmts = array_empty(stmt_array);
         ctx   = (parse_context) {
                 .l     = l,
                 .a     = {0},
                 .err   = {0},
                 .t_ctx = {0},
+                .stmts = array_empty(stmt_array),
         };
 
         arena_init(&ctx.a, ARENA_DEFAULT_ALLOC_SIZE);
@@ -485,7 +484,7 @@ parse(lexer *l)
 
         while (SP(ctx.l, 0)->k != TK_EOF) {
                 stmt *s = parse_stmt(&ctx);
-                if (s) array_append(stmts, s);
+                if (s) array_append(ctx.stmts, s);
                 else   break;
         }
 
@@ -493,12 +492,12 @@ parse(lexer *l)
                 err_print(ctx.err);
                 lexer_free(l);
                 arena_free(&ctx.a);
-                array_free(stmts);
+                array_free(ctx.stmts);
                 exit(1);
         }
 
         if (g_glconf.flags & FT_SHOW_AST)
-                ast_dump(stmts);
+                ast_dump(ctx.stmts);
 
         return ctx;
 }

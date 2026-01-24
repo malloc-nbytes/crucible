@@ -4,7 +4,6 @@
 scope
 semantic_toplvl_pass1(parse_context *pctx)
 {
-        NOOP(pctx);
-        TODO("");
-        return (scope) {0};
+        for (size_t i = 0; i < pctx->stmts.len; ++i) {
+        }
 }
