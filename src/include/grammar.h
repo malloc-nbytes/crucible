@@ -3,6 +3,7 @@
 
 #include "token.h"
 #include "loc.h"
+#include "ds/array.h"
 
 typedef enum {
         EXPR_KIND_IDENT = 0,
@@ -16,6 +17,8 @@ typedef struct {
         expr_kind kind;
         loc       loc;
 } expr;
+
+ARRAY_DEFINE(expr *, exprp_ar);
 
 typedef struct {
         expr   base;
@@ -44,6 +47,31 @@ typedef struct {
         token *prefix;
         expr  *e;
 } expr_un;
+
+typedef enum {
+	STMT_KIND_BLOCK = 0,
+	STMT_KIND_PROC,
+	STMT_KIND_EXPR,
+	STMT_KIND_LET,
+} stmt_kind;
+
+typedef struct {
+	stmt_kind kind;
+	loc       loc;
+} stmt;
+
+ARRAY_DEFINE(stmt *, stmtp_ar);
+
+typedef struct {
+	stmt     base;
+	stmtp_ar stmts;
+} stmt_block;
+
+typedef struct {
+	stmt base;
+	token *id;
+
+} stmt_proc; 
 
 expr_ident  expr_ident_alloc(token *id);
 expr_intlit expr_intlit_alloc(token *i);

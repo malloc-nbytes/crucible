@@ -27,6 +27,23 @@ lexer_opmap_cmp(const char **s0,
         return strcmp(*s0, *s1);
 }
 
+token *
+lexer_next(lexer *l)
+{
+        if (l->pos >= l->tokens.len)
+                return NULL;
+        return l->tokens.data[l->pos++];
+}
+
+token *
+lexer_peek(lexer *l, size_t p)
+{
+        if (l->pos+p >= l->tokens.len)
+                return NULL;
+
+        return l->tokens.data[l->pos+p];
+}
+
 void
 init_lexer_translation_unit(void)
 {

@@ -13,11 +13,11 @@ typedef struct {
         sv        path;
 } lexer;
 
-void init_lexer_translation_unit(void);
-
-lexer lexer_lex_file(const char *path,
-                     const char *src);
-
-void lexer_dump(const lexer *l);
+void   init_lexer_translation_unit(void);
+void   lexer_dump(const lexer *l);
+token *lexer_next(lexer *l);
+token *lexer_peek(lexer *l, size_t p);
+lexer  lexer_lex_file(const char *path,
+                      const char *src);
 
 #endif // LEXER_H_INCLUDED

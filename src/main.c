@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "io.h"
+#include "types.h"
 
 #include <stdio.h>
 
@@ -7,6 +8,7 @@ int
 main(void)
 {
         init_lexer_translation_unit();
+        init_types_translation_unit();
 
         const char *path;
         char       *src;
