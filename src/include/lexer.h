@@ -18,4 +18,6 @@ void init_lexer_translation_unit(void);
 lexer lexer_lex_file(const char *path,
                      const char *src);
 
+void lexer_dump(const lexer *l);
+
 #endif // LEXER_H_INCLUDED

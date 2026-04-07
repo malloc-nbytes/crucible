@@ -1,6 +1,7 @@
 #include "lexer.h"
 #include "token.h"
 #include "kw.h"
+#include "err.h"
 #include "ds/map.h"
 
 #include <assert.h>
@@ -32,13 +33,15 @@ init_lexer_translation_unit(void)
         g_opmap = lexer_opmap_create(lexer_opmap_hash,
                                      lexer_opmap_cmp);
 
-        lexer_opmap_insert(&g_opmap, ")", TK_LPAREN);
-        lexer_opmap_insert(&g_opmap, "(", TK_RPAREN);
+        lexer_opmap_insert(&g_opmap, "(", TK_LPAREN);
+        lexer_opmap_insert(&g_opmap, ")", TK_RPAREN);
         lexer_opmap_insert(&g_opmap, "{", TK_LCURLY);
         lexer_opmap_insert(&g_opmap, "}", TK_RCURLY);
         lexer_opmap_insert(&g_opmap, "[", TK_LSQR);
         lexer_opmap_insert(&g_opmap, "]", TK_RSQR);
         lexer_opmap_insert(&g_opmap, ":", TK_COLON);
+        lexer_opmap_insert(&g_opmap, "!", TK_BANG);
+        lexer_opmap_insert(&g_opmap, ";", TK_SEMI);
 }
 
 static size_t
@@ -57,6 +60,37 @@ isident(int c)
 {
         return c == '_' || isalnum(c);
 }
+
+static int
+isop(int c)
+{
+        return !isspace(c) && !isident(c) && c != '\'' && c != '"';
+}
+
+static int
+notquote(int c)
+{
+        return c != '"';
+}
+
+#define BUF_CAP 256
+static token_kind *
+determine_op(const char *s, size_t *n)
+{
+        assert(*n < BUF_CAP);
+        char buf[BUF_CAP];
+
+        while (*n > 0) {
+                memset(buf, 0, sizeof(buf));
+                strncpy(buf, s, *n);
+                if (lexer_opmap_contains(&g_opmap, buf))
+                        return lexer_opmap_get(&g_opmap, buf);
+                --(*n);
+        }
+
+        return NULL;
+}
+#undef BUF_CAP
 
 void
 lexer_dump(const lexer *l)
@@ -108,7 +142,10 @@ lexer_lex_file(const char *path,
                 } else if (ch == '\'') {
                         assert(0);
                 } else if (ch == '"') {
-                        assert(0);
+                        size_t n = consume_while(src+i+1, notquote);
+                        array_append(l.tokens, token_from(TK_STRLIT, src+i+1, n, TK_PATH_CONS));
+                        i += n + 2;
+                        c += n + 2;
                 } else if (isalpha(ch) || ch == '_') {
                         size_t n = consume_while(src+i, isident);
                         token *t = token_from(TK_IDENT, src+i, n, TK_PATH_CONS);
@@ -123,9 +160,18 @@ lexer_lex_file(const char *path,
                         i += n;
                         c += n;
                 } else {
-                        assert(0);
+                        size_t n      = consume_while(src+i, isop);
+                        token_kind *k = determine_op(src+i, &n);
+                        if (!k)
+                                fatal("unknown symbol starting at: %s", src+i);
+                        array_append(l.tokens, token_from(*k, src+i, n, TK_PATH_CONS));
+                        i += n;
+                        c += n;
                 }
         }
+
+        static const char *eof = "EOF";
+        array_append(l.tokens, token_from(TK_EOF, eof, 3, TK_PATH_CONS));
 
         return l;
 }

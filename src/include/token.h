@@ -7,6 +7,7 @@
 
 typedef enum {
         // Special
+        TK_EOF = 0,
         TK_IDENT,
         TK_STRLIT,
         TK_INTLIT,
@@ -20,6 +21,8 @@ typedef enum {
         TK_LSQR,
         TK_RSQR,
         TK_COLON,
+        TK_BANG,
+        TK_SEMI,
 } token_kind;
 
 typedef struct token {

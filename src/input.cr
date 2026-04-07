@@ -1,4 +1,4 @@
-proc _start(void): !
+proc _start(): !
 {
-        let x: i32 = 1;
+        "hello world";
 }
