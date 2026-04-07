@@ -1,6 +1,6 @@
 bin_PROGRAMS = cruc cruc-debug-build
 
-cruc_SOURCES = main.c loc.c io.c lex.c mem.c strv.c kwd.c visitor.c grammar.c parse.c err.c utils.c type.c ast.c argument.c glconf.c
+cruc_SOURCES = main.c io.c mem.c loc.c sv.c lexer.c token.c kw.c
 cruc_CFLAGS = -O2 -march=native -pipe -I$(top_srcdir)/src/include -Wextra -Wall
 cruc_LDADD = 
 

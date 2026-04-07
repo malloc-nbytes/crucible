@@ -6,7 +6,7 @@
 
 #define MAP_DEFAULT_CAPACITY 2048
 
-#define MAP_TYPE(ktype, vtype, mapname) \
+#define MAP_DEFINE(ktype, vtype, mapname) \
         typedef unsigned (*mapname##_hash_sig)(ktype *); \
         typedef int      (*mapname##_cmp_sig)(ktype *, ktype *); \
         \
@@ -14,11 +14,11 @@
                 ktype k; \
                 vtype v; \
                 struct __mapname##_node *n; \
-        } __mapname##_node; \
+        } __##mapname##_node; \
         \
         typedef struct { \
                 struct { \
-                        __mapname##_node **data; \
+                        __##mapname##_node **data; \
                         size_t len; \
                         size_t cap; \
                         size_t sz; \
@@ -31,14 +31,15 @@
         void mapname##_destroy(mapname *map); \
         void mapname##_insert(mapname *map, ktype k, vtype v); \
         int mapname##_contains(mapname *map, ktype k); \
-        vtype *mapname##_get(mapname *map, ktype k); \
-        \
+        vtype *mapname##_get(mapname *map, ktype k)
+
+#define MAP_IMPL(ktype, vtype, mapname) \
         mapname \
         mapname##_create(mapname##_hash_sig hash, \
                          mapname##_cmp_sig cmp) \
         { \
-                __mapname##_node **data \
-                        = (__mapname##_node **)calloc(MAP_DEFAULT_CAPACITY, sizeof(__mapname##_node *)); \
+                __##mapname##_node **data \
+                        = (__##mapname##_node **)calloc(MAP_DEFAULT_CAPACITY, sizeof(__##mapname##_node *)); \
                 return (mapname) { \
                         .tbl = { \
                                 .data = data, \
@@ -53,18 +54,18 @@
         void \
         mapname##_insert(mapname *map, ktype k, vtype v) \
         { \
-                unsigned idx = map->hash(&k) % map->tbl.cap; \
-                __mapname##_node *it = map->tbl.data[idx]; \
-                __mapname##_node *prev = NULL; \
+                unsigned idx = map->hash(&k) % map->tbl.cap;  \
+                __##mapname##_node *it = map->tbl.data[idx]; \
+                __##mapname##_node *prev = NULL; \
                 while (it) { \
-                        if (!map->cmp(&it->k, &k)) { \
+                        if (!map->cmp(&it->k, &k)) {   \
                                 it->v = v; \
                                 return; \
                         } \
                         prev = it; \
                         it = it->n; \
                 } \
-                it = (__mapname##_node *)malloc(sizeof(__mapname##_node)); \
+                it = (__##mapname##_node *)malloc(sizeof(__##mapname##_node)); \
                 it->k = k; \
                 it->v = v; \
                 it->n = NULL; \
@@ -87,14 +88,14 @@
         mapname##_get(mapname *map, ktype k) \
         { \
                 unsigned idx = map->hash(&k) % map->tbl.cap; \
-                __mapname##_node *it = map->tbl.data[idx]; \
+                __##mapname##_node *it = map->tbl.data[idx]; \
                 while (it) { \
-                        if (!map->cmp(&it->k, &k)) { \
+                        if (!map->cmp(&it->k, &k)) {  \
                                 return &it->v; \
                         } \
                         it = it->n; \
                 } \
                 return NULL; \
-        } \
+        }
 
 #endif // MAP_H_INCLUDED

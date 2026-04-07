@@ -4,21 +4,23 @@
 #include <string.h>
 
 loc
-loc_create(const char *fp,
-           size_t      r,
-           size_t      c)
+loc_from(size_t      r,
+         size_t      c,
+         const char *path)
 {
         return (loc) {
-                .fp = fp,
-                .r = r,
-                .c = c,
+                .r    = r,
+                .c    = c,
+                .path = path,
         };
 }
 
-char *
-loc_err(loc loc)
+const char *
+loc_cstr(loc l)
 {
-        char buf[512] = {0};
-        snprintf(buf, sizeof(buf), "%s:%zu:%zu: error: ", loc.fp, loc.r, loc.c);
-        return strdup(buf);
+        static char buf[256];
+
+        memset(buf, 0, sizeof(buf));
+        sprintf(buf, "%s:%zu:%zu", l.path, l.r, l.c);
+        return buf;
 }

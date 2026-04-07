@@ -1,14 +1,12 @@
 #ifndef ERR_H_INCLUDED
 #define ERR_H_INCLUDED
 
-#include "loc.h"
+#include <stdio.h>
 
-typedef struct {
-        char *msg;
-        loc loc;
-} err;
-
-err err_create(char *msg, loc loc);
-void err_print(err err);
+#define fatal(fmt, ...)                                                 \
+        do {                                                            \
+                fprintf(stderr, "fatal: " fmt "\n", ##__VA_ARGS__);     \
+                exit(1);                                                \
+        } while (0)
 
 #endif // ERR_H_INCLUDED

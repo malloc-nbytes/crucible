@@ -4,15 +4,15 @@
 #include <stddef.h>
 
 typedef struct {
-        const char *fp;
         size_t r;
         size_t c;
+        const char *path;
 } loc;
 
-loc loc_create(const char *fp,
-               size_t      r,
-               size_t      c);
+loc loc_from(size_t      r,
+             size_t      c,
+             const char *path);
 
-char *loc_err(loc loc);
+const char *loc_cstr(loc l);
 
 #endif // LOC_H_INCLUDED
