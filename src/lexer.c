@@ -47,23 +47,23 @@ init_lexer_translation_unit(void)
         lexer_opmap_insert(&g_opmap, "/", TK_FORWARDSLASH);
         lexer_opmap_insert(&g_opmap, "%", TK_PERCENT);
         lexer_opmap_insert(&g_opmap, "*", TK_ASTERISK);
-	lexer_opmap_insert(&g_opmap, "=", TK_EQUALS);
-	lexer_opmap_insert(&g_opmap, "+=", TK_PLUS_EQUALS);
-	lexer_opmap_insert(&g_opmap, "-=", TK_MINUS_EQUALS);
-	lexer_opmap_insert(&g_opmap, "/=", TK_FORWARDSLASH_EQUALS);
-	lexer_opmap_insert(&g_opmap, "*=", TK_ASTERISK_EQUALS);
-	lexer_opmap_insert(&g_opmap, "&", TK_AMPERSAND);
-	lexer_opmap_insert(&g_opmap, "|", TK_PIPE);
-	lexer_opmap_insert(&g_opmap, "&&", TK_DOUBLE_AMPERSAND);
-	lexer_opmap_insert(&g_opmap, "||", TK_DOUBLE_PIPE);
-	lexer_opmap_insert(&g_opmap, "&=", TK_AMPERSAND_EQUALS);
-	lexer_opmap_insert(&g_opmap, "|=", TK_PIPE_EQUALS);
-	lexer_opmap_insert(&g_opmap, "^", TK_UPTICK);
-	lexer_opmap_insert(&g_opmap, "^=", TK_UPTICK_EQUALS);
-	lexer_opmap_insert(&g_opmap, ">", TK_GREATERTHAN);
-	lexer_opmap_insert(&g_opmap, "<", TK_LESSTHAN);
-	lexer_opmap_insert(&g_opmap, ">=", TK_GREATERTHAN_EQUALS);
-	lexer_opmap_insert(&g_opmap, "<=", TK_LESSTHAN_EQUALS);
+        lexer_opmap_insert(&g_opmap, "=", TK_EQUALS);
+        lexer_opmap_insert(&g_opmap, "+=", TK_PLUS_EQUALS);
+        lexer_opmap_insert(&g_opmap, "-=", TK_MINUS_EQUALS);
+        lexer_opmap_insert(&g_opmap, "/=", TK_FORWARDSLASH_EQUALS);
+        lexer_opmap_insert(&g_opmap, "*=", TK_ASTERISK_EQUALS);
+        lexer_opmap_insert(&g_opmap, "&", TK_AMPERSAND);
+        lexer_opmap_insert(&g_opmap, "|", TK_PIPE);
+        lexer_opmap_insert(&g_opmap, "&&", TK_DOUBLE_AMPERSAND);
+        lexer_opmap_insert(&g_opmap, "||", TK_DOUBLE_PIPE);
+        lexer_opmap_insert(&g_opmap, "&=", TK_AMPERSAND_EQUALS);
+        lexer_opmap_insert(&g_opmap, "|=", TK_PIPE_EQUALS);
+        lexer_opmap_insert(&g_opmap, "^", TK_UPTICK);
+        lexer_opmap_insert(&g_opmap, "^=", TK_UPTICK_EQUALS);
+        lexer_opmap_insert(&g_opmap, ">", TK_GREATERTHAN);
+        lexer_opmap_insert(&g_opmap, "<", TK_LESSTHAN);
+        lexer_opmap_insert(&g_opmap, ">=", TK_GREATERTHAN_EQUALS);
+        lexer_opmap_insert(&g_opmap, "<=", TK_LESSTHAN_EQUALS);
 }
 
 static size_t
