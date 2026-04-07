@@ -32,6 +32,7 @@ lexer_next(lexer *l)
 {
         if (l->pos >= l->tokens.len)
                 return NULL;
+
         return l->tokens.data[l->pos++];
 }
 
@@ -142,7 +143,6 @@ lexer_dump(const lexer *l)
         }
 }
 
-#define TK_PATH_CONS r, c, path
 lexer
 lexer_lex_file(const char *path,
                const char *src)
@@ -162,6 +162,8 @@ lexer_lex_file(const char *path,
         r = 1;
         c = 1;
         i = 0;
+
+#define TK_PATH_CONS r, c, path
 
         while (i < l.src.len) {
                 char ch = src[i];
@@ -213,5 +215,6 @@ lexer_lex_file(const char *path,
         array_append(l.tokens, token_from(TK_EOF, eof, 3, TK_PATH_CONS));
 
         return l;
-}
+
 #undef TK_PATH_CONS
+}

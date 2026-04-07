@@ -1,4 +1,4 @@
-proc _start(): !
+proc _start(): i32
 {
-        "hello world";
+
 }

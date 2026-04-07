@@ -14,7 +14,7 @@ sv_from(const char *s, ssize_t len)
         };
 }
 
-#define BUF_CAP 512
+#define BUF_CAP 1024
 const char *
 sv_cstr(sv sv)
 {
