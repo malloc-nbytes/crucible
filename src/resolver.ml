@@ -165,10 +165,64 @@ let resolve_stmt_let
       }
 
 let resolve_stmt_proc
-      (v : vis_type)
-      (s : Stmt.proc)
+      ({context; _} as v : vis_type)
+      ({id; rty; params; body; _} as s : Stmt.proc)
     : Stmt.t * vis_type =
-  assert false
+  let name = id.lx in
+  if Scope.contains name context.scope then
+    raise @@ Err.Identifier_Already_Defined (s.node.loc, name)
+  else
+    let proc_ty =
+      Type.Proc
+        { rty
+        ; ptys = List.map (fun (p : Stmt.parameter) -> p.ty) params
+        }
+    in
+    let sym, v = new_symbol Symbol.Proc id proc_ty v in
+    let outer_scope = Scope.add name sym v.context.scope in
+    let body_v =
+      { v with
+        context =
+          { v.context with
+            scope = Scope.push outer_scope
+          ; return_type = Some rty
+          }
+      }
+    in
+    let params, body_v =
+      List.fold_left
+        (fun (params, v) (param : Stmt.parameter) ->
+          let name = param.id.lx in
+          if Scope.contains name v.context.scope then
+            raise @@ Err.Identifier_Already_Defined (param.id.loc, name)
+          else
+            let symbol, v =
+              new_symbol Symbol.Param param.id param.ty v
+            in
+            let scope = Scope.add name symbol v.context.scope in
+            {param with sym = Some symbol} :: params,
+            {v with context = {v.context with scope}})
+        ([], body_v)
+        params
+    in
+    let params = List.rev params in
+    let blk, body_v = accept_stmt body_v body in
+    let v =
+      { body_v with
+        context =
+          { body_v.context with
+            scope = outer_scope
+          ; return_type = context.return_type
+          }
+      }
+    in
+    Stmt.Proc
+      { s with
+        params
+      ; body = blk
+      ; sym = Some sym
+      },
+    v
 
 let analyze stmts =
   try
