@@ -1,0 +1,14 @@
+io.cmx :
+keyword.cmx :
+lexer.cmx : \
+    type.cmx \
+    token.cmx \
+    keyword.cmx
+location.cmx :
+main.cmx : \
+    lexer.cmx \
+    io.cmx
+token.cmx : \
+    location.cmx \
+    keyword.cmx
+type.cmx :
