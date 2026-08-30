@@ -8,3 +8,9 @@ type t =
 let is_primitive = function
   | "void" | "u8" | "i32" -> true
   | _ -> false
+
+let from = function
+  | "void" -> Some Void
+  | "u8" -> Some U8
+  | "i32" -> Some I32
+  | _ -> None
