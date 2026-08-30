@@ -38,3 +38,8 @@ let get_location = function
   | String     e -> e.node.loc
   | Binary     e -> e.node.loc
 
+let get_type = function
+  | Integer    e -> e.node.ty
+  | Identifier e -> e.node.ty
+  | String     e -> e.node.ty
+  | Binary     e -> e.node.ty
