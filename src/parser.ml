@@ -101,19 +101,20 @@ and parse_assignment_expr p =
 and parse_expr p = parse_assignment_expr p
 
 let parse_type p =
-  let base, p = expect Type p in
-  let ty, p =
-    let rec aux base p =
-      match p.ts with
-      | {k = Asterisk; _} :: tl ->
-         aux (Type.Ptr base) p
-      | _ -> base, p
-    in aux (match Type.from base.lx with
-            | Some t -> t
-            | _ -> raise (Err.Invalid_Type (base.loc, base.lx)))
-         p
+  let ty, p = expect Token.Type p in
+  let ty = match ty.lx with
+    | "void" -> Type.Void
+    | "i32" -> Type.I32
+    | "u32" -> Type.U32
+    | "u8" -> Type.U8
+    | _ -> raise (Err.Expect (ty.loc, "primitive type", ty.lx))
   in
-  ty, p
+  let rec pointers ty p =
+    match p.ts with
+    | {k = Asterisk; _} :: ts -> pointers (Type.Ptr ty) {p with ts}
+    | _ -> ty, p
+  in
+  pointers ty p
 
 let rec parse_stmt_expr p =
   let e, p = parse_expr p in
@@ -197,7 +198,8 @@ and parse_stmt_proc p =
   let export, loc, p =
     match p.ts with
     | {k = Keyword Export; _} as hd :: tl ->
-       true, hd.loc, {p with ts = tl}
+       let p = expect' (Keyword Proc) {p with ts = tl} in
+       true, hd.loc, p
     | _ ->
        let hd, p = expect (Keyword Proc) p in
        false, hd.loc, p
