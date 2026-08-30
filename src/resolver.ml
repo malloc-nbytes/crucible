@@ -93,8 +93,8 @@ let resolve_stmt_block
        let s, v = accept_stmt v hd in
        aux (s :: acc) v tl
   in
-  let stmts, v = aux [] v stmts in
-  Stmt.Block {s with stmts}, v
+  let stmts, v = aux [] {v with context = {v.context with scope = Scope.push v.context.scope}} stmts in
+  Stmt.Block {s with stmts}, {v with context = {v.context with scope = Scope.pop v.context.scope}}
 
 let resolve_stmt_if
       (v : vis_type)
