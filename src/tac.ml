@@ -38,11 +38,18 @@ type block =
   ; terminator : terminator
   }
 
+type linkage =
+  | Internal
+  | Export
+  | Extern
+  | Extern_Export
+
 type proc =
   { sym : Symbol.t
+  ; linkage : linkage
   ; params : Symbol.t list
   ; return_type : Type.t
-  ; entry : label
+  ; entry : label option
   ; blocks : block list
   }
 
@@ -105,6 +112,16 @@ let block_to_string blk =
        instructions @
        ["  " ^ terminator_to_string blk.terminator])
 
+let linkage_to_string = function
+  | Internal -> ""
+  | Export -> "export "
+  | Extern -> "extern "
+  | Extern_Export -> "extern export "
+
+let is_extern = function
+  | Extern | Extern_Export -> true
+  | Internal | Export -> false
+
 let proc_to_string proc =
   let params =
     proc.params
@@ -112,16 +129,24 @@ let proc_to_string proc =
            "%arg" ^ string_of_int sym.id ^ ": " ^ Type.to_string sym.ty)
     |> String.concat ", "
   in
-  let blks =
-    proc.blocks
-    |> List.map block_to_string
-    |> String.concat "\n"
-  in
-  Printf.sprintf "proc %s(%s): %s {\n%s\n}"
-    proc.sym.name
-    params
-    (Type.to_string proc.return_type)
-    blks
+  if is_extern proc.linkage then
+    Printf.sprintf "%sproc %s(%s): %s;"
+      (linkage_to_string proc.linkage)
+      proc.sym.name
+      params
+      (Type.to_string proc.return_type)
+  else
+    let blks =
+      proc.blocks
+      |> List.map block_to_string
+      |> String.concat "\n"
+    in
+    Printf.sprintf "%sproc %s(%s): %s {\n%s\n}"
+      (linkage_to_string proc.linkage)
+      proc.sym.name
+      params
+      (Type.to_string proc.return_type)
+      blks
 
 let program_to_string prog =
   let strings = List.map (

@@ -1,5 +1,4 @@
-export proc
-main(): i32
+export proc main(): i32
 {
         if 1 {
            let x: i32 = 1;

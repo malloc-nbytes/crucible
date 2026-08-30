@@ -198,21 +198,40 @@ let new_builder program =
   ; bindings = Hashtbl.create 16
   }
 
-let lower_proc program ({sym; params; rty; body; _} : Stmt.proc) =
-  let blk = body in
+let linkage_of_stmt = function
+  | Stmt.Internal -> Tac.Internal
+  | Stmt.Export -> Tac.Export
+  | Stmt.Extern -> Tac.Extern
+  | Stmt.Extern_Export -> Tac.Extern_Export
+
+let lower_proc program ({sym; linkage; params; rty; body; _} : Stmt.proc) =
   let symbol = require_symbol "procedure declaration" sym in
+  let linkage = linkage_of_stmt linkage in
+  let params =
+    List.map (fun (param : Stmt.parameter) ->
+        require_symbol "procedure parameter" param.sym) params
+  in
+  if Tac.is_extern linkage then
+    Tac.
+    { sym = symbol
+    ; linkage
+    ; params
+    ; return_type = rty
+    ; entry = None
+    ; blocks = []
+    }
+  else
+    let body = match body with
+      | Some body -> body
+      | None -> failwith "lowering invariant violated: internal procedure has no body"
+    in
   let builder = new_builder program in
   let entry = new_label builder in
   start_block builder entry;
 
-  let params =
-    List.map (fun (param : Stmt.parameter) ->
-        let symbol = require_symbol "procedure parameter" param.sym in
-        bind_symbol builder symbol (Tac.Param symbol);
-        symbol) params
-  in
+  List.iter (fun symbol -> bind_symbol builder symbol (Tac.Param symbol)) params;
 
-  lower_stmt builder blk;
+  lower_stmt builder body;
 
   if builder.current_open then
     (match rty with
@@ -226,9 +245,10 @@ let lower_proc program ({sym; params; rty; body; _} : Stmt.proc) =
 
   Tac.
   { sym = symbol
+  ; linkage
   ; params
   ; return_type = rty
-  ; entry
+  ; entry = Some entry
   ; blocks = List.rev builder.completed_blocks_rev
   }
 

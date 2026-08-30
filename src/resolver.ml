@@ -206,20 +206,31 @@ let resolve_stmt_proc
         params
     in
     let params = List.rev params in
-    let blk, body_v = accept_stmt body_v body in
-    let v =
-      { body_v with
-        context =
-          { body_v.context with
-            scope = outer_scope
-          ; return_type = context.return_type
-          }
-      }
+    let body, v = match body with
+      | None ->
+         None,
+         { body_v with
+           context =
+             { body_v.context with
+               scope = outer_scope
+             ; return_type = context.return_type
+             }
+         }
+      | Some body ->
+         let body, body_v = accept_stmt body_v body in
+         Some body,
+         { body_v with
+           context =
+             { body_v.context with
+               scope = outer_scope
+             ; return_type = context.return_type
+             }
+         }
     in
     Stmt.Proc
       { s with
         params
-      ; body = blk
+      ; body
       ; sym = Some sym
       },
     v

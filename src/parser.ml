@@ -195,23 +195,41 @@ and parse_stmt_proc p =
           let p = expect' R_Paren p in
           List.rev acc, p
   in
-  let export, loc, p =
+  let rec modifiers export extern loc p =
     match p.ts with
-    | {k = Keyword Export; _} as hd :: tl ->
-       let p = expect' (Keyword Proc) {p with ts = tl} in
-       true, hd.loc, p
+    | {k = Keyword Export; loc = modifier_loc; _} :: tl ->
+       modifiers true extern (Some modifier_loc) {p with ts = tl}
+    | {k = Keyword Extern; loc = modifier_loc; _} :: tl ->
+       modifiers export true (Some modifier_loc) {p with ts = tl}
     | _ ->
-       let hd, p = expect (Keyword Proc) p in
-       false, hd.loc, p
+       let proc, p = expect (Keyword Proc) p in
+       let loc = match loc with
+         | Some loc -> loc
+         | None -> proc.loc
+       in
+       let linkage = match export, extern with
+         | false, false -> Stmt.Internal
+         | true, false -> Stmt.Export
+         | false, true -> Stmt.Extern
+         | true, true -> Stmt.Extern_Export
+       in
+       linkage, loc, p
   in
+  let linkage, loc, p = modifiers false false None p in
   let id, p = expect Identifier p in
   let params, p = aux [] (expect' L_Paren p) in
   let p = expect' Colon p in
   let rty, p = parse_type p in
-  let body, p = parse_stmt p in
+  let body, p = match linkage with
+    | Stmt.Extern | Stmt.Extern_Export ->
+       None, expect' Semicolon p
+    | Stmt.Internal | Stmt.Export ->
+       let body, p = parse_stmt p in
+       Some body, p
+  in
   Stmt.Proc
     { node = {loc}
-    ; export
+    ; linkage
     ; id
     ; params
     ; rty
@@ -223,7 +241,8 @@ and parse_stmt_proc p =
 and parse_stmt p =
   match p.ts with
   | []                             -> raise Err.Out_Of_Tokens
-  | ({k = Keyword Export; _} :: {k = Keyword Proc; _} :: _)
+  | ({k = Keyword Export; _} :: _)
+    | ({k = Keyword Extern; _} :: _)
     | ({k = Keyword Proc; _} :: _) -> parse_stmt_proc p
   | {k = Keyword Let; _} :: _      -> parse_stmt_let p
   | {k = Keyword If; _} :: _       -> parse_stmt_if p

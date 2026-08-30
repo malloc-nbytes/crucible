@@ -2,6 +2,12 @@ type node =
   { loc : Location.t
   }
 
+type linkage =
+  | Internal
+  | Export
+  | Extern
+  | Extern_Export
+
 type parameter =
   { id : Token.t
   ; ty : Type.t
@@ -18,11 +24,11 @@ type t =
 
 and proc =
   { node : node
-  ; export : bool
+  ; linkage : linkage
   ; id : Token.t
   ; params : parameter list
   ; rty : Type.t
-  ; body : t
+  ; body : t option
   ; sym : Symbol.t option
   }
 

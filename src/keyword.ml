@@ -4,6 +4,7 @@ type t =
   | If
   | Else
   | Export
+  | Extern
   | Return
 
 let to_string = function
@@ -12,6 +13,7 @@ let to_string = function
   | If -> "if"
   | Else -> "else"
   | Export -> "export"
+  | Extern -> "extern"
   | Return -> "return"
 
 let of_string = function
@@ -20,5 +22,6 @@ let of_string = function
   | "if" -> Some If
   | "else" -> Some Else
   | "export" -> Some Export
+  | "extern" -> Some Extern
   | "return" -> Some Return
   | _ -> None
