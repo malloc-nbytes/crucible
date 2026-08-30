@@ -14,3 +14,10 @@ let from = function
   | "u8" -> Some U8
   | "i32" -> Some I32
   | _ -> None
+
+let rec to_string = function
+  | Undefined -> "Undefined"
+  | Void -> "Void"
+  | U8 -> "U8"
+  | I32 -> "I32"
+  | Ptr t -> "Ptr(" ^ to_string t ^ ")"

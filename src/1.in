@@ -1,4 +1,9 @@
-proc sum(a: i32, b: i32): i32 {
+proc f(a: i32): i32 {
+        let x: i32 = a;
+
+        let y: i32 = a * a;
+
+        return x + a * 3;
 }
 
-let x: i32 const* = 1;
+

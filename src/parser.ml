@@ -1,4 +1,6 @@
 open Token
+open Expr
+open Stmt
 
 type t =
   { ts : Token.t list
@@ -8,7 +10,7 @@ type t =
 let expect k p =
   match p.ts with
   | [] -> raise Err.Out_Of_Tokens
-  | {k = k'; _} as hd :: tl when k' = k -> hd, p
+  | {k = k'; _} as hd :: ts when k' = k -> hd, {p with ts}
   | {k = k'; loc; _} :: _ ->
      raise @@
        Err.Expect (loc,
@@ -17,7 +19,86 @@ let expect k p =
 
 let expect' k p = snd @@ expect k p
 
-let parse_expr p = assert false
+let binary lhs op rhs =
+  Expr.Binary
+    { node = {loc = Expr.get_location lhs; ty = Type.Undefined}
+    ; lhs
+    ; op
+    ; rhs
+    }
+
+let rec parse_primary_expr p =
+  match p.ts with
+  | [] -> raise Err.Out_Of_Tokens
+  | ({k = Integer_Literal; _} as i) :: ts ->
+     Integer {node = {loc = i.loc; ty = Type.Undefined}; i}, {p with ts}
+  | ({k = String_Literal; _} as s) :: ts ->
+     String {node = {loc = s.loc; ty = Type.Undefined}; s}, {p with ts}
+  | ({k = Identifier; _} as id) :: ts ->
+     Identifier {node = {loc = id.loc; ty = Type.Undefined}; id; sym = None}, {p with ts}
+  | hd :: _ ->
+     raise @@ Err.Invalid_Primary_Expression hd.loc
+
+and parse_unary_expr p = parse_primary_expr p
+
+and parse_multiplicative_expr p =
+  let lhs, p = parse_unary_expr p in
+  let rec aux lhs p =
+    match p.ts with
+    | ({k = (Asterisk | Forward_Slash | Percent); _} as op) :: ts ->
+       let rhs, p = parse_unary_expr {p with ts} in
+       aux (binary lhs op rhs) p
+    | _ -> lhs, p
+  in
+  aux lhs p
+
+and parse_additive_expr p =
+  let lhs, p = parse_multiplicative_expr p in
+  let rec aux lhs p =
+    match p.ts with
+    | ({k = (Plus | Minus); _} as op) :: ts ->
+       let rhs, p = parse_multiplicative_expr {p with ts} in
+       aux (binary lhs op rhs) p
+    | _ -> lhs, p
+  in
+  aux lhs p
+
+and parse_equalitive_expr p =
+  let lhs, p = parse_additive_expr p in
+  let rec aux lhs p =
+    match p.ts with
+    | ({k = (Double_Equals | Bang_Equals        |
+             Greaterthan   | Greaterthan_Equals |
+             Lessthan      | Lessthan_Equals); _} as op) :: ts ->
+       let rhs, p = parse_additive_expr {p with ts} in
+       aux (binary lhs op rhs) p
+    | _ -> lhs, p
+  in
+  aux lhs p
+
+and parse_logical_expr p =
+  let lhs, p = parse_equalitive_expr p in
+  let rec aux lhs p =
+    match p.ts with
+    | ({k = (Pipe | Double_Pipe | Ampersand | Double_Ampersand); _} as op) :: ts ->
+       let rhs, p = parse_equalitive_expr {p with ts} in
+       aux (binary lhs op rhs) p
+    | _ -> lhs, p
+  in
+  aux lhs p
+
+and parse_assignment_expr p =
+  let lhs, p = parse_logical_expr p in
+  match p.ts with
+  | ({k = (Equals           | Plus_Equals          | Minus_Equals |
+           Asterisk_Equals  | Forward_Slash_Equals | Pipe_Equals  |
+           Ampersand_Equals | Uptick_Equals        | Percent_Equals)} as op)
+    :: ts ->
+     let rhs, p = parse_assignment_expr {p with ts} in
+     binary lhs op rhs, p
+  | _ -> lhs, p
+
+and parse_expr p = parse_assignment_expr p
 
 let parse_type p =
   let base, p = expect Type p in
@@ -37,7 +118,7 @@ let parse_type p =
 let rec parse_stmt_expr p =
   let e, p = parse_expr p in
   let p = expect' Semicolon p in
-  Stmt.Expr {node = {loc = e.loc}; e}, p
+  Stmt.Expr {node = {loc = Expr.get_location e}; e}, p
 
 and parse_stmt_if p =
   let loc, p =
@@ -57,15 +138,11 @@ and parse_stmt_if p =
 and parse_stmt_block p =
   let rec aux acc p =
     match p.ts with
-    | {k = R_Curly; _} :: tl -> List.rev acc, p
+    | {k = R_Curly; _} :: ts ->
+       List.rev acc, {p with ts}
     | _ ->
        let s, p = parse_stmt p in
-       match p.ts with
-       | {k = Comma; _} :: tl ->
-          aux (s :: acc) {p with ts = tl}
-       | _ ->
-          let p = expect' R_Curly p in
-          List.rev acc, p
+       aux (s :: acc) p
   in
   let loc, p =
     let hd, p = expect L_Curly p in
@@ -76,9 +153,10 @@ and parse_stmt_block p =
 and parse_stmt_let p =
   let loc, p =
     let hd, p = expect (Keyword Let) p in
-    hd.loc, p in
+    hd.loc, p
+  in
   let id, p = expect Identifier p in
-  let p = expect' Semicolon p in
+  let p = expect' Colon p in
   let ty, p = parse_type p in
   let p = expect' Equals p in
   let e, p = parse_expr p in
@@ -113,7 +191,7 @@ and parse_stmt_proc p =
        | {k = Comma; _} :: tl ->
           aux acc {p with ts = tl}
        | _ ->
-          let p = expect' R_Curly p in
+          let p = expect' R_Paren p in
           List.rev acc, p
   in
   let export, loc, p =
@@ -142,14 +220,14 @@ and parse_stmt_proc p =
 
 and parse_stmt p =
   match p.ts with
-  | [] -> raise Err.Out_Of_Tokens
+  | []                             -> raise Err.Out_Of_Tokens
   | ({k = Keyword Export; _} :: {k = Keyword Proc; _} :: _)
     | ({k = Keyword Proc; _} :: _) -> parse_stmt_proc p
-  | {k = Keyword Let; _} :: _ -> parse_stmt_let p
-  | {k = Keyword If; _} :: _ -> parse_stmt_if p
-  | {k = Keyword Return; _} :: _ -> parse_stmt_return p
-  | {k = L_Curly; _} :: _ -> parse_stmt_block p
-  | _ -> parse_stmt_expr p
+  | {k = Keyword Let; _} :: _      -> parse_stmt_let p
+  | {k = Keyword If; _} :: _       -> parse_stmt_if p
+  | {k = Keyword Return; _} :: _   -> parse_stmt_return p
+  | {k = L_Curly; _} :: _          -> parse_stmt_block p
+  | _                              -> parse_stmt_expr p
 
 let parse ts =
   try
@@ -175,3 +253,8 @@ let parse ts =
       let _ = Printf.eprintf "%s: invalid type `%s'\n"
                 (Location.to_string l) t in
       failwith "parser error"
+
+  | Err.Invalid_Primary_Expression l ->
+     let _ = Printf.eprintf "%s: invalid primary expression\n"
+               (Location.to_string l) in
+     failwith "parser error"

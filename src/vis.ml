@@ -1,8 +1,9 @@
 type ('c, 'e, 's) t =
-  { context      : 'c
-  ; expr_integer : ('c, 'e, 's) t -> Expr.integer -> 'e * ('c, 'e, 's) t
-  ; expr_string  : ('c, 'e, 's) t -> Expr.string_ -> 'e * ('c, 'e, 's) t
-  ; expr_binary  : ('c, 'e, 's) t -> Expr.binary  -> 'e * ('c, 'e, 's) t
+  { context         : 'c
+  ; expr_integer    : ('c, 'e, 's) t -> Expr.integer    -> 'e * ('c, 'e, 's) t
+  ; expr_identifier : ('c, 'e, 's) t -> Expr.identifier -> 'e * ('c, 'e, 's) t
+  ; expr_string     : ('c, 'e, 's) t -> Expr.string_    -> 'e * ('c, 'e, 's) t
+  ; expr_binary     : ('c, 'e, 's) t -> Expr.binary     -> 'e * ('c, 'e, 's) t
 
   ; stmt_proc    : ('c, 'e, 's) t -> Stmt.proc   -> 's * ('c, 'e, 's) t
   ; stmt_let     : ('c, 'e, 's) t -> Stmt.let_   -> 's * ('c, 'e, 's) t
@@ -13,9 +14,10 @@ type ('c, 'e, 's) t =
   }
 
 let accept_expr v = function
-  | Expr.Integer e -> v.expr_integer v e
-  | Expr.String  e -> v.expr_string  v e
-  | Expr.Binary  e -> v.expr_binary  v e
+  | Expr.Integer    e -> v.expr_integer    v e
+  | Expr.Identifier e -> v.expr_identifier v e
+  | Expr.String     e -> v.expr_string     v e
+  | Expr.Binary     e -> v.expr_binary     v e
 
 let accept_stmt v = function
   | Stmt.Proc   s -> v.stmt_proc   v s
