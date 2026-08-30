@@ -62,10 +62,17 @@ let resolve_expr_string
     }, v
 
 let resolve_expr_identifier
-      (v : vis_type)
-      (e : Expr.identifier)
+      ({context; _}as v : vis_type)
+      ({node; id = {lx = name; _}; _} as e : Expr.identifier)
     : Expr.t * vis_type =
-  assert false
+  match Scope.get name context.scope with
+  | None -> raise @@ Err.Identifier_Not_Defined (e.node.loc, name)
+  | Some sym ->
+     Expr.Identifier
+       { e with
+         node = {node with ty = sym.ty}
+       ; sym = Some sym
+       }, v
 
 let resolve_expr_integer
       (v : vis_type)
@@ -133,10 +140,29 @@ let resolve_stmt_expr
   Stmt.Expr { s with e }, v
 
 let resolve_stmt_let
-      (v : vis_type)
-      (s : Stmt.let_)
+      ({context; _} as v : vis_type)
+      ({id; ty; _} as s : Stmt.let_)
     : Stmt.t * vis_type =
-  assert false
+  let name = id.lx in
+  if Scope.contains name context.scope then
+    raise @@ Err.Identifier_Already_Defined (s.node.loc, name)
+  else
+    let e, v = accept_expr v s.e in
+    if not @@ Type.check ty (Expr.get_type e) then
+      raise @@ Err.Incompatible_Types (Expr.get_location e, ty, (Expr.get_type e))
+    else
+      let sym, v = new_symbol Symbol.Local id ty v in
+      Stmt.Let
+        { s with
+          e
+        ; sym = Some sym
+        },
+      { v with
+        context =
+          { v.context with
+            scope = Scope.add name sym v.context.scope
+          }
+      }
 
 let resolve_stmt_proc
       (v : vis_type)
@@ -186,4 +212,11 @@ let analyze stmts =
                (Type.to_string t)
                (Type.to_string t') in
      failwith "semantic error"
-
+  | Err.Identifier_Not_Defined (l, id) ->
+     let _ = Printf.eprintf "%s: identifier `%s' is not defined\n"
+               (Location.to_string l) id in
+     failwith "semantic error"
+  | Err.Identifier_Already_Defined (l, id) ->
+     let _ = Printf.eprintf "%s: identifier `%s' is already defined\n"
+               (Location.to_string l) id in
+     failwith "semantic error"
