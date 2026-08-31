@@ -8,6 +8,7 @@ type t =
   | Proc of
       { rty : t
       ; ptys : t list
+      ; variadic : bool
       }
 
 let is_primitive = function
@@ -45,6 +46,7 @@ let binop_check t (op : Token.kind) t' =
   else
     match op with
     | (Token.Plus     | Token.Minus |
-       Token.Asterisk | Token.Forward_Slash) -> true
+       Token.Asterisk | Token.Forward_Slash |
+       Token.Double_Equals) -> true
     | _ -> false
 

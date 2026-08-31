@@ -30,6 +30,7 @@ let lex path src =
     | [] -> []
     | (' ' | '\t') :: tl -> aux r (c+1) tl
     | '\n' :: tl -> aux (r+1) 1 tl
+    | '.' :: '.' :: '.' :: tl -> {lx = "..."; k = Triple_Period; loc = {r; c; path}} :: aux r (c+1) tl
     | '!' :: '=' :: tl -> {lx = "!="; k = Bang_Equals;          loc = {r; c; path}} :: aux r (c+1) tl
     | '=' :: '=' :: tl -> {lx = "=="; k = Double_Equals;        loc = {r; c; path}} :: aux r (c+1) tl
     | '>' :: '=' :: tl -> {lx = ">="; k = Greaterthan_Equals;   loc = {r; c; path}} :: aux r (c+1) tl

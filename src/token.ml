@@ -39,6 +39,7 @@ type kind =
   | Uptick
   | Uptick_Equals
   | Comma
+  | Triple_Period
 
 type t =
   { lx : string
@@ -87,6 +88,7 @@ let kind_to_string = function
   | Uptick -> "Uptick"
   | Uptick_Equals -> "Uptick_Equals"
   | Comma -> "Comma"
+  | Triple_Period -> "Triple_Period"
 
 
 let to_string t =

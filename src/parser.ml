@@ -180,8 +180,11 @@ and parse_stmt_return p =
 and parse_stmt_proc p =
   let rec aux acc p =
     match p.ts with
-    | {k = R_Paren; _} :: tl ->
-       List.rev acc, {p with ts = tl}
+    | {k = R_Paren; _} :: ts ->
+       List.rev acc, false, {p with ts}
+    | {k = Triple_Period; _} :: ts ->
+       let p = expect' R_Paren {p with ts} in
+       List.rev acc, true, p
     | _ ->
        let id, p = expect Identifier p in
        let p = expect' Colon p in
@@ -193,7 +196,7 @@ and parse_stmt_proc p =
           aux acc {p with ts = tl}
        | _ ->
           let p = expect' R_Paren p in
-          List.rev acc, p
+          List.rev acc, false, p
   in
   let rec modifiers export extern loc p =
     match p.ts with
@@ -217,7 +220,7 @@ and parse_stmt_proc p =
   in
   let linkage, loc, p = modifiers false false None p in
   let id, p = expect Identifier p in
-  let params, p = aux [] (expect' L_Paren p) in
+  let params, variadic, p = aux [] (expect' L_Paren p) in
   let p = expect' Colon p in
   let rty, p = parse_type p in
   let body, p = match linkage with
@@ -232,6 +235,7 @@ and parse_stmt_proc p =
     ; linkage
     ; id
     ; params
+    ; variadic
     ; rty
     ; body
     ; sym = None

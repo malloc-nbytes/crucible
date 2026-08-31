@@ -27,6 +27,7 @@ and proc =
   ; linkage : linkage
   ; id : Token.t
   ; params : parameter list
+  ; variadic : bool
   ; rty : Type.t
   ; body : t option
   ; sym : Symbol.t option

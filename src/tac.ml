@@ -130,10 +130,11 @@ let proc_to_string proc =
     |> String.concat ", "
   in
   if is_extern proc.linkage then
-    Printf.sprintf "%sproc %s(%s): %s;"
+    Printf.sprintf "%sproc %s(%s%s): %s;"
       (linkage_to_string proc.linkage)
       proc.sym.name
       params
+      (match proc.sym.ty with Proc {variadic = true; _} -> " ... " | _ -> "")
       (Type.to_string proc.return_type)
   else
     let blks =
@@ -141,10 +142,11 @@ let proc_to_string proc =
       |> List.map block_to_string
       |> String.concat "\n"
     in
-    Printf.sprintf "%sproc %s(%s): %s {\n%s\n}"
+    Printf.sprintf "%sproc %s(%s%s): %s {\n%s\n}"
       (linkage_to_string proc.linkage)
       proc.sym.name
       params
+      (match proc.sym.ty with Proc {variadic = true; _} -> ", ..." | _ -> "")
       (Type.to_string proc.return_type)
       blks
 

@@ -166,7 +166,7 @@ let resolve_stmt_let
 
 let resolve_stmt_proc
       ({context; _} as v : vis_type)
-      ({id; rty; params; body; _} as s : Stmt.proc)
+      ({id; rty; params; variadic; body; _} as s : Stmt.proc)
     : Stmt.t * vis_type =
   let name = id.lx in
   if Scope.contains name context.scope then
@@ -176,6 +176,7 @@ let resolve_stmt_proc
       Type.Proc
         { rty
         ; ptys = List.map (fun (p : Stmt.parameter) -> p.ty) params
+        ; variadic
         }
     in
     let sym, v = new_symbol Symbol.Proc id proc_ty v in

@@ -8,7 +8,7 @@ LDFLAGS ?=
 LDLIBS ?=
 
 # Override SOURCES when the project needs a deliberate module list.
-SOURCES ?= $(filter-out test_lower.ml,$(sort $(wildcard *.ml)))
+SOURCES ?= $(filter-out test_%.ml,$(sort $(wildcard *.ml)))
 TEST_SOURCES := $(filter-out main.ml,$(SOURCES)) test_lower.ml
 TEST_NATIVE_SOURCES := $(shell $(OCAMLDEP) -sort $(OCAMLDEPFLAGS) $(TEST_SOURCES))
 TEST_OBJECTS := $(TEST_NATIVE_SOURCES:.ml=.cmx)
