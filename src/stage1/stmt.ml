@@ -21,6 +21,7 @@ type t =
   | Return of return
   | If of if_
   | Block of block
+  | While of while_
 
 and proc =
   { node : node
@@ -61,4 +62,10 @@ and if_ =
 and block =
   { node : node
   ; stmts : t list
+  }
+
+and while_ =
+  { node : node
+  ; cond : expr
+  ; body : t
   }

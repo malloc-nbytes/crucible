@@ -186,6 +186,9 @@ let rec lower_stmt builder = function
   | Stmt.If {cond; then_; else_; _} ->
      lower_if builder cond then_ else_
 
+  | Stmt.While {cond; body; _} ->
+     lower_while builder cond body
+
 and lower_stmts builder = function
   | [] -> ()
   | stmt :: stmts ->
@@ -193,6 +196,28 @@ and lower_stmts builder = function
        failwith "unreachable statement after a terminating statement";
      lower_stmt builder stmt;
      lower_stmts builder stmts
+
+and lower_while builder cond body =
+  let cond_lbl = new_label builder in
+  let body_lbl = new_label builder in
+  let exit_lbl = new_label builder in
+  end_block builder (Tac.Jmp cond_lbl);
+
+  start_block builder cond_lbl;
+  let cond = lower_expr builder cond.Stmt.e in
+  end_block builder
+    (Tac.Branch
+       { cond
+       ; if_true = body_lbl
+       ; if_false = exit_lbl
+       });
+
+  start_block builder body_lbl;
+  lower_stmt builder body;
+  if builder.current_open then
+    end_block builder (Tac.Jmp cond_lbl);
+
+  start_block builder exit_lbl
 
 and lower_if builder cond then_ else_ =
   let cond = lower_expr builder cond in

@@ -143,6 +143,18 @@ let resolve_stmt_block
   let stmts, v = aux [] {v with context = {v.context with scope = Scope.push v.context.scope}} stmts in
   Stmt.Block {s with stmts}, {v with context = {v.context with scope = Scope.pop v.context.scope}}
 
+let resolve_stmt_while
+      (v : vis_type)
+      ({cond; body; _} as s : Stmt.while_)
+    : Stmt.t * vis_type =
+  let e, v = accept_expr v cond.e in
+  let body, v = accept_stmt v body in
+  Stmt.While
+    { s with
+      cond = {cond with e}
+    ; body
+    }, v
+
 let resolve_stmt_if
       (v : vis_type)
       ({cond; then_; else_; _} as s : Stmt.if_)
@@ -307,6 +319,7 @@ let analyze stmts =
        ; stmt_return = resolve_stmt_return
        ; stmt_if     = resolve_stmt_if
        ; stmt_block  = resolve_stmt_block
+       ; stmt_while  = resolve_stmt_while
        } stmts
   with
   | Err.Illegal_Statement l ->

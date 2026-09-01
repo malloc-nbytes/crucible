@@ -62,3 +62,15 @@ let () =
     ; "= and i32"
     ; "= xor i32"
     ]
+
+let () =
+  expect_equal
+    "export proc main(): i32 {\nL0:\n  store i32 2, %local1\n  jmp L1\nL1:\n  %0 = load i32 %local1\n  branch %0, L2, L3\nL2:\n  %1 = load i32 %local1\n  %2 = sub i32 %1, 1\n  store i32 %2, %local1\n  jmp L1\nL3:\n  ret 0\n}"
+    (lower
+       "export proc main(): i32 {\n\
+       \  let n: i32 = 2;\n\
+       \  while n {\n\
+       \    n -= 1;\n\
+       \  }\n\
+       \  return 0;\n\
+       }\n")

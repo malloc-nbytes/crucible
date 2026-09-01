@@ -171,6 +171,19 @@ and parse_stmt_if p =
   in
   Stmt.If {node = {loc}; cond; then_; else_}, p
 
+and parse_stmt_while p =
+  let loc, p =
+    let hd, p = expect (Keyword While) p in
+    hd.loc, p
+  in
+  let e, p = parse_expr p in
+  let body, p = parse_stmt p in
+  Stmt.While
+    { node = {loc}
+    ; cond = {node = {loc = Expr.get_location e}; e}
+    ; body
+    }, p
+
 and parse_stmt_block p =
   let rec aux acc p =
     match p.ts with
@@ -285,6 +298,7 @@ and parse_stmt p =
     | ({k = Keyword Proc; _} :: _) -> parse_stmt_proc p
   | {k = Keyword Let; _} :: _      -> parse_stmt_let p
   | {k = Keyword If; _} :: _       -> parse_stmt_if p
+  | {k = Keyword While; _} :: _    -> parse_stmt_while p
   | {k = Keyword Return; _} :: _   -> parse_stmt_return p
   | {k = L_Curly; _} :: _          -> parse_stmt_block p
   | _                              -> parse_stmt_expr p

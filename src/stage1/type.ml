@@ -69,7 +69,8 @@ let binop_check t (op : Token.kind) t' =
     | (Token.Plus     | Token.Minus |
        Token.Asterisk | Token.Forward_Slash | Token.Percent |
        Token.Pipe | Token.Ampersand | Token.Uptick |
-       Token.Double_Equals | Token.Equals) -> true
+       Token.Double_Equals | Token.Equals
+       | Token.Lessthan | Token.Greaterthan) -> true
     | op when Option.is_some @@ compound_assignment_binop op -> true
     | _ -> false
 

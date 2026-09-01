@@ -3,6 +3,7 @@ type t =
   | Let
   | If
   | Else
+  | While
   | Export
   | Extern
   | Return
@@ -12,6 +13,7 @@ let to_string = function
   | Let -> "let"
   | If -> "if"
   | Else -> "else"
+  | While -> "while"
   | Export -> "export"
   | Extern -> "extern"
   | Return -> "return"
@@ -21,6 +23,7 @@ let of_string = function
   | "let" -> Some Let
   | "if" -> Some If
   | "else" -> Some Else
+  | "while" -> Some While
   | "export" -> Some Export
   | "extern" -> Some Extern
   | "return" -> Some Return

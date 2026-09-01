@@ -12,6 +12,7 @@ type ('c, 'e, 's) t =
   ; stmt_return  : ('c, 'e, 's) t -> Stmt.return -> 's * ('c, 'e, 's) t
   ; stmt_if      : ('c, 'e, 's) t -> Stmt.if_    -> 's * ('c, 'e, 's) t
   ; stmt_block   : ('c, 'e, 's) t -> Stmt.block  -> 's * ('c, 'e, 's) t
+  ; stmt_while   : ('c, 'e, 's) t -> Stmt.while_ -> 's * ('c, 'e, 's) t
   }
 
 let accept_expr v = function
@@ -28,3 +29,4 @@ let accept_stmt v = function
   | Stmt.Return s -> v.stmt_return v s
   | Stmt.If     s -> v.stmt_if     v s
   | Stmt.Block  s -> v.stmt_block  v s
+  | Stmt.While  s -> v.stmt_while  v s
