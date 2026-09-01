@@ -5,5 +5,5 @@ let () =
   let stmts = Parser.parse ts in
   let stmts = Resolver.analyze stmts in
   let program = Lower.lower stmts in
-  print_endline @@ Tac.program_to_string program
+  print_endline @@ X86.generate program
 

@@ -138,7 +138,9 @@ let parse_type p =
   let ty = match ty.lx with
     | "void" -> Type.Void
     | "i32" -> Type.I32
+    | "i64" -> Type.I64
     | "u32" -> Type.U32
+    | "u64" -> Type.U64
     | "u8" -> Type.U8
     | _ -> raise (Err.Expect (ty.loc, "primitive type", ty.lx))
   in
