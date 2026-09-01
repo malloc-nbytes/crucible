@@ -33,6 +33,10 @@ let new_symbol
       }
   }
 
+let is_assignable = function
+  | Expr.Identifier {sym = Some {kind = Symbol.Local | Symbol.Param; _}; _} -> true
+  | _ -> false
+
 let resolve_expr_binary
       (v : vis_type)
       ({lhs; op; rhs; _} as e : Expr.binary)
@@ -40,7 +44,9 @@ let resolve_expr_binary
   let lhs, v = accept_expr v lhs in
   let rhs, v = accept_expr v rhs in
   let lty, rty = Expr.get_type lhs, Expr.get_type rhs in
-  if not @@ Type.check lty rty then
+  if Type.is_assignment op.k && not @@ is_assignable lhs then
+    raise @@ Err.Invalid_Assignment_Target (Expr.get_location lhs)
+  else if not @@ Type.check lty rty then
     raise @@ Err.Incompatible_Types (Expr.get_location lhs, lty, rty)
   else if not @@ Type.binop_check lty op.k rty then
     raise @@ Err.Incompatible_Binop_Types (Expr.get_location lhs, lty, op.k, rty)
@@ -335,4 +341,8 @@ let analyze stmts =
   | Err.Identifier_Already_Defined (l, id) ->
      let _ = Printf.eprintf "%s: identifier `%s' is already defined\n"
                (Location.to_string l) id in
+     failwith "semantic error"
+  | Err.Invalid_Assignment_Target l ->
+     let _ = Printf.eprintf "%s: invalid assignment target\n"
+               (Location.to_string l) in
      failwith "semantic error"

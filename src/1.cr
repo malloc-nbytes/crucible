@@ -1,12 +1,6 @@
-export proc main(): i32
+export proc main(): void
 {
+        let y: i32 = 3;
         let x: i32 = 9;
-
-        main();
-
-        if 0 {
-           return 1;
-        }
-
-        return x;
+        x += 1 * y;
 }

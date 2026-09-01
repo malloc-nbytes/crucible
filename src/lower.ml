@@ -87,6 +87,22 @@ let require_resolved_type expr =
      failwith "lowering invariant violated: expression type is undefined"
   | ty -> ty
 
+let lower_identifier builder ({node; sym; _} : Expr.identifier) =
+  let sym = require_symbol "identifier" sym in
+  match sym.kind with
+  | Symbol.Proc -> Tac.Proc sym
+  | Symbol.Local | Symbol.Param ->
+     let src = lookup_symbol builder sym in
+     let dst = new_temp builder in
+     emit builder (Tac.Load {dst; ty = node.ty; src});
+     Tac.Temp dst
+
+let lower_assignment_target builder = function
+  | Expr.Identifier {sym; _} ->
+     let sym = require_symbol "assignment target" sym in
+     lookup_symbol builder sym
+  | _ -> failwith "lowering invariant violated: assignment target is not an identifier"
+
 let rec lower_expr builder = function
   | Expr.Integer {i; _} ->
      Tac.I32 (int_of_string i.lx)
@@ -94,27 +110,41 @@ let rec lower_expr builder = function
   | Expr.String {s; _} ->
      Tac.String (intern_string builder.program s.lx)
 
-  | Expr.Identifier {sym = Some ({kind = Symbol.Proc; _} as sym); _} ->
-     Tac.Proc sym
-
-  | Expr.Identifier {sym; _} ->
-     let sym = require_symbol "identifier" sym in
-     lookup_symbol builder sym
+  | Expr.Identifier e -> lower_identifier builder e
 
   | Expr.Binary {lhs; op; rhs; _} as expression ->
-     let lhs = lower_expr builder lhs in
-     let rhs = lower_expr builder rhs in
-     let dst = new_temp builder in
      let ty  = require_resolved_type expression in
-     emit builder
-       (Tac.Binop
-          { dst
-          ; ty
-          ; op = Tac.binop_of_token op.k
-          ; lhs
-          ; rhs
-       });
-     Tac.Temp dst
+     if Type.is_assignment op.k then
+       let dst = lower_assignment_target builder lhs in
+       let lhs = match Type.compound_assignment_binop op.k with
+         | None -> None
+         | Some _ -> Some (lower_expr builder lhs)
+       in
+       let rhs = lower_expr builder rhs in
+       let value = match lhs, Type.compound_assignment_binop op.k with
+         | None, None -> rhs
+         | Some lhs, Some op ->
+            let temp = new_temp builder in
+            emit builder
+              (Tac.Binop {dst = temp; ty; op = Tac.binop_of_token op; lhs; rhs});
+            Tac.Temp temp
+         | _ -> assert false
+       in
+       emit builder (Tac.Store {ty; src = value; dst});
+       value
+     else
+       let lhs = lower_expr builder lhs in
+       let rhs = lower_expr builder rhs in
+       let dst = new_temp builder in
+       emit builder
+         (Tac.Binop
+            { dst
+            ; ty
+            ; op = Tac.binop_of_token op.k
+            ; lhs
+            ; rhs
+         });
+       Tac.Temp dst
 
   | Expr.Call {lhs; args; _} as expression ->
      let callee = lower_expr builder lhs in
@@ -136,7 +166,9 @@ let rec lower_stmt builder = function
   | Stmt.Let {sym; e; _} ->
      let symbol = require_symbol "let declaration" sym in
      let value = lower_expr builder e in
-     bind_symbol builder symbol value
+     let dst = Tac.Local symbol in
+     bind_symbol builder symbol dst;
+     emit builder (Tac.Store {ty = symbol.ty; src = value; dst})
 
   | Stmt.Expr {e; _} ->
      ignore @@ lower_expr builder e
@@ -245,7 +277,12 @@ let lower_proc program ({sym; linkage; params; rty; body; _} : Stmt.proc) =
   let entry = new_label builder in
   start_block builder entry;
 
-  List.iter (fun symbol -> bind_symbol builder symbol (Tac.Param symbol)) params;
+  List.iter
+    (fun symbol ->
+      let dst = Tac.Local symbol in
+      bind_symbol builder symbol dst;
+      emit builder (Tac.Store {ty = symbol.ty; src = Tac.Param symbol; dst}))
+    params;
 
   lower_stmt builder body;
 

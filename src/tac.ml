@@ -7,6 +7,7 @@ type operand =
   | Temp of temp
   | Proc of Symbol.t
   | Param of Symbol.t
+  | Local of Symbol.t
   | I32 of int
   | String of string_id
 
@@ -15,6 +16,10 @@ type binop =
   | Sub
   | Mul
   | Div
+  | Mod
+  | Or
+  | And
+  | Xor
 
 type instruction =
   | Binop of
@@ -23,6 +28,16 @@ type instruction =
       ; op : binop
       ; lhs : operand
       ; rhs : operand
+      }
+  | Load of
+      { dst : temp
+      ; ty : Type.t
+      ; src : operand
+      }
+  | Store of
+      { ty : Type.t
+      ; src : operand
+      ; dst : operand
       }
   | Call of
       { dst : temp option
@@ -75,21 +90,30 @@ let binop_to_string = function
   | Add -> "add"
   | Sub -> "sub"
   | Mul -> "mul"
-  | Div -> "Div"
+  | Div -> "div"
+  | Mod -> "mod"
+  | Or -> "or"
+  | And -> "and"
+  | Xor -> "xor"
 
 let binop_of_token = function
   | Token.Plus          -> Add
   | Token.Minus         -> Sub
   | Token.Asterisk      -> Mul
   | Token.Forward_Slash -> Div
+  | Token.Percent       -> Mod
+  | Token.Pipe          -> Or
+  | Token.Ampersand     -> And
+  | Token.Uptick        -> Xor
   | _ -> failwith "unsupported TAC binary operator"
 
 let operand_to_string = function
   | Void      -> "void"
   | Temp id   -> "%" ^ string_of_int id
   | Proc p   -> "@proc" ^ string_of_int p.id
-  | Param p   -> "%arg" ^ string_of_int p.id
-  | I32 v     -> string_of_int v
+  | Param p  -> "%arg" ^ string_of_int p.id
+  | Local p  -> "%local" ^ string_of_int p.id
+  | I32 v    -> string_of_int v
   | String id -> "@str" ^ string_of_int id
 
 let instruction_to_string = function
@@ -100,6 +124,16 @@ let instruction_to_string = function
        (Type.to_string ty)
        (operand_to_string lhs)
        (operand_to_string rhs)
+  | Load {dst; ty; src} ->
+     Printf.sprintf "%%%d = load %s %s"
+       dst
+       (Type.to_string ty)
+       (operand_to_string src)
+  | Store {ty; src; dst} ->
+     Printf.sprintf "store %s %s, %s"
+       (Type.to_string ty)
+       (operand_to_string src)
+       (operand_to_string dst)
   | Call {dst; ty; callee; args} ->
      let result = match dst with
        | Some dst -> Printf.sprintf "%%%d = " dst

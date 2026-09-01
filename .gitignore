@@ -2,6 +2,7 @@ main
 cruc
 src/probe
 src/program
+src/test_lower
 *.cru
 *.asm
 *.s

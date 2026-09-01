@@ -14,8 +14,15 @@ DEPENDENCIES ?= .depend
 # ocamldep determines an order suitable for native linking.
 NATIVE_SOURCES := $(shell test -z "$(SOURCES)" || $(OCAMLDEP) -sort $(OCAMLDEPFLAGS) $(SOURCES))
 OBJECTS := $(NATIVE_SOURCES:.ml=.cmx)
+COMMON_TEST_SOURCES := $(filter-out main.ml,$(SOURCES))
+TEST_LOWER_SOURCES := $(COMMON_TEST_SOURCES) test_lower.ml
+TEST_LOWER_NATIVE_SOURCES := $(shell $(OCAMLDEP) -sort $(OCAMLDEPFLAGS) $(TEST_LOWER_SOURCES))
+TEST_LOWER_OBJECTS := $(TEST_LOWER_NATIVE_SOURCES:.ml=.cmx)
+TEST_X86_SOURCES := $(COMMON_TEST_SOURCES) test_x86.ml
+TEST_X86_NATIVE_SOURCES := $(shell $(OCAMLDEP) -sort $(OCAMLDEPFLAGS) $(TEST_X86_SOURCES))
+TEST_X86_OBJECTS := $(TEST_X86_NATIVE_SOURCES:.ml=.cmx)
 
-.PHONY: all clean rebuild
+.PHONY: all clean rebuild test
 
 all: $(PROGRAM)
 
@@ -23,12 +30,23 @@ $(PROGRAM): $(OBJECTS)
 	@test -n "$(OBJECTS)" || { echo "error: no OCaml source files found" >&2; exit 1; }
 	$(OCAMLOPT) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
+test: test_lower test_x86
+	./test_lower
+	./test_x86
+	$(CC) -c -o test_x86_asm.o test_x86.s
+
+test_lower: $(TEST_LOWER_OBJECTS)
+	$(OCAMLOPT) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+test_x86: $(TEST_X86_OBJECTS)
+	$(OCAMLOPT) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
 %.cmx: %.ml
 	$(OCAMLOPT) $(OCAMLFLAGS) -c $<
 
 ifneq ($(strip $(SOURCES)),)
-$(DEPENDENCIES): $(SOURCES) test_lower.ml
-	$(OCAMLDEP) -native $(OCAMLDEPFLAGS) $(SOURCES) test_lower.ml > $@
+$(DEPENDENCIES): $(SOURCES) test_lower.ml test_x86.ml
+	$(OCAMLDEP) -native $(OCAMLDEPFLAGS) $(SOURCES) test_lower.ml test_x86.ml > $@
 endif
 
 ifeq ($(filter clean rebuild,$(MAKECMDGOALS)),)
@@ -36,8 +54,7 @@ ifeq ($(filter clean rebuild,$(MAKECMDGOALS)),)
 endif
 
 clean:
-	rm -f $(PROGRAM) $(DEPENDENCIES) $(SOURCES:.ml=.cmi) $(SOURCES:.ml=.cmx) $(SOURCES:.ml=.o)
+	rm -f $(PROGRAM) test_lower test_x86 test_x86.s test_x86_asm.o $(DEPENDENCIES) $(SOURCES:.ml=.cmi) $(SOURCES:.ml=.cmx) $(SOURCES:.ml=.o) test_lower.cmi test_lower.cmx test_lower.o test_x86.cmi test_x86.cmx test_x86.o
 
 rebuild: clean
 	$(MAKE) all
-

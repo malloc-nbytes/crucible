@@ -1,0 +1,64 @@
+let lower src =
+  src
+  |> Lexer.lex "assignment.cr"
+  |> Parser.parse
+  |> Resolver.analyze
+  |> Lower.lower
+  |> Tac.program_to_string
+
+let expect_equal expected actual =
+  if actual <> expected then
+    failwith @@
+      Printf.sprintf "expected:\n%s\n\ngot:\n%s" expected actual
+
+let contains needle haystack =
+  let needle_len = String.length needle in
+  let rec aux i =
+    i + needle_len <= String.length haystack &&
+    (String.sub haystack i needle_len = needle || aux (i + 1))
+  in
+  aux 0
+
+let expect_contains needle haystack =
+  if not @@ contains needle haystack then
+    failwith @@ Printf.sprintf "expected output to contain:\n%s\n\ngot:\n%s" needle haystack
+
+let () =
+  expect_equal
+    "export proc main(): i32 {\nL0:\n  store i32 9, %local1\n  %0 = load i32 %local1\n  %1 = add i32 %0, 2\n  store i32 %1, %local1\n  %2 = load i32 %local1\n  ret %2\n}"
+    (lower
+       "export proc main(): i32 {\n\
+       \  let x: i32 = 9;\n\
+       \  x += 2;\n\
+       \  return x;\n\
+       }\n")
+
+let () =
+  let output =
+    lower
+      "export proc main(): i32 {\n\
+      \  let x: i32 = 9;\n\
+      \  x = 8;\n\
+      \  x += 1;\n\
+      \  x -= 1;\n\
+      \  x *= 2;\n\
+      \  x /= 2;\n\
+      \  x %= 2;\n\
+      \  x |= 1;\n\
+      \  x &= 1;\n\
+      \  x ^= 1;\n\
+      \  return x;\n\
+      }\n"
+  in
+  List.iter
+    (fun needle -> expect_contains needle output)
+    [ "store i32 8, %local1"
+    ; "= add i32"
+    ; "= sub i32"
+    ; "= mul i32"
+    ; "= div i32"
+    ; "= mod i32"
+    ; "= or i32"
+    ; "= and i32"
+    ; "= xor i32"
+    ]
