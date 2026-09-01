@@ -1,0 +1,86 @@
+config.cmx :
+err.cmx : \
+    type.cmx \
+    token.cmx \
+    location.cmx
+expr.cmx : \
+    type.cmx \
+    token.cmx \
+    symbol.cmx \
+    location.cmx
+io.cmx :
+keyword.cmx :
+lexer.cmx : \
+    type.cmx \
+    token.cmx \
+    keyword.cmx
+location.cmx :
+lower.cmx : \
+    type.cmx \
+    tac.cmx \
+    symbol.cmx \
+    stmt.cmx \
+    expr.cmx
+main.cmx : \
+    x86.cmx \
+    resolver.cmx \
+    parser.cmx \
+    lower.cmx \
+    lexer.cmx \
+    io.cmx \
+    config.cmx
+parser.cmx : \
+    type.cmx \
+    token.cmx \
+    stmt.cmx \
+    location.cmx \
+    expr.cmx \
+    err.cmx
+resolver.cmx : \
+    vis.cmx \
+    type.cmx \
+    token.cmx \
+    symbol.cmx \
+    stmt.cmx \
+    scope.cmx \
+    location.cmx \
+    expr.cmx \
+    err.cmx
+scope.cmx :
+stmt.cmx : \
+    type.cmx \
+    token.cmx \
+    symbol.cmx \
+    location.cmx \
+    expr.cmx
+symbol.cmx : \
+    type.cmx \
+    location.cmx
+tac.cmx : \
+    type.cmx \
+    token.cmx \
+    symbol.cmx
+test_lower.cmx : \
+    tac.cmx \
+    resolver.cmx \
+    parser.cmx \
+    lower.cmx \
+    lexer.cmx
+test_x86.cmx : \
+    x86.cmx \
+    resolver.cmx \
+    parser.cmx \
+    lower.cmx \
+    lexer.cmx
+token.cmx : \
+    location.cmx \
+    keyword.cmx
+type.cmx : \
+    token.cmx
+vis.cmx : \
+    stmt.cmx \
+    expr.cmx
+x86.cmx : \
+    type.cmx \
+    tac.cmx \
+    symbol.cmx

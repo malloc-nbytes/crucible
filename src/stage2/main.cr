@@ -1,0 +1,4 @@
+export proc main(): i32
+{
+        return 0;
+}
