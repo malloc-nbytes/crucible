@@ -56,10 +56,42 @@ let resolve_expr_call
       (v : vis_type)
       ({lhs; args; _} as e : Expr.call)
     : Expr.t * vis_type =
-  ignore lhs;
-  ignore args;
-  ignore e;
-  assert false
+  let lhs, v = accept_expr v lhs in
+  let args, v =
+    List.fold_left
+      (fun (args, v) arg ->
+        let arg, v = accept_expr v arg in
+        arg :: args, v)
+      ([], v)
+      args
+  in
+  let args = List.rev args in
+  match Expr.get_type lhs with
+  | Type.Proc {rty; ptys; variadic} ->
+     let argc = List.length args in
+     let paramc = List.length ptys in
+     if (variadic && argc < paramc) || (not variadic && argc <> paramc) then
+       raise @@
+         Err.Invalid_Argument_Count (Expr.get_location (Expr.Call e), paramc, argc)
+     else
+       let rec check_args args ptys =
+         match args, ptys with
+         | _, [] -> ()
+         | arg :: args, pty :: ptys ->
+            let aty = Expr.get_type arg in
+            if not @@ Type.check pty aty then
+              raise @@ Err.Incompatible_Types (Expr.get_location arg, pty, aty)
+            else
+              check_args args ptys
+         | [], _ :: _ -> assert false
+       in
+       check_args args ptys;
+       Expr.Call
+         { node = {e.node with ty = rty}
+         ; lhs
+         ; args
+         }, v
+  | ty -> raise @@ Err.Invalid_Call_Target (Expr.get_location lhs, ty)
 
 let resolve_expr_string
       (v : vis_type)
@@ -287,6 +319,14 @@ let analyze stmts =
                (Token.kind_to_string op)
                (Type.to_string t)
                (Type.to_string t') in
+     failwith "semantic error"
+  | Err.Invalid_Call_Target (l, ty) ->
+     let _ = Printf.eprintf "%s: cannot call expression of type `%s'\n"
+               (Location.to_string l) (Type.to_string ty) in
+     failwith "semantic error"
+  | Err.Invalid_Argument_Count (l, expected, got) ->
+     let _ = Printf.eprintf "%s: procedure expects %d arguments but got %d\n"
+               (Location.to_string l) expected got in
      failwith "semantic error"
   | Err.Identifier_Not_Defined (l, id) ->
      let _ = Printf.eprintf "%s: identifier `%s' is not defined\n"

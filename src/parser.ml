@@ -43,7 +43,36 @@ let rec parse_primary_expr p =
   | hd :: _ ->
      raise @@ Err.Invalid_Primary_Expression hd.loc
 
-and parse_unary_expr p = parse_primary_expr p
+and parse_call_expr p =
+  let lhs, p = parse_primary_expr p in
+  let rec args acc p =
+    match p.ts with
+    | {k = R_Paren; _} :: ts -> List.rev acc, {p with ts}
+    | _ ->
+       let arg, p = parse_expr p in
+       match p.ts with
+       | {k = Comma; _} :: ts -> args (arg :: acc) {p with ts}
+       | _ ->
+          let p = expect' R_Paren p in
+          List.rev (arg :: acc), p
+  in
+  let rec aux lhs p =
+    match p.ts with
+    | {k = L_Paren; _} :: ts ->
+       let args, p = args [] {p with ts} in
+       let call =
+         Call
+           { node = {loc = Expr.get_location lhs; ty = Type.Undefined}
+           ; lhs
+           ; args
+           }
+       in
+       aux call p
+    | _ -> lhs, p
+  in
+  aux lhs p
+
+and parse_unary_expr p = parse_call_expr p
 
 and parse_multiplicative_expr p =
   let lhs, p = parse_unary_expr p in

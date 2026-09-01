@@ -3,7 +3,9 @@ type label = int
 type string_id = int
 
 type operand =
+  | Void
   | Temp of temp
+  | Proc of Symbol.t
   | Param of Symbol.t
   | I32 of int
   | String of string_id
@@ -21,6 +23,12 @@ type instruction =
       ; op : binop
       ; lhs : operand
       ; rhs : operand
+      }
+  | Call of
+      { dst : temp option
+      ; ty : Type.t
+      ; callee : operand
+      ; args : operand list
       }
 
 type terminator =
@@ -77,7 +85,9 @@ let binop_of_token = function
   | _ -> failwith "unsupported TAC binary operator"
 
 let operand_to_string = function
+  | Void      -> "void"
   | Temp id   -> "%" ^ string_of_int id
+  | Proc p   -> "@proc" ^ string_of_int p.id
   | Param p   -> "%arg" ^ string_of_int p.id
   | I32 v     -> string_of_int v
   | String id -> "@str" ^ string_of_int id
@@ -90,6 +100,16 @@ let instruction_to_string = function
        (Type.to_string ty)
        (operand_to_string lhs)
        (operand_to_string rhs)
+  | Call {dst; ty; callee; args} ->
+     let result = match dst with
+       | Some dst -> Printf.sprintf "%%%d = " dst
+       | None -> ""
+     in
+     Printf.sprintf "%scall %s %s(%s)"
+       result
+       (Type.to_string ty)
+       (operand_to_string callee)
+       (args |> List.map operand_to_string |> String.concat ", ")
 
 let terminator_to_string = function
   | Ret None -> "ret"

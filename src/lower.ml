@@ -94,6 +94,9 @@ let rec lower_expr builder = function
   | Expr.String {s; _} ->
      Tac.String (intern_string builder.program s.lx)
 
+  | Expr.Identifier {sym = Some ({kind = Symbol.Proc; _} as sym); _} ->
+     Tac.Proc sym
+
   | Expr.Identifier {sym; _} ->
      let sym = require_symbol "identifier" sym in
      lookup_symbol builder sym
@@ -113,8 +116,18 @@ let rec lower_expr builder = function
        });
      Tac.Temp dst
 
-  | Expr.Call {lhs; args; _} ->
-     assert false
+  | Expr.Call {lhs; args; _} as expression ->
+     let callee = lower_expr builder lhs in
+     let args = List.map (lower_expr builder) args in
+     let ty = require_resolved_type expression in
+     let dst = match ty with
+       | Type.Void -> None
+       | _ -> Some (new_temp builder)
+     in
+     emit builder (Tac.Call {dst; ty; callee; args});
+     match dst with
+     | Some dst -> Tac.Temp dst
+     | None -> Tac.Void
 
 let rec lower_stmt builder = function
   | Stmt.Proc _ ->

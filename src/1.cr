@@ -1,6 +1,8 @@
-export proc main(a: i32, ...): i32
+export proc main(): i32
 {
         let x: i32 = 9;
+
+        main();
 
         if 0 {
            return 1;
