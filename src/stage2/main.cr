@@ -5,7 +5,7 @@ export proc main(): i32
 {
         let x: i32 = 0;
 
-        while 1 {
+        while x < 10 {
                 printf("%d", x);
                 putchar(10);
                 x = x + 1;

@@ -51,8 +51,9 @@ let resolve_expr_binary
   else if not @@ Type.binop_check lty op.k rty then
     raise @@ Err.Incompatible_Binop_Types (Expr.get_location lhs, lty, op.k, rty)
   else
+    let ty = if Type.is_comparison op.k then Type.I32 else lty in
     Expr.Binary
-      { node = {e.node with ty = lty}
+      { node = {e.node with ty}
       ; lhs
       ; op
       ; rhs

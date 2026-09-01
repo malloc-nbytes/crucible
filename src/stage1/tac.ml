@@ -20,11 +20,18 @@ type binop =
   | Or
   | And
   | Xor
+  | Less
+  | Greater
+  | Less_equal
+  | Greater_equal
+  | Equal
+  | Not_equal
 
 type instruction =
   | Binop of
       { dst : temp
       ; ty : Type.t
+      ; result_ty : Type.t
       ; op : binop
       ; lhs : operand
       ; rhs : operand
@@ -95,6 +102,12 @@ let binop_to_string = function
   | Or -> "or"
   | And -> "and"
   | Xor -> "xor"
+  | Less -> "lt"
+  | Greater -> "gt"
+  | Less_equal -> "le"
+  | Greater_equal -> "ge"
+  | Equal -> "eq"
+  | Not_equal -> "ne"
 
 let binop_of_token = function
   | Token.Plus          -> Add
@@ -105,6 +118,12 @@ let binop_of_token = function
   | Token.Pipe          -> Or
   | Token.Ampersand     -> And
   | Token.Uptick        -> Xor
+  | Token.Lessthan          -> Less
+  | Token.Greaterthan       -> Greater
+  | Token.Lessthan_Equals   -> Less_equal
+  | Token.Greaterthan_Equals -> Greater_equal
+  | Token.Double_Equals     -> Equal
+  | Token.Bang_Equals       -> Not_equal
   | _ -> failwith "unsupported TAC binary operator"
 
 let operand_to_string = function
@@ -117,7 +136,7 @@ let operand_to_string = function
   | String id -> "@str" ^ string_of_int id
 
 let instruction_to_string = function
-  | Binop {dst; ty; op; lhs; rhs} ->
+  | Binop {dst; ty; op; lhs; rhs; _} ->
      Printf.sprintf "%%%d = %s %s %s, %s"
        dst
        (binop_to_string op)

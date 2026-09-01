@@ -251,8 +251,8 @@ let type_of_operand layout = function
   | Tac.String _ -> Type.Ptr Type.U8
 
 let reserve_instruction layout = function
-  | Tac.Binop {dst; ty; lhs; rhs; _} ->
-     reserve_slot layout (Tac.Temp dst) ty;
+  | Tac.Binop {dst; ty; result_ty; lhs; rhs; _} ->
+     reserve_slot layout (Tac.Temp dst) result_ty;
      reserve_slot layout lhs ty;
      reserve_slot layout rhs ty
   | Tac.Load {dst; ty; src} ->
@@ -330,7 +330,7 @@ let store_value layout operand ty reg =
      invalid_arg "x86 store destination is not a mutable slot"
 
 let emit_binop layout = function
-  | Tac.Binop {dst; ty; op; lhs; rhs} ->
+  | Tac.Binop {dst; ty; result_ty; op; lhs; rhs} ->
      let width = width_of_type ty in
      let setup = load_value layout Rax lhs ty @ load_value layout Rcx rhs ty in
      let operation, result =
@@ -341,6 +341,23 @@ let emit_binop layout = function
        | Tac.Or -> [Or (width, Reg Rax, Reg Rcx)], Rax
        | Tac.And -> [And (width, Reg Rax, Reg Rcx)], Rax
        | Tac.Xor -> [Xor (width, Rax, Rcx)], Rax
+       | Tac.Less | Tac.Greater | Tac.Less_equal | Tac.Greater_equal
+         | Tac.Equal | Tac.Not_equal ->
+          let condition =
+            match op, is_unsigned ty with
+            | Tac.Less, false -> Less
+            | Tac.Less, true -> Below
+            | Tac.Greater, false -> Greater
+            | Tac.Greater, true -> Above
+            | Tac.Less_equal, false -> Less_equal
+            | Tac.Less_equal, true -> Below_equal
+            | Tac.Greater_equal, false -> Greater_equal
+            | Tac.Greater_equal, true -> Above_equal
+            | Tac.Equal, _ -> Equal
+            | Tac.Not_equal, _ -> Not_equal
+            | _ -> assert false
+          in
+          [Xor (W32, Rdx, Rdx); Cmp (width, Reg Rax, Reg Rcx); Set (condition, Rdx)], Rdx
        | Tac.Div | Tac.Mod ->
           let extend = match width, is_unsigned ty with
             | W32, false -> [Cdq]
@@ -351,7 +368,7 @@ let emit_binop layout = function
           let divide = if is_unsigned ty then Div (width, Reg Rcx) else Idiv (width, Reg Rcx) in
           extend @ [divide], (match op with Tac.Div -> Rax | Tac.Mod -> Rdx | _ -> assert false)
      in
-     setup @ operation @ store_value layout (Tac.Temp dst) ty result
+     setup @ operation @ store_value layout (Tac.Temp dst) result_ty result
   | _ -> assert false
 
 let emit_call layout = function

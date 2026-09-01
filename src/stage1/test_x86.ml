@@ -39,10 +39,16 @@ let () =
        export proc main(): i32 {\n\
        \  let x: i32 = 20;\n\
        \  let y: i32 = 2;\n\
+       \  let lt: i32 = 2 < 3;\n\
+       \  let gt: i32 = 3 > 2;\n\
+       \  let le: i32 = 2 <= 2;\n\
+       \  let ge: i32 = 2 >= 2;\n\
+       \  let eq: i32 = 2 == 2;\n\
+       \  let ne: i32 = 2 != 3;\n\
        \  while y { y -= 1; }\n\
        \  y = 2;\n\
        \  x += y;\n\
-       \  return add(x, y);\n\
+       \  return add(lt + gt + le + ge + eq + ne, 18);\n\
        }\n"
   in
   List.iter
@@ -55,6 +61,12 @@ let () =
     ; "mov esi"
     ; "call add"
     ; "test eax, eax"
+    ; "setl dl"
+    ; "setg dl"
+    ; "setle dl"
+    ; "setge dl"
+    ; "sete dl"
+    ; "setne dl"
     ];
   let channel = open_out "test_x86.s" in
   output_string channel output;

@@ -126,20 +126,29 @@ let rec lower_expr builder = function
          | Some lhs, Some op ->
             let temp = new_temp builder in
             emit builder
-              (Tac.Binop {dst = temp; ty; op = Tac.binop_of_token op; lhs; rhs});
+              (Tac.Binop
+                 { dst = temp
+                 ; ty
+                 ; result_ty = ty
+                 ; op = Tac.binop_of_token op
+                 ; lhs
+                 ; rhs
+                 });
             Tac.Temp temp
          | _ -> assert false
        in
        emit builder (Tac.Store {ty; src = value; dst});
        value
      else
+       let operand_ty = require_resolved_type lhs in
        let lhs = lower_expr builder lhs in
        let rhs = lower_expr builder rhs in
        let dst = new_temp builder in
        emit builder
          (Tac.Binop
             { dst
-            ; ty
+            ; ty = operand_ty
+            ; result_ty = ty
             ; op = Tac.binop_of_token op.k
             ; lhs
             ; rhs

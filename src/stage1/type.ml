@@ -62,6 +62,12 @@ let is_assignment = function
   | Token.Equals -> true
   | op -> Option.is_some @@ compound_assignment_binop op
 
+let is_comparison = function
+  | Token.Lessthan | Token.Greaterthan
+  | Token.Lessthan_Equals | Token.Greaterthan_Equals
+  | Token.Double_Equals | Token.Bang_Equals -> true
+  | _ -> false
+
 let binop_check t (op : Token.kind) t' =
   if not @@ check t t' then false
   else
@@ -69,8 +75,9 @@ let binop_check t (op : Token.kind) t' =
     | (Token.Plus     | Token.Minus |
        Token.Asterisk | Token.Forward_Slash | Token.Percent |
        Token.Pipe | Token.Ampersand | Token.Uptick |
-       Token.Double_Equals | Token.Equals
-       | Token.Lessthan | Token.Greaterthan) -> true
+       Token.Double_Equals | Token.Bang_Equals | Token.Equals
+       | Token.Lessthan | Token.Greaterthan
+       | Token.Lessthan_Equals | Token.Greaterthan_Equals) -> true
     | op when Option.is_some @@ compound_assignment_binop op -> true
     | _ -> false
 

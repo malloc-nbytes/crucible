@@ -74,3 +74,26 @@ let () =
        \  }\n\
        \  return 0;\n\
        }\n")
+
+let () =
+  let output =
+    lower
+      "export proc main(): i32 {\n\
+       \  let lt: i32 = 2 < 3;\n\
+       \  let gt: i32 = 3 > 2;\n\
+       \  let le: i32 = 2 <= 2;\n\
+       \  let ge: i32 = 2 >= 2;\n\
+       \  let eq: i32 = 2 == 2;\n\
+       \  let ne: i32 = 2 != 3;\n\
+       \  return lt + gt + le + ge + eq + ne;\n\
+       }\n"
+  in
+  List.iter
+    (fun needle -> expect_contains needle output)
+    [ "= lt i32"
+    ; "= gt i32"
+    ; "= le i32"
+    ; "= ge i32"
+    ; "= eq i32"
+    ; "= ne i32"
+    ]
