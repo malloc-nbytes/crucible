@@ -210,13 +210,13 @@ let epilogue frame =
   @ List.rev_map (fun reg -> Pop reg) frame.callee_saved
   @ [Pop Rbp; Ret]
 
-let emit_function ~public ~name ~frame body =
-  let linkage = if public then [".globl " ^ name] else [] in
-  let instructions = Label name :: prologue frame @ body @ epilogue frame in
-  String.concat "\n"
-    (".intel_syntax noprefix" :: ".text" :: "" :: linkage @
-       List.map instruction_to_string instructions @
-         [""; ".section .note.GNU-stack,\"\",@progbits"])
+(* let emit_function ~public ~name ~frame body = *)
+(*   let linkage = if public then [".globl " ^ name] else [] in *)
+(*   let instructions = Label name :: prologue frame @ body @ epilogue frame in *)
+(*   String.concat "\n" *)
+(*     (".intel_syntax noprefix" :: ".text" :: "" :: linkage @ *)
+(*        List.map instruction_to_string instructions @ *)
+(*          [""; ".section .note.GNU-stack,\"\",@progbits"]) *)
 
 type layout =
   { slots : (string, int) Hashtbl.t

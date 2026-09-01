@@ -2,10 +2,10 @@
 
 set -xe
 
-pushd ../stage1
+# pushd ../stage1
+# make -B
+# popd
 
-make -B
+cc -c io.c -o io.o
 
-popd
-
-../stage1/cruc.stage1 ./main.cr -o cruc.stage2
+../stage1/cruc.stage1 ./main.cr -o cruc.stage2 -obj io.o
