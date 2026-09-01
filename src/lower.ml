@@ -113,6 +113,9 @@ let rec lower_expr builder = function
        });
      Tac.Temp dst
 
+  | Expr.Call {lhs; args; _} ->
+     assert false
+
 let rec lower_stmt builder = function
   | Stmt.Proc _ ->
      failwith "nested procedures are not supported by TAC lowering"

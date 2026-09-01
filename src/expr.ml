@@ -8,6 +8,7 @@ type t =
   | Identifier of identifier
   | String of string_
   | Binary of binary
+  | Call of call
 
 and integer =
   { node : node
@@ -32,14 +33,22 @@ and binary =
   ; rhs : t
   }
 
+and call =
+  { node : node
+  ; lhs : t
+  ; args : t list
+  }
+
 let get_location = function
   | Integer    e -> e.node.loc
   | Identifier e -> e.node.loc
   | String     e -> e.node.loc
   | Binary     e -> e.node.loc
+  | Call       e -> e.node.loc
 
 let get_type = function
   | Integer    e -> e.node.ty
   | Identifier e -> e.node.ty
   | String     e -> e.node.ty
   | Binary     e -> e.node.ty
+  | Call       e -> e.node.ty

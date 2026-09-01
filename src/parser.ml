@@ -30,12 +30,16 @@ let binary lhs op rhs =
 let rec parse_primary_expr p =
   match p.ts with
   | [] -> raise Err.Out_Of_Tokens
+
   | ({k = Integer_Literal; _} as i) :: ts ->
      Integer {node = {loc = i.loc; ty = Type.Undefined}; i}, {p with ts}
+
   | ({k = String_Literal; _} as s) :: ts ->
      String {node = {loc = s.loc; ty = Type.Undefined}; s}, {p with ts}
+
   | ({k = Identifier; _} as id) :: ts ->
      Identifier {node = {loc = id.loc; ty = Type.Undefined}; id; sym = None}, {p with ts}
+
   | hd :: _ ->
      raise @@ Err.Invalid_Primary_Expression hd.loc
 

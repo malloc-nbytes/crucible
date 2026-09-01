@@ -52,6 +52,15 @@ let resolve_expr_binary
       ; rhs
       }, v
 
+let resolve_expr_call
+      (v : vis_type)
+      ({lhs; args; _} as e : Expr.call)
+    : Expr.t * vis_type =
+  ignore lhs;
+  ignore args;
+  ignore e;
+  assert false
+
 let resolve_expr_string
       (v : vis_type)
       (e : Expr.string_)
@@ -248,17 +257,18 @@ let analyze stmts =
                    ; return_type = None
                    ; next_symbol_id = 0
                    }
-       ; expr_integer = resolve_expr_integer
+       ; expr_integer    = resolve_expr_integer
        ; expr_identifier = resolve_expr_identifier
-       ; expr_string = resolve_expr_string
-       ; expr_binary = resolve_expr_binary
+       ; expr_string     = resolve_expr_string
+       ; expr_binary     = resolve_expr_binary
+       ; expr_call       = resolve_expr_call
 
-       ; stmt_proc = resolve_stmt_proc
-       ; stmt_let = resolve_stmt_let
-       ; stmt_expr = resolve_stmt_expr
+       ; stmt_proc   = resolve_stmt_proc
+       ; stmt_let    = resolve_stmt_let
+       ; stmt_expr   = resolve_stmt_expr
        ; stmt_return = resolve_stmt_return
-       ; stmt_if = resolve_stmt_if
-       ; stmt_block = resolve_stmt_block
+       ; stmt_if     = resolve_stmt_if
+       ; stmt_block  = resolve_stmt_block
        } stmts
   with
   | Err.Illegal_Statement l ->
