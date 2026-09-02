@@ -14,24 +14,6 @@ src/run.sh
 src/.depend
 *cruc.stage*
 
-Makefile
-Makefile.in
-aclocal.m4
-autom4te.cache
-compile
-config.log
-config.status
-configure
-configure~
-depcomp
-install-sh
-missing
-src/.deps/
-!src/Makefile
-src/Makefile.in
-src/cruc-debug-build
-src/include/config.h
-src/include/stamp-h1
 *.cmi
 *.cmx
 *.in
