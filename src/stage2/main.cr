@@ -1,15 +1,11 @@
 extern proc printf(fmt: u8*, ...): void;
 extern proc putchar(c: i32): void;
+extern proc load_file(path: u8*): u8*;
 
 export proc main(): i32
 {
-        let x: i32 = 0;
-
-        while x < 10 {
-                printf("%d", x);
-                putchar(10);
-                x = x + 1;
-        }
+        let src: u8* = load_file("build.sh");
+        let i: i32 = 0;
 
         return 0;
 }

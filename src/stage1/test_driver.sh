@@ -7,6 +7,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 source="$tmpdir/main.cr"
 output="$tmpdir/program"
+debug_output="$tmpdir/program-debug"
 object_a="$tmpdir/helper_a.o"
 object_b="$tmpdir/helper_b.o"
 
@@ -23,3 +24,8 @@ timeout 10s "$output"
 status=$?
 set -e
 test "$status" -eq 37
+
+"$compiler" "$source" -asm -tac -obj "$object_a" -obj "$object_b" -o "$debug_output"
+test -x "$debug_output"
+test -s "$debug_output.s"
+test -s "$debug_output.tac"
