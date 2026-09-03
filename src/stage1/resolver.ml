@@ -64,6 +64,17 @@ let resolve_expr_unary
      raise @@ Err.Invalid_Address_Of_Target (Expr.get_location rhs)
   | _ -> assert false
 
+let resolve_expr_cast
+      (v : vis_type)
+      ({target; rhs; _} as e : Expr.cast)
+    : Expr.t * vis_type =
+  let rhs, v = accept_expr v rhs in
+  let source = Expr.get_type rhs in
+  if not @@ Type.is_castable source target then
+    raise @@ Err.Invalid_Cast (e.node.loc, source, target)
+  else
+    Expr.Cast {e with node = {e.node with ty = target}; rhs}, v
+
 let resolve_expr_binary
       (v : vis_type)
       ({lhs; op; rhs; _} as e : Expr.binary)
@@ -386,6 +397,7 @@ let analyze stmts =
        ; expr_binary     = resolve_expr_binary
        ; expr_call       = resolve_expr_call
        ; expr_unary      = resolve_expr_unary
+       ; expr_cast       = resolve_expr_cast
        ; expr_index      = resolve_expr_index
        ; expr_array      = resolve_expr_array
 
@@ -454,4 +466,9 @@ let analyze stmts =
   | Err.Invalid_Address_Of_Target l ->
      let _ = Printf.eprintf "%s: invalid address-of target\n"
                (Location.to_string l) in
+     failwith "semantic error"
+  | Err.Invalid_Cast (l, source, target) ->
+     let _ = Printf.eprintf "%s: cannot cast `%s' to `%s'\n"
+               (Location.to_string l)
+               (Type.to_string source) (Type.to_string target) in
      failwith "semantic error"

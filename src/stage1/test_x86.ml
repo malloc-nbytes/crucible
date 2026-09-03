@@ -101,3 +101,18 @@ let () =
   output_string channel output;
   output_char channel '\n';
   close_out channel
+
+let () =
+  let output =
+    compile
+      "export proc main(): i32 {\n\
+       \  let values: i32[3] = {257, 2, 3};\n\
+       \  let byte: u8 = (u8)values[0];\n\
+       \  let bytes: u8* = (u8*)values;\n\
+       \  return (i32)byte + (i32)*bytes;\n\
+       }\n"
+  in
+  let channel = open_out "test_cast.s" in
+  output_string channel output;
+  output_char channel '\n';
+  close_out channel

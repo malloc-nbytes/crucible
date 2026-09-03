@@ -50,6 +50,17 @@ let rec check t t' =
     | Ptr p, Ptr p' -> check p p'
     | _ -> true
 
+let is_integer = function
+  | U8 | I32 | I64 | U32 | U64 -> true
+  | Undefined | Void | Ptr _ | Proc _ | Array _ -> false
+
+let is_castable source target =
+  match source, target with
+  | source, target when is_integer source && is_integer target -> true
+  | Ptr _, Ptr _ -> true
+  | Array _, Ptr _ -> true
+  | _ -> false
+
 let rec size_bytes = function
   | U8 -> 1
   | I32 | U32 -> 4

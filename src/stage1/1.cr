@@ -11,5 +11,11 @@ export proc main(): i32
 {
         let ar: i32[3] = {1, 2, 3};
 
+        let u: u8 = (u8)ar[0];
+
+        let u: u8 = (u8)1;
+
+        let p: u8* = (u8*)ar;
+
         return 0;
 }

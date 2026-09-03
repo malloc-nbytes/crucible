@@ -100,6 +100,11 @@ and parse_call_expr p =
 
 and parse_unary_expr p =
   match p.ts with
+  | {k = L_Paren; loc; _} :: {k = Type; _} :: _ ->
+     let target, p = parse_type (expect' L_Paren p) in
+     let p = expect' R_Paren p in
+     let rhs, p = parse_unary_expr p in
+     Cast {node = {loc; ty = Type.Undefined}; target; rhs}, p
   | ({k = (Asterisk | Ampersand); _} as op) :: ts ->
      let rhs, p = parse_unary_expr {p with ts} in
      Unary
@@ -168,7 +173,7 @@ and parse_assignment_expr p =
 
 and parse_expr p = parse_assignment_expr p
 
-let parse_type p =
+and parse_type p =
   let ty, p = expect Token.Type p in
   let ty = match ty.lx with
     | "void" -> Type.Void

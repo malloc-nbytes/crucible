@@ -32,6 +32,8 @@ type instruction =
   | Push          of register
   | Pop           of register
   | Mov           of width * operand * operand
+  | Movzx         of width * register * operand
+  | Movsx         of width * register * operand
   | Lea           of register * operand
   | Add           of width * operand * operand
   | Sub           of width * operand * operand
@@ -167,6 +169,12 @@ let instruction_to_string = function
   | Pop reg -> "  pop " ^ register_to_string W64 reg
   | Mov (width, dst, src) ->
      Printf.sprintf "  mov %s, %s" (operand_to_string width dst) (operand_to_string width src)
+  | Movzx (source_width, dst, src) ->
+     Printf.sprintf "  movzx %s, %s" (register_to_string W64 dst)
+       (operand_to_string source_width src)
+  | Movsx (source_width, dst, src) ->
+     Printf.sprintf "  movsx %s, %s" (register_to_string W64 dst)
+       (operand_to_string source_width src)
   | Lea (dst, src) ->
      Printf.sprintf "  lea %s, %s"
        (register_to_string W64 dst) (operand_to_string W64 src)
@@ -263,6 +271,9 @@ let reserve_instruction layout = function
   | Tac.Store {ty; src; dst} ->
      reserve_slot layout src ty;
      reserve_slot layout dst ty
+  | Tac.Cast {dst; source_ty; target_ty; src} ->
+     reserve_slot layout (Tac.Temp dst) target_ty;
+     reserve_slot layout src source_ty
   | Tac.Call {dst; ty; callee; args} ->
      Option.iter (fun dst -> reserve_slot layout (Tac.Temp dst) ty) dst;
      reserve_slot layout callee ty;
@@ -419,6 +430,24 @@ let emit_binop layout = function
      setup @ operation @ store_value layout (Tac.Temp dst) result_ty result
   | _ -> assert false
 
+let emit_cast layout = function
+  | Tac.Cast {dst; source_ty; target_ty; src} ->
+     let convert = match source_ty, target_ty, src with
+       | Type.U8, (Type.I32 | Type.U32 | Type.I64 | Type.U64), Tac.I32 value ->
+          [Mov (W32, Reg Rax, Imm (Int64.of_int value))]
+       | Type.U8, (Type.I32 | Type.U32 | Type.I64 | Type.U64), _ ->
+          [Movzx (W8, Rax, stack_operand layout src)]
+       | Type.I32, (Type.I64 | Type.U64), Tac.I32 value ->
+          [Mov (W64, Reg Rax, Imm (Int64.of_int value))]
+       | Type.I32, (Type.I64 | Type.U64), _ ->
+          [Movsx (W32, Rax, stack_operand layout src)]
+       | Type.U32, (Type.I64 | Type.U64), _ ->
+          load_value layout Rax src Type.U32
+       | _ -> load_value layout Rax src source_ty
+     in
+     convert @ store_value layout (Tac.Temp dst) target_ty Rax
+  | _ -> assert false
+
 let emit_call layout = function
   | Tac.Call {dst; ty; callee; args} ->
      let register_args, stack_args =
@@ -511,6 +540,7 @@ let emit_instruction layout = function
      load_value layout Rax src ty @ store_value layout (Tac.Temp dst) ty Rax
   | Tac.Store {ty; src; dst} ->
      load_value layout Rax src ty @ store_value layout dst ty Rax
+  | Tac.Cast cast -> emit_cast layout (Tac.Cast cast)
   | Tac.Call call -> emit_call layout (Tac.Call call)
   | Tac.Address_of address -> emit_pointer layout (Tac.Address_of address)
   | Tac.Index_address address -> emit_pointer layout (Tac.Index_address address)

@@ -17,12 +17,14 @@ lexer.cmx : \
 location.cmx :
 lower.cmx : \
     type.cmx \
+    token.cmx \
     tac.cmx \
     symbol.cmx \
     stmt.cmx \
     expr.cmx
 main.cmx : \
     x86.cmx \
+    tac.cmx \
     resolver.cmx \
     parser.cmx \
     lower.cmx \

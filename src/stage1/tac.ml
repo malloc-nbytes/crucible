@@ -46,6 +46,12 @@ type instruction =
       ; src : operand
       ; dst : operand
       }
+  | Cast of
+      { dst : temp
+      ; source_ty : Type.t
+      ; target_ty : Type.t
+      ; src : operand
+      }
   | Call of
       { dst : temp option
       ; ty : Type.t
@@ -191,6 +197,10 @@ let instruction_to_string = function
        (Type.to_string ty)
        (operand_to_string src)
        (operand_to_string dst)
+  | Cast {dst; source_ty; target_ty; src} ->
+     Printf.sprintf "%%%d = cast %s %s to %s"
+       dst (Type.to_string source_ty) (operand_to_string src)
+       (Type.to_string target_ty)
   | Call {dst; ty; callee; args} ->
      let result = match dst with
        | Some dst -> Printf.sprintf "%%%d = " dst

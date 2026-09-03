@@ -262,6 +262,17 @@ and lower_expr builder = function
       | _ -> assert false);
      Tac.Temp dst
 
+  | Expr.Cast {target; rhs; _} ->
+     let source_ty = require_resolved_type rhs in
+     let source_ty, src = match source_ty with
+       | Type.Array (element_type, _) ->
+          Type.Ptr element_type, lower_address builder rhs
+       | _ -> source_ty, lower_expr builder rhs
+     in
+     let dst = new_temp builder in
+     emit builder (Tac.Cast {dst; source_ty; target_ty = target; src});
+     Tac.Temp dst
+
   | Expr.Unary _ ->
      failwith "lowering invariant violated: unsupported unary operator"
 

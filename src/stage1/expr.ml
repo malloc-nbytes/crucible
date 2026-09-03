@@ -10,6 +10,7 @@ type t =
   | Binary of binary
   | Call of call
   | Unary of unary
+  | Cast of cast
   | Index of index
   | Array of array_
 
@@ -48,6 +49,12 @@ and unary =
   ; rhs : t
   }
 
+and cast =
+  { node : node
+  ; target : Type.t
+  ; rhs : t
+  }
+
 and index =
   { node : node
   ; lhs : t
@@ -66,6 +73,7 @@ let get_location = function
   | Binary     e -> e.node.loc
   | Call       e -> e.node.loc
   | Unary      e -> e.node.loc
+  | Cast       e -> e.node.loc
   | Index      e -> e.node.loc
   | Array      e -> e.node.loc
 
@@ -76,5 +84,6 @@ let get_type = function
   | Binary     e -> e.node.ty
   | Call       e -> e.node.ty
   | Unary      e -> e.node.ty
+  | Cast       e -> e.node.ty
   | Index      e -> e.node.ty
   | Array      e -> e.node.ty
