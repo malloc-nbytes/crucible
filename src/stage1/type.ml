@@ -12,6 +12,7 @@ type t =
       ; ptys : t list
       ; variadic : bool
       }
+  | Array of t * int
 
 let is_primitive = function
   | "void" | "u8" | "i32" | "i64" | "u32" | "u64" -> true
@@ -38,6 +39,8 @@ let rec to_string = function
   | Proc {rty; ptys} ->
      Printf.sprintf "%s proc(%s)" (to_string rty)
        (List.map to_string ptys |> String.concat ", ")
+  | Array (inner, len) ->
+     Printf.sprintf "array(%s, %d)" (to_string inner) len
 
 let rec check t t' =
   if t <> t' then
@@ -46,6 +49,14 @@ let rec check t t' =
     match t, t' with
     | Ptr p, Ptr p' -> check p p'
     | _ -> true
+
+let rec size_bytes = function
+  | U8 -> 1
+  | I32 | U32 -> 4
+  | I64 | U64 | Ptr _ -> 8
+  | Array (element_type, length) -> size_bytes element_type * length
+  | Void | Undefined | Proc _ ->
+     invalid_arg "type has no runtime size"
 
 let compound_assignment_binop = function
   | Token.Plus_Equals          -> Some Token.Plus

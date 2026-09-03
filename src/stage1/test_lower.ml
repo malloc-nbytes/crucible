@@ -97,3 +97,12 @@ let () =
     ; "= eq i32"
     ; "= ne i32"
     ]
+
+let () =
+  expect_equal
+    "export proc main(): i32 {\nL0:\n  array i32 {1, 2, 3}, %local1\n  %0 = index_load i32 %local1, 1\n  ret %0\n}"
+    (lower
+       "export proc main(): i32 {\n\
+       \  let values: i32[3] = {1, 2, 3};\n\
+       \  return values[1];\n\
+       }\n")

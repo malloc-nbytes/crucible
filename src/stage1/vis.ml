@@ -5,6 +5,8 @@ type ('c, 'e, 's) t =
   ; expr_string     : ('c, 'e, 's) t -> Expr.string_    -> 'e * ('c, 'e, 's) t
   ; expr_binary     : ('c, 'e, 's) t -> Expr.binary     -> 'e * ('c, 'e, 's) t
   ; expr_call       : ('c, 'e, 's) t -> Expr.call       -> 'e * ('c, 'e, 's) t
+  ; expr_index      : ('c, 'e, 's) t -> Expr.index      -> 'e * ('c, 'e, 's) t
+  ; expr_array      : ('c, 'e, 's) t -> Expr.array_     -> 'e * ('c, 'e, 's) t
 
   ; stmt_proc    : ('c, 'e, 's) t -> Stmt.proc   -> 's * ('c, 'e, 's) t
   ; stmt_let     : ('c, 'e, 's) t -> Stmt.let_   -> 's * ('c, 'e, 's) t
@@ -21,6 +23,8 @@ let accept_expr v = function
   | Expr.String     e -> v.expr_string     v e
   | Expr.Binary     e -> v.expr_binary     v e
   | Expr.Call       e -> v.expr_call       v e
+  | Expr.Index      e -> v.expr_index      v e
+  | Expr.Array      e -> v.expr_array      v e
 
 let accept_stmt v = function
   | Stmt.Proc   s -> v.stmt_proc   v s

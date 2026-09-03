@@ -40,6 +40,21 @@ let rec parse_primary_expr p =
   | ({k = Identifier; _} as id) :: ts ->
      Identifier {node = {loc = id.loc; ty = Type.Undefined}; id; sym = None}, {p with ts}
 
+  | {k = L_Curly; loc; _} :: ts ->
+     let rec elements acc p =
+       match p.ts with
+       | {k = R_Curly; _} :: ts -> List.rev acc, {p with ts}
+       | _ ->
+          let e, p = parse_expr p in
+          match p.ts with
+          | {k = Comma; _} :: ts -> elements (e :: acc) {p with ts}
+          | _ ->
+             let p = expect' R_Curly p in
+             List.rev (e :: acc), p
+     in
+     let exprs, p = elements [] {p with ts} in
+     Array {node = {loc; ty = Type.Undefined}; exprs}, p
+
   | hd :: _ ->
      raise @@ Err.Invalid_Primary_Expression hd.loc
 
@@ -68,6 +83,17 @@ and parse_call_expr p =
            }
        in
        aux call p
+    | {k = L_Sqr; _} :: ts ->
+       let idx, p = parse_expr {p with ts} in
+       let p = expect' R_Sqr p in
+       let index =
+         Index
+           { node = {loc = Expr.get_location lhs; ty = Type.Undefined}
+           ; lhs
+           ; idx
+           }
+       in
+       aux index p
     | _ -> lhs, p
   in
   aux lhs p
@@ -144,12 +170,16 @@ let parse_type p =
     | "u8" -> Type.U8
     | _ -> raise (Err.Expect (ty.loc, "primitive type", ty.lx))
   in
-  let rec pointers ty p =
+  let rec suffixes ty p =
     match p.ts with
-    | {k = Asterisk; _} :: ts -> pointers (Type.Ptr ty) {p with ts}
+    | {k = Asterisk; _} :: ts -> suffixes (Type.Ptr ty) {p with ts}
+    | {k = L_Sqr; _} :: ts ->
+       let length, p = expect Integer_Literal {p with ts} in
+       let p = expect' R_Sqr p in
+       suffixes (Type.Array (ty, int_of_string length.lx)) p
     | _ -> ty, p
   in
-  pointers ty p
+  suffixes ty p
 
 let rec parse_stmt_expr p =
   let e, p = parse_expr p in

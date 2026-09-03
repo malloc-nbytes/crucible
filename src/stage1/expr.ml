@@ -9,6 +9,8 @@ type t =
   | String of string_
   | Binary of binary
   | Call of call
+  | Index of index
+  | Array of array_
 
 and integer =
   { node : node
@@ -39,12 +41,25 @@ and call =
   ; args : t list
   }
 
+and index =
+  { node : node
+  ; lhs : t
+  ; idx : t
+  }
+
+and array_ =
+  { node : node
+  ; exprs : t list
+  }
+
 let get_location = function
   | Integer    e -> e.node.loc
   | Identifier e -> e.node.loc
   | String     e -> e.node.loc
   | Binary     e -> e.node.loc
   | Call       e -> e.node.loc
+  | Index      e -> e.node.loc
+  | Array      e -> e.node.loc
 
 let get_type = function
   | Integer    e -> e.node.ty
@@ -52,3 +67,5 @@ let get_type = function
   | String     e -> e.node.ty
   | Binary     e -> e.node.ty
   | Call       e -> e.node.ty
+  | Index      e -> e.node.ty
+  | Array      e -> e.node.ty

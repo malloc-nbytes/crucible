@@ -93,9 +93,12 @@ let lower_identifier builder ({node; sym; _} : Expr.identifier) =
   | Symbol.Proc -> Tac.Proc sym
   | Symbol.Local | Symbol.Param ->
      let src = lookup_symbol builder sym in
-     let dst = new_temp builder in
-     emit builder (Tac.Load {dst; ty = node.ty; src});
-     Tac.Temp dst
+     (match node.ty with
+      | Type.Array _ -> src
+      | _ ->
+         let dst = new_temp builder in
+         emit builder (Tac.Load {dst; ty = node.ty; src});
+         Tac.Temp dst)
 
 let lower_assignment_target builder = function
   | Expr.Identifier {sym; _} ->
@@ -103,7 +106,34 @@ let lower_assignment_target builder = function
      lookup_symbol builder sym
   | _ -> failwith "lowering invariant violated: assignment target is not an identifier"
 
-let rec lower_expr builder = function
+let rec lower_index_store builder lhs rhs op ty =
+  match lhs with
+  | Expr.Index {lhs = array; idx; _} ->
+     let array = lower_expr builder array in
+     let idx = lower_expr builder idx in
+     let value = match Type.compound_assignment_binop op with
+       | None -> lower_expr builder rhs
+       | Some binop ->
+          let old = new_temp builder in
+          emit builder (Tac.Index_load {dst = old; element_type = ty; src = array; idx});
+          let rhs = lower_expr builder rhs in
+          let dst = new_temp builder in
+          emit builder
+            (Tac.Binop
+               { dst
+               ; ty
+               ; result_ty = ty
+               ; op = Tac.binop_of_token binop
+               ; lhs = Tac.Temp old
+               ; rhs
+               });
+          Tac.Temp dst
+     in
+     emit builder (Tac.Index_store {element_type = ty; src = value; idx; dst = array});
+     value
+  | _ -> assert false
+
+and lower_expr builder = function
   | Expr.Integer {i; _} ->
      Tac.I32 (int_of_string i.lx)
 
@@ -115,30 +145,33 @@ let rec lower_expr builder = function
   | Expr.Binary {lhs; op; rhs; _} as expression ->
      let ty  = require_resolved_type expression in
      if Type.is_assignment op.k then
-       let dst = lower_assignment_target builder lhs in
-       let lhs = match Type.compound_assignment_binop op.k with
-         | None -> None
-         | Some _ -> Some (lower_expr builder lhs)
-       in
-       let rhs = lower_expr builder rhs in
-       let value = match lhs, Type.compound_assignment_binop op.k with
-         | None, None -> rhs
-         | Some lhs, Some op ->
-            let temp = new_temp builder in
-            emit builder
-              (Tac.Binop
-                 { dst = temp
-                 ; ty
-                 ; result_ty = ty
-                 ; op = Tac.binop_of_token op
-                 ; lhs
-                 ; rhs
-                 });
-            Tac.Temp temp
-         | _ -> assert false
-       in
-       emit builder (Tac.Store {ty; src = value; dst});
-       value
+       (match lhs with
+        | Expr.Index _ -> lower_index_store builder lhs rhs op.k ty
+        | _ ->
+           let dst = lower_assignment_target builder lhs in
+           let lhs = match Type.compound_assignment_binop op.k with
+             | None -> None
+             | Some _ -> Some (lower_expr builder lhs)
+           in
+           let rhs = lower_expr builder rhs in
+           let value = match lhs, Type.compound_assignment_binop op.k with
+             | None, None -> rhs
+             | Some lhs, Some op ->
+                let temp = new_temp builder in
+                emit builder
+                  (Tac.Binop
+                     { dst = temp
+                     ; ty
+                     ; result_ty = ty
+                     ; op = Tac.binop_of_token op
+                     ; lhs
+                     ; rhs
+                     });
+                Tac.Temp temp
+             | _ -> assert false
+           in
+           emit builder (Tac.Store {ty; src = value; dst});
+           value)
      else
        let operand_ty = require_resolved_type lhs in
        let lhs = lower_expr builder lhs in
@@ -164,9 +197,20 @@ let rec lower_expr builder = function
        | _ -> Some (new_temp builder)
      in
      emit builder (Tac.Call {dst; ty; callee; args});
-     match dst with
-     | Some dst -> Tac.Temp dst
-     | None -> Tac.Void
+     (match dst with
+      | Some dst -> Tac.Temp dst
+      | None -> Tac.Void)
+
+  | Expr.Index {lhs; idx; _} as expression ->
+     let element_type = require_resolved_type expression in
+     let src = lower_expr builder lhs in
+     let idx = lower_expr builder idx in
+     let dst = new_temp builder in
+     emit builder (Tac.Index_load {dst; element_type; src; idx});
+     Tac.Temp dst
+
+  | Expr.Array _ ->
+     failwith "lowering invariant violated: array literal requires an array declaration"
 
 let rec lower_stmt builder = function
   | Stmt.Proc _ ->
@@ -174,10 +218,19 @@ let rec lower_stmt builder = function
 
   | Stmt.Let {sym; e; _} ->
      let symbol = require_symbol "let declaration" sym in
-     let value = lower_expr builder e in
      let dst = Tac.Local symbol in
      bind_symbol builder symbol dst;
-     emit builder (Tac.Store {ty = symbol.ty; src = value; dst})
+     (match e with
+      | Expr.Array {exprs; _} ->
+         let element_type = match symbol.ty with
+           | Type.Array (element_type, _) -> element_type
+           | _ -> failwith "lowering invariant violated: array literal has non-array type"
+         in
+         let elements = List.map (lower_expr builder) exprs in
+         emit builder (Tac.Array {dst; element_type; elements})
+      | _ ->
+         let value = lower_expr builder e in
+         emit builder (Tac.Store {ty = symbol.ty; src = value; dst}))
 
   | Stmt.Expr {e; _} ->
      ignore @@ lower_expr builder e

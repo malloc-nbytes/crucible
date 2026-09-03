@@ -90,6 +90,7 @@ let width_of_type = function
   | Type.U8 -> W8
   | Type.I32 | Type.U32 -> W32
   | Type.I64 | Type.U64 | Type.Ptr _ -> W64
+  | Type.Array (t, len) -> assert false
   | Type.Void | Type.Undefined | Type.Proc _ ->
      invalid_arg "x86 value width is undefined for this type"
 
@@ -236,8 +237,9 @@ let reserve_slot layout operand ty =
   | Tac.Temp _ | Tac.Local _ | Tac.Param _ ->
      let key = slot_key operand in
      if not @@ Hashtbl.mem layout.slots key then begin
-         layout.next_slot <- layout.next_slot + 1;
-         Hashtbl.add layout.slots key (-8 * layout.next_slot);
+        let slots = (Type.size_bytes ty + 7) / 8 in
+        layout.next_slot <- layout.next_slot + slots;
+        Hashtbl.add layout.slots key (-8 * layout.next_slot);
          Hashtbl.add layout.types key ty
        end
   | Tac.Void | Tac.Proc _ | Tac.I32 _ | Tac.String _ -> ()
@@ -267,6 +269,17 @@ let reserve_instruction layout = function
      List.iter
        (fun arg -> reserve_slot layout arg (type_of_operand layout arg))
        args
+  | Tac.Array {dst; element_type; elements} ->
+     reserve_slot layout dst (Type.Array (element_type, List.length elements));
+     List.iter (fun element -> reserve_slot layout element element_type) elements
+  | Tac.Index_load {dst; element_type; src; idx} ->
+     reserve_slot layout (Tac.Temp dst) element_type;
+     reserve_slot layout src (type_of_operand layout src);
+     reserve_slot layout idx Type.I32
+  | Tac.Index_store {element_type; src; idx; dst} ->
+     reserve_slot layout src element_type;
+     reserve_slot layout idx Type.I32;
+     reserve_slot layout dst (type_of_operand layout dst)
 
 let make_layout (proc : Tac.proc) =
   let layout =
@@ -304,6 +317,7 @@ let proc_label (proc : Tac.proc) label =
 let is_unsigned = function
   | Type.U8 | Type.U32 | Type.U64 -> true
   | Type.I32 | Type.I64 | Type.Ptr _ -> false
+  | Type.Array _ -> assert false
   | Type.Void | Type.Undefined | Type.Proc _ ->
      invalid_arg "x86 integer signedness is undefined for this type"
 
@@ -328,6 +342,21 @@ let store_value layout operand ty reg =
      [Mov (width_of_type ty, stack_operand layout operand, Reg reg)]
   | Tac.Param _ | Tac.Void | Tac.Proc _ | Tac.I32 _ | Tac.String _ ->
      invalid_arg "x86 store destination is not a mutable slot"
+
+let array_offset layout operand =
+  match operand with
+  | Tac.Temp _ | Tac.Local _ -> Hashtbl.find layout.slots (slot_key operand)
+  | Tac.Param _ | Tac.Void | Tac.Proc _ | Tac.I32 _ | Tac.String _ ->
+     invalid_arg "x86 array operand is not a stack slot"
+
+let element_address layout array index element_type =
+  let offset = array_offset layout array in
+  let element_size = Type.size_bytes element_type in
+  load_value layout Rcx index Type.I32
+  @ [ Lea (Rdx, Mem {base = Rbp; offset})
+    ; Imul (W64, Reg Rcx, Imm (Int64.of_int element_size))
+    ; Add (W64, Reg Rdx, Reg Rcx)
+    ]
 
 let emit_binop layout = function
   | Tac.Binop {dst; ty; result_ty; op; lhs; rhs} ->
@@ -419,6 +448,27 @@ let emit_call layout = function
             | Some dst -> store_value layout (Tac.Temp dst) ty Rax)
   | _ -> assert false
 
+let emit_array layout = function
+  | Tac.Array {dst; element_type; elements} ->
+     let offset = array_offset layout dst in
+     elements
+     |> List.mapi
+          (fun index element ->
+            load_value layout Rax element element_type
+            @ [Mov (width_of_type element_type,
+                    Mem {base = Rbp; offset = offset + (index * Type.size_bytes element_type)},
+                    Reg Rax)])
+     |> List.flatten
+  | Tac.Index_load {dst; element_type; src; idx} ->
+     element_address layout src idx element_type
+     @ [Mov (width_of_type element_type, Reg Rax, Mem {base = Rdx; offset = 0})]
+     @ store_value layout (Tac.Temp dst) element_type Rax
+  | Tac.Index_store {element_type; src; idx; dst} ->
+     element_address layout dst idx element_type
+     @ load_value layout Rax src element_type
+     @ [Mov (width_of_type element_type, Mem {base = Rdx; offset = 0}, Reg Rax)]
+  | _ -> assert false
+
 let emit_instruction layout = function
   | Tac.Binop binop -> emit_binop layout (Tac.Binop binop)
   | Tac.Load {dst; ty; src} ->
@@ -426,6 +476,9 @@ let emit_instruction layout = function
   | Tac.Store {ty; src; dst} ->
      load_value layout Rax src ty @ store_value layout dst ty Rax
   | Tac.Call call -> emit_call layout (Tac.Call call)
+  | Tac.Array array -> emit_array layout (Tac.Array array)
+  | Tac.Index_load index_load -> emit_array layout (Tac.Index_load index_load)
+  | Tac.Index_store index_store -> emit_array layout (Tac.Index_store index_store)
 
 let emit_terminator layout proc epilogue = function
   | Tac.Ret None -> [Jmp epilogue]

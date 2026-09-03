@@ -35,6 +35,7 @@ let new_symbol
 
 let is_assignable = function
   | Expr.Identifier {sym = Some {kind = Symbol.Local | Symbol.Param; _}; _} -> true
+  | Expr.Index _ -> true
   | _ -> false
 
 let resolve_expr_binary
@@ -99,6 +100,46 @@ let resolve_expr_call
          ; args
          }, v
   | ty -> raise @@ Err.Invalid_Call_Target (Expr.get_location lhs, ty)
+
+let resolve_expr_index
+      (v : vis_type)
+      ({lhs; idx; _} as e : Expr.index)
+    : Expr.t * vis_type =
+  let lhs, v = accept_expr v lhs in
+  let idx, v = accept_expr v idx in
+  match Expr.get_type lhs with
+  | Type.Array (ty, _) ->
+     if not @@ Type.check (Expr.get_type idx) Type.I32 then
+       raise @@ Err.Invalid_Index_Type (Expr.get_location idx, Expr.get_type idx)
+     else
+       Expr.Index {node = {e.node with ty}; lhs; idx}, v
+  | ty -> raise @@ Err.Invalid_Index_Target (Expr.get_location lhs, ty)
+
+let resolve_expr_array
+      (v : vis_type)
+      ({exprs; _} as e : Expr.array_)
+    : Expr.t * vis_type =
+  let exprs, v =
+    List.fold_left
+      (fun (exprs, v) expr ->
+        let expr, v = accept_expr v expr in
+        expr :: exprs, v)
+      ([], v)
+      exprs
+  in
+  let exprs = List.rev exprs in
+  match exprs with
+  | [] -> raise @@ Err.Empty_Array_Literal e.node.loc
+  | first :: rest ->
+     let ty = Expr.get_type first in
+     List.iter
+       (fun expr ->
+         if not @@ Type.check ty (Expr.get_type expr) then
+           raise @@ Err.Incompatible_Types
+                       (Expr.get_location expr, ty, Expr.get_type expr))
+       rest;
+     Expr.Array
+       {node = {e.node with ty = Type.Array (ty, List.length exprs)}; exprs}, v
 
 let resolve_expr_string
       (v : vis_type)
@@ -313,6 +354,8 @@ let analyze stmts =
        ; expr_string     = resolve_expr_string
        ; expr_binary     = resolve_expr_binary
        ; expr_call       = resolve_expr_call
+       ; expr_index      = resolve_expr_index
+       ; expr_array      = resolve_expr_array
 
        ; stmt_proc   = resolve_stmt_proc
        ; stmt_let    = resolve_stmt_let
@@ -359,4 +402,16 @@ let analyze stmts =
   | Err.Invalid_Assignment_Target l ->
      let _ = Printf.eprintf "%s: invalid assignment target\n"
                (Location.to_string l) in
+     failwith "semantic error"
+  | Err.Empty_Array_Literal l ->
+     let _ = Printf.eprintf "%s: cannot infer the type of an empty array literal\n"
+               (Location.to_string l) in
+     failwith "semantic error"
+  | Err.Invalid_Index_Target (l, ty) ->
+     let _ = Printf.eprintf "%s: cannot index expression of type `%s'\n"
+               (Location.to_string l) (Type.to_string ty) in
+     failwith "semantic error"
+  | Err.Invalid_Index_Type (l, ty) ->
+     let _ = Printf.eprintf "%s: array index has type `%s', expected `i32'\n"
+               (Location.to_string l) (Type.to_string ty) in
      failwith "semantic error"

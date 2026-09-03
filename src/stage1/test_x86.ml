@@ -72,3 +72,17 @@ let () =
   output_string channel output;
   output_char channel '\n';
   close_out channel
+
+let () =
+  let output =
+    compile
+      "export proc main(): i32 {\n\
+       \  let values: i32[3] = {1, 2, 3};\n\
+       \  values[1] += 4;\n\
+       \  return values[1];\n\
+       }\n"
+  in
+  let channel = open_out "test_array.s" in
+  output_string channel output;
+  output_char channel '\n';
+  close_out channel

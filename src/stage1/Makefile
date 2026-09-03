@@ -35,6 +35,8 @@ test: $(PROGRAM) test_lower test_x86
 	./test_x86
 	$(CC) -o test_x86_asm test_x86.s test_x86_runtime.c
 	timeout 10s ./test_x86_asm; test $$? -eq 24
+	$(CC) -o test_array_asm test_array.s
+	timeout 10s ./test_array_asm; test $$? -eq 6
 	sh ./test_driver.sh ./$(PROGRAM)
 
 test_lower: $(TEST_LOWER_OBJECTS)
@@ -56,7 +58,7 @@ ifeq ($(filter clean rebuild,$(MAKECMDGOALS)),)
 endif
 
 clean:
-	rm -f $(PROGRAM) test_lower test_x86 test_x86.s test_x86_asm $(DEPENDENCIES) $(SOURCES:.ml=.cmi) $(SOURCES:.ml=.cmx) $(SOURCES:.ml=.o) test_lower.cmi test_lower.cmx test_lower.o test_x86.cmi test_x86.cmx test_x86.o
+	rm -f $(PROGRAM) test_lower test_x86 test_x86.s test_x86_asm test_array.s test_array_asm $(DEPENDENCIES) $(SOURCES:.ml=.cmi) $(SOURCES:.ml=.cmx) $(SOURCES:.ml=.o) test_lower.cmi test_lower.cmx test_lower.o test_x86.cmi test_x86.cmx test_x86.o
 
 rebuild: clean
 	$(MAKE) all

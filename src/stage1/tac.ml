@@ -52,6 +52,23 @@ type instruction =
       ; callee : operand
       ; args : operand list
       }
+  | Array of
+      { dst : operand
+      ; element_type : Type.t
+      ; elements : operand list
+      }
+  | Index_load of
+      { dst : temp
+      ; element_type : Type.t
+      ; src : operand
+      ; idx : operand
+      }
+  | Index_store of
+      { element_type : Type.t
+      ; src : operand
+      ; idx : operand
+      ; dst : operand
+      }
 
 type terminator =
   | Ret of operand option
@@ -163,6 +180,19 @@ let instruction_to_string = function
        (Type.to_string ty)
        (operand_to_string callee)
        (args |> List.map operand_to_string |> String.concat ", ")
+  | Array {dst; element_type; elements} ->
+     Printf.sprintf "array %s {%s}, %s"
+       (Type.to_string element_type)
+       (elements |> List.map operand_to_string |> String.concat ", ")
+       (operand_to_string dst)
+  | Index_load {dst; element_type; src; idx} ->
+     Printf.sprintf "%%%d = index_load %s %s, %s"
+       dst (Type.to_string element_type)
+       (operand_to_string src) (operand_to_string idx)
+  | Index_store {element_type; src; idx; dst} ->
+     Printf.sprintf "index_store %s %s, %s, %s"
+       (Type.to_string element_type)
+       (operand_to_string src) (operand_to_string idx) (operand_to_string dst)
 
 let terminator_to_string = function
   | Ret None -> "ret"
