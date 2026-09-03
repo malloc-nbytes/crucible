@@ -13,3 +13,5 @@ exception Invalid_Assignment_Target of Location.t
 exception Empty_Array_Literal of Location.t
 exception Invalid_Index_Target of Location.t * Type.t
 exception Invalid_Index_Type of Location.t * Type.t
+exception Invalid_Dereference_Target of Location.t * Type.t
+exception Invalid_Address_Of_Target of Location.t

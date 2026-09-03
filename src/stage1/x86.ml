@@ -269,6 +269,19 @@ let reserve_instruction layout = function
      List.iter
        (fun arg -> reserve_slot layout arg (type_of_operand layout arg))
        args
+  | Tac.Address_of {dst; ty; src} ->
+     reserve_slot layout (Tac.Temp dst) ty;
+     reserve_slot layout src (type_of_operand layout src)
+  | Tac.Index_address {dst; element_type; src; idx} ->
+     reserve_slot layout (Tac.Temp dst) (Type.Ptr element_type);
+     reserve_slot layout src (type_of_operand layout src);
+     reserve_slot layout idx Type.I32
+  | Tac.Deref_load {dst; element_type; src} ->
+     reserve_slot layout (Tac.Temp dst) element_type;
+     reserve_slot layout src (Type.Ptr element_type)
+  | Tac.Deref_store {element_type; src; dst} ->
+     reserve_slot layout src element_type;
+     reserve_slot layout dst (Type.Ptr element_type)
   | Tac.Array {dst; element_type; elements} ->
      reserve_slot layout dst (Type.Array (element_type, List.length elements));
      List.iter (fun element -> reserve_slot layout element element_type) elements
@@ -350,11 +363,17 @@ let array_offset layout operand =
      invalid_arg "x86 array operand is not a stack slot"
 
 let element_address layout array index element_type =
-  let offset = array_offset layout array in
   let element_size = Type.size_bytes element_type in
+  let base = match type_of_operand layout array with
+    | Type.Array _ ->
+       let offset = array_offset layout array in
+       [Lea (Rdx, Mem {base = Rbp; offset})]
+    | Type.Ptr _ -> load_value layout Rdx array (type_of_operand layout array)
+    | _ -> invalid_arg "x86 index source is not an array or pointer"
+  in
   load_value layout Rcx index Type.I32
-  @ [ Lea (Rdx, Mem {base = Rbp; offset})
-    ; Imul (W64, Reg Rcx, Imm (Int64.of_int element_size))
+  @ base
+  @ [ Imul (W64, Reg Rcx, Imm (Int64.of_int element_size))
     ; Add (W64, Reg Rdx, Reg Rcx)
     ]
 
@@ -469,6 +488,23 @@ let emit_array layout = function
      @ [Mov (width_of_type element_type, Mem {base = Rdx; offset = 0}, Reg Rax)]
   | _ -> assert false
 
+let emit_pointer layout = function
+  | Tac.Address_of {dst; ty; src} ->
+     [Lea (Rax, stack_operand layout src)]
+     @ store_value layout (Tac.Temp dst) ty Rax
+  | Tac.Index_address {dst; element_type; src; idx} ->
+     element_address layout src idx element_type
+     @ store_value layout (Tac.Temp dst) (Type.Ptr element_type) Rdx
+  | Tac.Deref_load {dst; element_type; src} ->
+     load_value layout Rdx src (Type.Ptr element_type)
+     @ [Mov (width_of_type element_type, Reg Rax, Mem {base = Rdx; offset = 0})]
+     @ store_value layout (Tac.Temp dst) element_type Rax
+  | Tac.Deref_store {element_type; src; dst} ->
+     load_value layout Rdx dst (Type.Ptr element_type)
+     @ load_value layout Rax src element_type
+     @ [Mov (width_of_type element_type, Mem {base = Rdx; offset = 0}, Reg Rax)]
+  | _ -> assert false
+
 let emit_instruction layout = function
   | Tac.Binop binop -> emit_binop layout (Tac.Binop binop)
   | Tac.Load {dst; ty; src} ->
@@ -476,6 +512,10 @@ let emit_instruction layout = function
   | Tac.Store {ty; src; dst} ->
      load_value layout Rax src ty @ store_value layout dst ty Rax
   | Tac.Call call -> emit_call layout (Tac.Call call)
+  | Tac.Address_of address -> emit_pointer layout (Tac.Address_of address)
+  | Tac.Index_address address -> emit_pointer layout (Tac.Index_address address)
+  | Tac.Deref_load dereference -> emit_pointer layout (Tac.Deref_load dereference)
+  | Tac.Deref_store dereference -> emit_pointer layout (Tac.Deref_store dereference)
   | Tac.Array array -> emit_array layout (Tac.Array array)
   | Tac.Index_load index_load -> emit_array layout (Tac.Index_load index_load)
   | Tac.Index_store index_store -> emit_array layout (Tac.Index_store index_store)

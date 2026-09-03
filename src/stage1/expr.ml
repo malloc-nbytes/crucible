@@ -9,6 +9,7 @@ type t =
   | String of string_
   | Binary of binary
   | Call of call
+  | Unary of unary
   | Index of index
   | Array of array_
 
@@ -41,6 +42,12 @@ and call =
   ; args : t list
   }
 
+and unary =
+  { node : node
+  ; op : Token.t
+  ; rhs : t
+  }
+
 and index =
   { node : node
   ; lhs : t
@@ -58,6 +65,7 @@ let get_location = function
   | String     e -> e.node.loc
   | Binary     e -> e.node.loc
   | Call       e -> e.node.loc
+  | Unary      e -> e.node.loc
   | Index      e -> e.node.loc
   | Array      e -> e.node.loc
 
@@ -67,5 +75,6 @@ let get_type = function
   | String     e -> e.node.ty
   | Binary     e -> e.node.ty
   | Call       e -> e.node.ty
+  | Unary      e -> e.node.ty
   | Index      e -> e.node.ty
   | Array      e -> e.node.ty

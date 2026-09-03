@@ -98,7 +98,16 @@ and parse_call_expr p =
   in
   aux lhs p
 
-and parse_unary_expr p = parse_call_expr p
+and parse_unary_expr p =
+  match p.ts with
+  | ({k = (Asterisk | Ampersand); _} as op) :: ts ->
+     let rhs, p = parse_unary_expr {p with ts} in
+     Unary
+       { node = {loc = op.loc; ty = Type.Undefined}
+       ; op
+       ; rhs
+       }, p
+  | _ -> parse_call_expr p
 
 and parse_multiplicative_expr p =
   let lhs, p = parse_unary_expr p in

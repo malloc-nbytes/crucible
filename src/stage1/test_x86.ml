@@ -86,3 +86,18 @@ let () =
   output_string channel output;
   output_char channel '\n';
   close_out channel
+
+let () =
+  let output =
+    compile
+      "export proc main(): i32 {\n\
+       \  let values: i32[3] = {4, 5, 6};\n\
+       \  let pointer: i32* = &values[1];\n\
+       \  *pointer += 7;\n\
+       \  return *pointer + *values + pointer[1];\n\
+       }\n"
+  in
+  let channel = open_out "test_pointer.s" in
+  output_string channel output;
+  output_char channel '\n';
+  close_out channel

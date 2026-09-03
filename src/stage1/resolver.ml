@@ -36,7 +36,33 @@ let new_symbol
 let is_assignable = function
   | Expr.Identifier {sym = Some {kind = Symbol.Local | Symbol.Param; _}; _} -> true
   | Expr.Index _ -> true
+  | Expr.Unary {op = {k = Token.Asterisk; _}; _} -> true
   | _ -> false
+
+let is_addressable = function
+  | Expr.Identifier {sym = Some {kind = Symbol.Local | Symbol.Param; _}; _} -> true
+  | Expr.Index _ -> true
+  | Expr.Unary {op = {k = Token.Asterisk; _}; _} -> true
+  | _ -> false
+
+let resolve_expr_unary
+      (v : vis_type)
+      ({op; rhs; _} as e : Expr.unary)
+    : Expr.t * vis_type =
+  let rhs, v = accept_expr v rhs in
+  match op.k, Expr.get_type rhs with
+  | Token.Asterisk, Type.Ptr ty
+    | Token.Asterisk, Type.Array (ty, _) ->
+     Expr.Unary {e with node = {e.node with ty}; rhs}, v
+  | Token.Asterisk, ty ->
+     raise @@ Err.Invalid_Dereference_Target (Expr.get_location rhs, ty)
+  | Token.Ampersand, Type.Array (ty, _) when is_addressable rhs ->
+     Expr.Unary {e with node = {e.node with ty = Type.Ptr ty}; rhs}, v
+  | Token.Ampersand, ty when is_addressable rhs ->
+     Expr.Unary {e with node = {e.node with ty = Type.Ptr ty}; rhs}, v
+  | Token.Ampersand, _ ->
+     raise @@ Err.Invalid_Address_Of_Target (Expr.get_location rhs)
+  | _ -> assert false
 
 let resolve_expr_binary
       (v : vis_type)
@@ -109,6 +135,11 @@ let resolve_expr_index
   let idx, v = accept_expr v idx in
   match Expr.get_type lhs with
   | Type.Array (ty, _) ->
+     if not @@ Type.check (Expr.get_type idx) Type.I32 then
+       raise @@ Err.Invalid_Index_Type (Expr.get_location idx, Expr.get_type idx)
+     else
+       Expr.Index {node = {e.node with ty}; lhs; idx}, v
+  | Type.Ptr ty ->
      if not @@ Type.check (Expr.get_type idx) Type.I32 then
        raise @@ Err.Invalid_Index_Type (Expr.get_location idx, Expr.get_type idx)
      else
@@ -354,6 +385,7 @@ let analyze stmts =
        ; expr_string     = resolve_expr_string
        ; expr_binary     = resolve_expr_binary
        ; expr_call       = resolve_expr_call
+       ; expr_unary      = resolve_expr_unary
        ; expr_index      = resolve_expr_index
        ; expr_array      = resolve_expr_array
 
@@ -414,4 +446,12 @@ let analyze stmts =
   | Err.Invalid_Index_Type (l, ty) ->
      let _ = Printf.eprintf "%s: array index has type `%s', expected `i32'\n"
                (Location.to_string l) (Type.to_string ty) in
+     failwith "semantic error"
+  | Err.Invalid_Dereference_Target (l, ty) ->
+     let _ = Printf.eprintf "%s: cannot dereference expression of type `%s'\n"
+               (Location.to_string l) (Type.to_string ty) in
+     failwith "semantic error"
+  | Err.Invalid_Address_Of_Target l ->
+     let _ = Printf.eprintf "%s: invalid address-of target\n"
+               (Location.to_string l) in
      failwith "semantic error"

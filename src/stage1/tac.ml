@@ -52,6 +52,27 @@ type instruction =
       ; callee : operand
       ; args : operand list
       }
+  | Address_of of
+      { dst : temp
+      ; ty : Type.t
+      ; src : operand
+      }
+  | Index_address of
+      { dst : temp
+      ; element_type : Type.t
+      ; src : operand
+      ; idx : operand
+      }
+  | Deref_load of
+      { dst : temp
+      ; element_type : Type.t
+      ; src : operand
+      }
+  | Deref_store of
+      { element_type : Type.t
+      ; src : operand
+      ; dst : operand
+      }
   | Array of
       { dst : operand
       ; element_type : Type.t
@@ -180,6 +201,20 @@ let instruction_to_string = function
        (Type.to_string ty)
        (operand_to_string callee)
        (args |> List.map operand_to_string |> String.concat ", ")
+  | Address_of {dst; ty; src} ->
+     Printf.sprintf "%%%d = address_of %s %s"
+       dst (Type.to_string ty) (operand_to_string src)
+  | Index_address {dst; element_type; src; idx} ->
+     Printf.sprintf "%%%d = index_address %s %s, %s"
+       dst (Type.to_string element_type)
+       (operand_to_string src) (operand_to_string idx)
+  | Deref_load {dst; element_type; src} ->
+     Printf.sprintf "%%%d = deref_load %s %s"
+       dst (Type.to_string element_type) (operand_to_string src)
+  | Deref_store {element_type; src; dst} ->
+     Printf.sprintf "deref_store %s %s, %s"
+       (Type.to_string element_type)
+       (operand_to_string src) (operand_to_string dst)
   | Array {dst; element_type; elements} ->
      Printf.sprintf "array %s {%s}, %s"
        (Type.to_string element_type)

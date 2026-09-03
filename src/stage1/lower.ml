@@ -106,7 +106,28 @@ let lower_assignment_target builder = function
      lookup_symbol builder sym
   | _ -> failwith "lowering invariant violated: assignment target is not an identifier"
 
-let rec lower_index_store builder lhs rhs op ty =
+let rec lower_address builder = function
+  | Expr.Identifier {sym; _} ->
+     let sym = require_symbol "address-of target" sym in
+     let src = lookup_symbol builder sym in
+     let dst = new_temp builder in
+     let ty = match sym.ty with
+       | Type.Array (element_type, _) -> Type.Ptr element_type
+       | ty -> Type.Ptr ty
+     in
+     emit builder (Tac.Address_of {dst; ty; src});
+     Tac.Temp dst
+  | Expr.Index {lhs; idx; _} as expression ->
+     let element_type = require_resolved_type expression in
+     let src = lower_expr builder lhs in
+     let idx = lower_expr builder idx in
+     let dst = new_temp builder in
+     emit builder (Tac.Index_address {dst; element_type; src; idx});
+     Tac.Temp dst
+  | Expr.Unary {op = {k = Token.Asterisk; _}; rhs; _} -> lower_expr builder rhs
+  | _ -> failwith "lowering invariant violated: address-of target is not addressable"
+
+and lower_index_store builder lhs rhs op ty =
   match lhs with
   | Expr.Index {lhs = array; idx; _} ->
      let array = lower_expr builder array in
@@ -133,6 +154,29 @@ let rec lower_index_store builder lhs rhs op ty =
      value
   | _ -> assert false
 
+and lower_deref_store builder pointer rhs op element_type =
+  let pointer = lower_expr builder pointer in
+  let value = match Type.compound_assignment_binop op with
+    | None -> lower_expr builder rhs
+    | Some binop ->
+       let old = new_temp builder in
+       emit builder (Tac.Deref_load {dst = old; element_type; src = pointer});
+       let rhs = lower_expr builder rhs in
+       let dst = new_temp builder in
+       emit builder
+         (Tac.Binop
+            { dst
+            ; ty = element_type
+            ; result_ty = element_type
+            ; op = Tac.binop_of_token binop
+            ; lhs = Tac.Temp old
+            ; rhs
+            });
+       Tac.Temp dst
+  in
+  emit builder (Tac.Deref_store {element_type; src = value; dst = pointer});
+  value
+
 and lower_expr builder = function
   | Expr.Integer {i; _} ->
      Tac.I32 (int_of_string i.lx)
@@ -147,6 +191,8 @@ and lower_expr builder = function
      if Type.is_assignment op.k then
        (match lhs with
         | Expr.Index _ -> lower_index_store builder lhs rhs op.k ty
+        | Expr.Unary {op = {k = Token.Asterisk; _}; rhs = pointer; _} ->
+           lower_deref_store builder pointer rhs op.k ty
         | _ ->
            let dst = lower_assignment_target builder lhs in
            let lhs = match Type.compound_assignment_binop op.k with
@@ -200,6 +246,24 @@ and lower_expr builder = function
      (match dst with
       | Some dst -> Tac.Temp dst
       | None -> Tac.Void)
+
+  | Expr.Unary {op = {k = Token.Ampersand; _}; rhs; _} ->
+     lower_address builder rhs
+
+  | Expr.Unary {op = {k = Token.Asterisk; _}; rhs; _} as expression ->
+     let element_type = require_resolved_type expression in
+     let src = lower_expr builder rhs in
+     let dst = new_temp builder in
+     (match Expr.get_type rhs with
+      | Type.Array _ ->
+         emit builder (Tac.Index_load {dst; element_type; src; idx = Tac.I32 0})
+      | Type.Ptr _ ->
+         emit builder (Tac.Deref_load {dst; element_type; src})
+      | _ -> assert false);
+     Tac.Temp dst
+
+  | Expr.Unary _ ->
+     failwith "lowering invariant violated: unsupported unary operator"
 
   | Expr.Index {lhs; idx; _} as expression ->
      let element_type = require_resolved_type expression in
