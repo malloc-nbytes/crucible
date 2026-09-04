@@ -65,6 +65,7 @@ token_alloc(const char *st,
             size_t      c,
             const char *path);
 
-void token_dump(const token *const &t);
+void             token_dump(const token *const &t);
+const char      *token_kind_to_cstring(token_kind k);
 
 #endif // TOKEN_H_INCLUDED

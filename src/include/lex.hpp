@@ -10,6 +10,7 @@ typedef struct {
         std::vector<token *>    ts;
         std::string             path;
         std::string             src;
+        size_t                  cursor;
 } lexer;
 
 void init_lexer_translation_unit(void);

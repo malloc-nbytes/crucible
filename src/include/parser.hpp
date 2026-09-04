@@ -2,9 +2,14 @@
 #define PARSER_H_INCLUDED
 
 #include "lex.hpp"
+#include "grammar.hpp"
+
+#include <vector>
 
 typedef struct {
-        lexer *l;
+        lexer                   *l;
+        int                      global;
+        std::vector<stmt *>      stmts;
 } parser;
 
 parser parse(lexer *l);

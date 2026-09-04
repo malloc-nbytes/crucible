@@ -88,9 +88,10 @@ lex_file(const char     *path,
          char           *src)
 {
         lexer l = lexer {
-                .ts   = std::vector<token *>(),
-                .path = std::string(path),
-                .src  = std::string(src),
+                .ts     = std::vector<token *>(),
+                .path   = std::string(path),
+                .src    = std::string(src),
+                .cursor = 0,
         };
 
         size_t i = 0, c = 1, r = 1;
@@ -138,6 +139,8 @@ lex_file(const char     *path,
                         c += len;
                 }
         }
+
+        l.ts.push_back(token_alloc("EOF", 3, TOKEN_KIND_EOF, r, c, path));
 
         return l;
 }
