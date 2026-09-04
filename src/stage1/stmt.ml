@@ -22,6 +22,7 @@ type t =
   | If of if_
   | Block of block
   | While of while_
+  | Struct of struct_
 
 and proc =
   { node : node
@@ -68,4 +69,16 @@ and while_ =
   { node : node
   ; cond : expr
   ; body : t
+  }
+
+and struct_ =
+  { node : node
+  ; id : Token.t
+  ; fields : struct_field list
+  ; ty : Type.t option
+  }
+
+and struct_field =
+  { id : Token.t
+  ; ty : Type.t
   }

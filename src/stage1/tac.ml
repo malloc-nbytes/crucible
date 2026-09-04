@@ -69,6 +69,11 @@ type instruction =
       ; src : operand
       ; idx : operand
       }
+  | Field_address of
+      { dst : temp
+      ; field : Type.struct_field
+      ; src : operand
+      }
   | Deref_load of
       { dst : temp
       ; element_type : Type.t
@@ -83,6 +88,11 @@ type instruction =
       { dst : operand
       ; element_type : Type.t
       ; elements : operand list
+      }
+  | Struct of
+      { dst : operand
+      ; ty : Type.t
+      ; fields : (Type.struct_field * operand) list
       }
   | Index_load of
       { dst : temp
@@ -230,14 +240,25 @@ let instruction_to_string = function
        (Type.to_string element_type)
        (elements |> List.map operand_to_string |> String.concat ", ")
        (operand_to_string dst)
+  | Struct {dst; ty; fields} ->
+     Printf.sprintf "struct %s {%s}, %s"
+       (Type.to_string ty)
+       (fields
+        |> List.map (fun ((field : Type.struct_field), value) ->
+               field.name ^ " = " ^ operand_to_string value)
+        |> String.concat ", ")
+       (operand_to_string dst)
   | Index_load {dst; element_type; src; idx} ->
      Printf.sprintf "%%%d = index_load %s %s, %s"
        dst (Type.to_string element_type)
        (operand_to_string src) (operand_to_string idx)
   | Index_store {element_type; src; idx; dst} ->
-     Printf.sprintf "index_store %s %s, %s, %s"
-       (Type.to_string element_type)
+    Printf.sprintf "index_store %s %s, %s, %s"
+      (Type.to_string element_type)
        (operand_to_string src) (operand_to_string idx) (operand_to_string dst)
+  | Field_address {dst; field; src} ->
+    Printf.sprintf "%%%d = field_address %s %s, %s"
+       dst (Type.to_string field.ty) (operand_to_string src) field.name
 
 let terminator_to_string = function
   | Ret None -> "ret"

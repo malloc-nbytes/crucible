@@ -106,3 +106,19 @@ let () =
        \  let values: i32[3] = {1, 2, 3};\n\
        \  return values[1];\n\
        }\n")
+
+let () =
+  expect_equal
+    "export proc main(): i32 {\nL0:\n  struct Pair {left = 4, right = 5}, %local1\n  ret 0\n}"
+    (lower "struct Pair { left: i32, right: i32, } export proc main(): i32 { let pair: Pair = Pair { .right = 5, .left = 4, }; return 0; }")
+
+let () =
+  let output =
+    lower
+      "struct Point { x: i32, y: i32, } export proc main(): i32 { let point: Point = Point { .x = 3, .y = 4, }; let ptr: Point* = &point; point.x += 2; ptr.y += point.x; return point.x + ptr.y; }"
+  in
+  List.iter (fun needle -> expect_contains needle output)
+    [ "field_address i32 %local1, x"
+    ; "field_address i32 %4, y"
+    ; "deref_store i32"
+    ]

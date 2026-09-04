@@ -22,6 +22,10 @@ let require_symbol what = function
   | Some sym -> sym
   | None -> fail_unresolved what
 
+let require_field = function
+  | Some field -> field
+  | None -> fail_unresolved "struct field"
+
 let new_temp builder =
   let temp = builder.next_temp in
   builder.next_temp <- builder.next_temp + 1;
@@ -94,7 +98,7 @@ let lower_identifier builder ({node; sym; _} : Expr.identifier) =
   | Symbol.Local | Symbol.Param ->
      let src = lookup_symbol builder sym in
      (match node.ty with
-      | Type.Array _ -> src
+      | Type.Array _ | Type.Struct _ -> src
       | _ ->
          let dst = new_temp builder in
          emit builder (Tac.Load {dst; ty = node.ty; src});
@@ -123,6 +127,12 @@ let rec lower_address builder = function
      let idx = lower_expr builder idx in
      let dst = new_temp builder in
      emit builder (Tac.Index_address {dst; element_type; src; idx});
+     Tac.Temp dst
+  | Expr.Member {lhs; field; _} ->
+     let field = require_field field in
+     let src = lower_expr builder lhs in
+     let dst = new_temp builder in
+     emit builder (Tac.Field_address {dst; field; src});
      Tac.Temp dst
   | Expr.Unary {op = {k = Token.Asterisk; _}; rhs; _} -> lower_expr builder rhs
   | _ -> failwith "lowering invariant violated: address-of target is not addressable"
@@ -177,6 +187,25 @@ and lower_deref_store builder pointer rhs op element_type =
   emit builder (Tac.Deref_store {element_type; src = value; dst = pointer});
   value
 
+and lower_member_store builder member rhs op element_type =
+  let pointer = lower_address builder member in
+  let value = match Type.compound_assignment_binop op with
+    | None -> lower_expr builder rhs
+    | Some binop ->
+       let old = new_temp builder in
+       emit builder (Tac.Deref_load {dst = old; element_type; src = pointer});
+       let rhs = lower_expr builder rhs in
+       let dst = new_temp builder in
+       emit builder
+         (Tac.Binop
+            { dst; ty = element_type; result_ty = element_type
+            ; op = Tac.binop_of_token binop; lhs = Tac.Temp old; rhs
+            });
+       Tac.Temp dst
+  in
+  emit builder (Tac.Deref_store {element_type; src = value; dst = pointer});
+  value
+
 and lower_expr builder = function
   | Expr.Integer {i; _} ->
      Tac.I32 (int_of_string i.lx)
@@ -193,6 +222,7 @@ and lower_expr builder = function
         | Expr.Index _ -> lower_index_store builder lhs rhs op.k ty
         | Expr.Unary {op = {k = Token.Asterisk; _}; rhs = pointer; _} ->
            lower_deref_store builder pointer rhs op.k ty
+        | Expr.Member _ -> lower_member_store builder lhs rhs op.k ty
         | _ ->
            let dst = lower_assignment_target builder lhs in
            let lhs = match Type.compound_assignment_binop op.k with
@@ -284,12 +314,25 @@ and lower_expr builder = function
      emit builder (Tac.Index_load {dst; element_type; src; idx});
      Tac.Temp dst
 
+  | Expr.Member _ as expression ->
+     let element_type = require_resolved_type expression in
+     let src = lower_address builder expression in
+     let dst = new_temp builder in
+     emit builder (Tac.Deref_load {dst; element_type; src});
+     Tac.Temp dst
+
   | Expr.Array _ ->
      failwith "lowering invariant violated: array literal requires an array declaration"
+
+  | Expr.Struct _ ->
+     failwith "lowering invariant violated: struct literal requires a struct declaration"
 
 let rec lower_stmt builder = function
   | Stmt.Proc _ ->
      failwith "nested procedures are not supported by TAC lowering"
+
+  | Stmt.Struct _ ->
+     failwith "nested struct declarations are not supported by TAC lowering"
 
   | Stmt.Let {sym; e; _} ->
      let symbol = require_symbol "let declaration" sym in
@@ -303,6 +346,23 @@ let rec lower_stmt builder = function
          in
          let elements = List.map (lower_expr builder) exprs in
          emit builder (Tac.Array {dst; element_type; elements})
+      | Expr.Struct {fields; _} ->
+         let ty = symbol.ty in
+         let struct_fields = match ty with
+           | Type.Struct {fields; _} -> fields
+           | _ -> failwith "lowering invariant violated: struct literal has non-struct type"
+         in
+         let fields =
+           List.map
+             (fun (field : Type.struct_field) ->
+               match List.find_opt
+                       (fun ((id : Token.t), _) -> id.lx = field.Type.name)
+                       fields with
+               | Some (_, value) -> field, lower_expr builder value
+               | None -> failwith "lowering invariant violated: missing struct field")
+             struct_fields
+         in
+         emit builder (Tac.Struct {dst; ty; fields})
       | _ ->
          let value = lower_expr builder e in
          emit builder (Tac.Store {ty = symbol.ty; src = value; dst}))
@@ -475,9 +535,12 @@ let lower stmts =
     }
   in
   let procs =
-    List.map
+    List.filter_map
       (function
-       | Stmt.Proc proc -> lower_proc program proc
+       | Stmt.Proc proc -> Some (lower_proc program proc)
+       | Stmt.Struct _ ->
+          (* Struct declarations have no runtime representation. *)
+          None
        | _ ->
           failwith @@ "top-level TAC lowering currently accepts only procedure declarations") stmts
   in

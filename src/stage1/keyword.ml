@@ -7,6 +7,7 @@ type t =
   | Export
   | Extern
   | Return
+  | Struct
 
 let to_string = function
   | Proc -> "proc"
@@ -17,6 +18,7 @@ let to_string = function
   | Export -> "export"
   | Extern -> "extern"
   | Return -> "return"
+  | Struct -> "struct"
 
 let of_string = function
   | "proc" -> Some Proc
@@ -27,4 +29,5 @@ let of_string = function
   | "export" -> Some Export
   | "extern" -> Some Extern
   | "return" -> Some Return
+  | "struct" -> Some Struct
   | _ -> None

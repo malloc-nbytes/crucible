@@ -4,6 +4,7 @@ open Expr
 
 type context =
   { scope : Symbol.t Scope.t
+  ; types : Type.t Scope.t
   ; return_type : Type.t option
   ; next_symbol_id : int
   }
@@ -36,14 +37,31 @@ let new_symbol
 let is_assignable = function
   | Expr.Identifier {sym = Some {kind = Symbol.Local | Symbol.Param; _}; _} -> true
   | Expr.Index _ -> true
+  | Expr.Member _ -> true
   | Expr.Unary {op = {k = Token.Asterisk; _}; _} -> true
   | _ -> false
 
 let is_addressable = function
   | Expr.Identifier {sym = Some {kind = Symbol.Local | Symbol.Param; _}; _} -> true
   | Expr.Index _ -> true
+  | Expr.Member _ -> true
   | Expr.Unary {op = {k = Token.Asterisk; _}; _} -> true
   | _ -> false
+
+let rec resolve_type types = function
+  | Type.Custom name ->
+     (match Scope.get name types with
+      | Some ty -> ty
+      | None -> failwith @@ "unknown type `" ^ name ^ "`")
+  | Type.Ptr ty -> Type.Ptr (resolve_type types ty)
+  | Type.Array (ty, length) -> Type.Array (resolve_type types ty, length)
+  | Type.Proc {rty; ptys; variadic} ->
+     Type.Proc
+       { rty = resolve_type types rty
+       ; ptys = List.map (resolve_type types) ptys
+       ; variadic
+       }
+  | ty -> ty
 
 let resolve_expr_unary
       (v : vis_type)
@@ -157,6 +175,21 @@ let resolve_expr_index
        Expr.Index {node = {e.node with ty}; lhs; idx}, v
   | ty -> raise @@ Err.Invalid_Index_Target (Expr.get_location lhs, ty)
 
+let resolve_expr_member
+      (v : vis_type)
+      ({lhs; id; _} as e : Expr.member)
+    : Expr.t * vis_type =
+  let lhs, v = accept_expr v lhs in
+  let struct_ty = match Expr.get_type lhs with
+    | Type.Struct _ as ty -> ty
+    | Type.Ptr (Type.Struct _ as ty) -> ty
+    | ty -> failwith @@ "cannot access a member of type `" ^ Type.to_string ty ^ "`"
+  in
+  match Type.field_by_name id.lx struct_ty with
+  | Some field ->
+     Expr.Member {e with node = {e.node with ty = field.ty}; lhs; field = Some field}, v
+  | None -> failwith @@ "struct has no field `" ^ id.lx ^ "`"
+
 let resolve_expr_array
       (v : vis_type)
       ({exprs; _} as e : Expr.array_)
@@ -182,6 +215,40 @@ let resolve_expr_array
        rest;
      Expr.Array
        {node = {e.node with ty = Type.Array (ty, List.length exprs)}; exprs}, v
+
+let resolve_expr_struct
+      (v : vis_type)
+      ({id; fields; _} as e : Expr.struct_)
+    : Expr.t * vis_type =
+  let ty = resolve_type v.context.types (Type.Custom id.lx) in
+  let expected_fields = match ty with
+    | Type.Struct {fields; _} -> fields
+    | _ -> failwith @@ "type `" ^ id.lx ^ "` is not a struct"
+  in
+  let fields, v =
+    List.fold_left
+      (fun (fields, v) (field_id, value) ->
+        let value, v = accept_expr v value in
+        (field_id, value) :: fields, v)
+      ([], v)
+      fields
+  in
+  let fields = List.rev fields in
+  if List.length fields <> List.length expected_fields then
+    failwith "struct literal has the wrong number of fields"
+  else
+    List.iter
+      (fun (expected : Type.struct_field) ->
+        match List.find_opt
+                (fun ((field : Token.t), _) -> field.lx = expected.Type.name)
+                fields with
+        | None -> failwith @@ "struct literal is missing field `" ^ expected.name ^ "`"
+        | Some (_, value) when not @@ Type.check expected.ty (Expr.get_type value) ->
+           raise @@ Err.Incompatible_Types
+                       (Expr.get_location value, expected.ty, Expr.get_type value)
+        | Some _ -> ())
+      expected_fields;
+    Expr.Struct {e with node = {e.node with ty}; fields}, v
 
 let resolve_expr_string
       (v : vis_type)
@@ -290,6 +357,7 @@ let resolve_stmt_let
   if Scope.contains name context.scope then
     raise @@ Err.Identifier_Already_Defined (s.node.loc, name)
   else
+    let ty = resolve_type context.types ty in
     let e, v = accept_expr v s.e in
     if not @@ Type.check ty (Expr.get_type e) then
       raise @@ Err.Incompatible_Types (Expr.get_location e, ty, (Expr.get_type e))
@@ -307,10 +375,34 @@ let resolve_stmt_let
           }
       }
 
+let resolve_stmt_struct
+      ({context; _} as v : vis_type)
+      ({id; fields; _} as s : Stmt.struct_)
+    : Stmt.t * vis_type =
+  if Scope.contains id.lx context.types then
+    raise @@ Err.Identifier_Already_Defined (id.loc, id.lx)
+  else
+    let fields =
+      List.map
+        (fun (field : Stmt.struct_field) ->
+          field.id.lx, resolve_type context.types field.ty)
+        fields
+    in
+    let ty = Type.make_struct id.lx fields in
+    Stmt.Struct {s with ty = Some ty},
+    {v with context = {v.context with types = Scope.add id.lx ty context.types}}
+
 let resolve_stmt_proc
       ({context; _} as v : vis_type)
       ({id; rty; params; variadic; body; _} as s : Stmt.proc)
     : Stmt.t * vis_type =
+  let rty = resolve_type context.types rty in
+  let params =
+    List.map
+      (fun (param : Stmt.parameter) ->
+        {param with ty = resolve_type context.types param.ty})
+      params
+  in
   let name = id.lx in
   if Scope.contains name context.scope then
     raise @@ Err.Identifier_Already_Defined (s.node.loc, name)
@@ -388,6 +480,7 @@ let analyze stmts =
          s :: aux v tl
     in aux Vis.
        { context = { scope = Scope.empty
+                   ; types = Scope.empty
                    ; return_type = None
                    ; next_symbol_id = 0
                    }
@@ -400,6 +493,8 @@ let analyze stmts =
        ; expr_cast       = resolve_expr_cast
        ; expr_index      = resolve_expr_index
        ; expr_array      = resolve_expr_array
+       ; expr_struct     = resolve_expr_struct
+       ; expr_member     = resolve_expr_member
 
        ; stmt_proc   = resolve_stmt_proc
        ; stmt_let    = resolve_stmt_let
@@ -408,6 +503,7 @@ let analyze stmts =
        ; stmt_if     = resolve_stmt_if
        ; stmt_block  = resolve_stmt_block
        ; stmt_while  = resolve_stmt_while
+       ; stmt_struct = resolve_stmt_struct
        } stmts
   with
   | Err.Illegal_Statement l ->

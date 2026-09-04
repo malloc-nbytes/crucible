@@ -92,8 +92,8 @@ let width_of_type = function
   | Type.U8 -> W8
   | Type.I32 | Type.U32 -> W32
   | Type.I64 | Type.U64 | Type.Ptr _ -> W64
-  | Type.Array (t, len) -> assert false
-  | Type.Void | Type.Undefined | Type.Proc _ ->
+  | Type.Array _ | Type.Struct _ -> assert false
+  | Type.Void | Type.Undefined | Type.Proc _ | Type.Custom _ ->
      invalid_arg "x86 value width is undefined for this type"
 
 let integer_argument_register = function
@@ -284,9 +284,12 @@ let reserve_instruction layout = function
      reserve_slot layout (Tac.Temp dst) ty;
      reserve_slot layout src (type_of_operand layout src)
   | Tac.Index_address {dst; element_type; src; idx} ->
-     reserve_slot layout (Tac.Temp dst) (Type.Ptr element_type);
-     reserve_slot layout src (type_of_operand layout src);
-     reserve_slot layout idx Type.I32
+    reserve_slot layout (Tac.Temp dst) (Type.Ptr element_type);
+    reserve_slot layout src (type_of_operand layout src);
+    reserve_slot layout idx Type.I32
+  | Tac.Field_address {dst; field; src} ->
+     reserve_slot layout (Tac.Temp dst) (Type.Ptr field.ty);
+     reserve_slot layout src (type_of_operand layout src)
   | Tac.Deref_load {dst; element_type; src} ->
      reserve_slot layout (Tac.Temp dst) element_type;
      reserve_slot layout src (Type.Ptr element_type)
@@ -296,6 +299,10 @@ let reserve_instruction layout = function
   | Tac.Array {dst; element_type; elements} ->
      reserve_slot layout dst (Type.Array (element_type, List.length elements));
      List.iter (fun element -> reserve_slot layout element element_type) elements
+  | Tac.Struct {dst; ty; fields} ->
+     reserve_slot layout dst ty;
+     List.iter (fun ((field : Type.struct_field), value) ->
+       reserve_slot layout value field.ty) fields
   | Tac.Index_load {dst; element_type; src; idx} ->
      reserve_slot layout (Tac.Temp dst) element_type;
      reserve_slot layout src (type_of_operand layout src);
@@ -341,8 +348,8 @@ let proc_label (proc : Tac.proc) label =
 let is_unsigned = function
   | Type.U8 | Type.U32 | Type.U64 -> true
   | Type.I32 | Type.I64 | Type.Ptr _ -> false
-  | Type.Array _ -> assert false
-  | Type.Void | Type.Undefined | Type.Proc _ ->
+  | Type.Array _ | Type.Struct _ -> assert false
+  | Type.Void | Type.Undefined | Type.Proc _ | Type.Custom _ ->
      invalid_arg "x86 integer signedness is undefined for this type"
 
 let load_value layout reg operand ty =
@@ -387,6 +394,16 @@ let element_address layout array index element_type =
   @ [ Imul (W64, Reg Rcx, Imm (Int64.of_int element_size))
     ; Add (W64, Reg Rdx, Reg Rcx)
     ]
+
+let field_address layout struct_ (field : Type.struct_field) =
+  match type_of_operand layout struct_ with
+  | Type.Struct _ ->
+     [Lea (Rdx, Mem {base = Rbp; offset = array_offset layout struct_ + field.offset})]
+  | Type.Ptr (Type.Struct _) ->
+     load_value layout Rdx struct_ (type_of_operand layout struct_)
+     @ (if field.offset = 0 then []
+        else [Add (W64, Reg Rdx, Imm (Int64.of_int field.offset))])
+  | _ -> invalid_arg "x86 field source is not a struct or struct pointer"
 
 let emit_binop layout = function
   | Tac.Binop {dst; ty; result_ty; op; lhs; rhs} ->
@@ -517,6 +534,19 @@ let emit_array layout = function
      @ [Mov (width_of_type element_type, Mem {base = Rdx; offset = 0}, Reg Rax)]
   | _ -> assert false
 
+let emit_struct layout = function
+  | Tac.Struct {dst; fields; _} ->
+     let offset = array_offset layout dst in
+     fields
+     |> List.map
+          (fun ((field : Type.struct_field), value) ->
+            load_value layout Rax value field.ty
+            @ [Mov (width_of_type field.ty,
+                    Mem {base = Rbp; offset = offset + field.offset},
+                    Reg Rax)])
+     |> List.flatten
+  | _ -> assert false
+
 let emit_pointer layout = function
   | Tac.Address_of {dst; ty; src} ->
      [Lea (Rax, stack_operand layout src)]
@@ -524,6 +554,9 @@ let emit_pointer layout = function
   | Tac.Index_address {dst; element_type; src; idx} ->
      element_address layout src idx element_type
      @ store_value layout (Tac.Temp dst) (Type.Ptr element_type) Rdx
+  | Tac.Field_address {dst; field; src} ->
+     field_address layout src field
+     @ store_value layout (Tac.Temp dst) (Type.Ptr field.ty) Rdx
   | Tac.Deref_load {dst; element_type; src} ->
      load_value layout Rdx src (Type.Ptr element_type)
      @ [Mov (width_of_type element_type, Reg Rax, Mem {base = Rdx; offset = 0})]
@@ -544,9 +577,11 @@ let emit_instruction layout = function
   | Tac.Call call -> emit_call layout (Tac.Call call)
   | Tac.Address_of address -> emit_pointer layout (Tac.Address_of address)
   | Tac.Index_address address -> emit_pointer layout (Tac.Index_address address)
+  | Tac.Field_address address -> emit_pointer layout (Tac.Field_address address)
   | Tac.Deref_load dereference -> emit_pointer layout (Tac.Deref_load dereference)
   | Tac.Deref_store dereference -> emit_pointer layout (Tac.Deref_store dereference)
   | Tac.Array array -> emit_array layout (Tac.Array array)
+  | Tac.Struct struct_ -> emit_struct layout (Tac.Struct struct_)
   | Tac.Index_load index_load -> emit_array layout (Tac.Index_load index_load)
   | Tac.Index_store index_store -> emit_array layout (Tac.Index_store index_store)
 

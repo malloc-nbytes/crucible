@@ -41,6 +41,10 @@ test: $(PROGRAM) test_lower test_x86
 	timeout 10s ./test_pointer_asm; test $$? -eq 22
 	$(CC) -o test_cast_asm test_cast.s
 	timeout 10s ./test_cast_asm; test $$? -eq 2
+	$(CC) -o test_struct_asm test_struct.s
+	timeout 10s ./test_struct_asm; test $$? -eq 0
+	$(CC) -o test_member_asm test_member.s
+	timeout 10s ./test_member_asm; test $$? -eq 14
 	sh ./test_driver.sh ./$(PROGRAM)
 
 test_lower: $(TEST_LOWER_OBJECTS)
@@ -62,7 +66,7 @@ ifeq ($(filter clean rebuild,$(MAKECMDGOALS)),)
 endif
 
 clean:
-	rm -f $(PROGRAM) test_lower test_x86 test_x86.s test_x86_asm test_array.s test_array_asm test_pointer.s test_pointer_asm test_cast.s test_cast_asm $(DEPENDENCIES) $(SOURCES:.ml=.cmi) $(SOURCES:.ml=.cmx) $(SOURCES:.ml=.o) test_lower.cmi test_lower.cmx test_lower.o test_x86.cmi test_x86.cmx test_x86.o
+	rm -f $(PROGRAM) test_lower test_x86 test_x86.s test_x86_asm test_array.s test_array_asm test_pointer.s test_pointer_asm test_cast.s test_cast_asm test_struct.s test_struct_asm test_member.s test_member_asm $(DEPENDENCIES) $(SOURCES:.ml=.cmi) $(SOURCES:.ml=.cmx) $(SOURCES:.ml=.o) test_lower.cmi test_lower.cmx test_lower.o test_x86.cmi test_x86.cmx test_x86.o
 
 rebuild: clean
 	$(MAKE) all

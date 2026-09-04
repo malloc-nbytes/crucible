@@ -13,6 +13,8 @@ type t =
   | Cast of cast
   | Index of index
   | Array of array_
+  | Struct of struct_
+  | Member of member
 
 and integer =
   { node : node
@@ -66,6 +68,19 @@ and array_ =
   ; exprs : t list
   }
 
+and struct_ =
+  { node : node
+  ; id : Token.t
+  ; fields : (Token.t * t) list
+  }
+
+and member =
+  { node : node
+  ; lhs : t
+  ; id : Token.t
+  ; field : Type.struct_field option
+  }
+
 let get_location = function
   | Integer    e -> e.node.loc
   | Identifier e -> e.node.loc
@@ -76,6 +91,8 @@ let get_location = function
   | Cast       e -> e.node.loc
   | Index      e -> e.node.loc
   | Array      e -> e.node.loc
+  | Struct     e -> e.node.loc
+  | Member     e -> e.node.loc
 
 let get_type = function
   | Integer    e -> e.node.ty
@@ -87,3 +104,5 @@ let get_type = function
   | Cast       e -> e.node.ty
   | Index      e -> e.node.ty
   | Array      e -> e.node.ty
+  | Struct     e -> e.node.ty
+  | Member     e -> e.node.ty

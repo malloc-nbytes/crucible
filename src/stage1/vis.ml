@@ -9,14 +9,17 @@ type ('c, 'e, 's) t =
   ; expr_cast       : ('c, 'e, 's) t -> Expr.cast       -> 'e * ('c, 'e, 's) t
   ; expr_index      : ('c, 'e, 's) t -> Expr.index      -> 'e * ('c, 'e, 's) t
   ; expr_array      : ('c, 'e, 's) t -> Expr.array_     -> 'e * ('c, 'e, 's) t
+  ; expr_struct     : ('c, 'e, 's) t -> Expr.struct_    -> 'e * ('c, 'e, 's) t
+  ; expr_member     : ('c, 'e, 's) t -> Expr.member     -> 'e * ('c, 'e, 's) t
 
-  ; stmt_proc    : ('c, 'e, 's) t -> Stmt.proc   -> 's * ('c, 'e, 's) t
-  ; stmt_let     : ('c, 'e, 's) t -> Stmt.let_   -> 's * ('c, 'e, 's) t
-  ; stmt_expr    : ('c, 'e, 's) t -> Stmt.expr   -> 's * ('c, 'e, 's) t
-  ; stmt_return  : ('c, 'e, 's) t -> Stmt.return -> 's * ('c, 'e, 's) t
-  ; stmt_if      : ('c, 'e, 's) t -> Stmt.if_    -> 's * ('c, 'e, 's) t
-  ; stmt_block   : ('c, 'e, 's) t -> Stmt.block  -> 's * ('c, 'e, 's) t
-  ; stmt_while   : ('c, 'e, 's) t -> Stmt.while_ -> 's * ('c, 'e, 's) t
+  ; stmt_proc    : ('c, 'e, 's) t -> Stmt.proc    -> 's * ('c, 'e, 's) t
+  ; stmt_let     : ('c, 'e, 's) t -> Stmt.let_    -> 's * ('c, 'e, 's) t
+  ; stmt_expr    : ('c, 'e, 's) t -> Stmt.expr    -> 's * ('c, 'e, 's) t
+  ; stmt_return  : ('c, 'e, 's) t -> Stmt.return  -> 's * ('c, 'e, 's) t
+  ; stmt_if      : ('c, 'e, 's) t -> Stmt.if_     -> 's * ('c, 'e, 's) t
+  ; stmt_block   : ('c, 'e, 's) t -> Stmt.block   -> 's * ('c, 'e, 's) t
+  ; stmt_while   : ('c, 'e, 's) t -> Stmt.while_  -> 's * ('c, 'e, 's) t
+  ; stmt_struct  : ('c, 'e, 's) t -> Stmt.struct_ -> 's * ('c, 'e, 's) t
   }
 
 let accept_expr v = function
@@ -29,6 +32,8 @@ let accept_expr v = function
   | Expr.Cast       e -> v.expr_cast       v e
   | Expr.Index      e -> v.expr_index      v e
   | Expr.Array      e -> v.expr_array      v e
+  | Expr.Struct     e -> v.expr_struct     v e
+  | Expr.Member     e -> v.expr_member     v e
 
 let accept_stmt v = function
   | Stmt.Proc   s -> v.stmt_proc   v s
@@ -38,3 +43,4 @@ let accept_stmt v = function
   | Stmt.If     s -> v.stmt_if     v s
   | Stmt.Block  s -> v.stmt_block  v s
   | Stmt.While  s -> v.stmt_while  v s
+  | Stmt.Struct s -> v.stmt_struct v s

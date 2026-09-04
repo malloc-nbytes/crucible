@@ -116,3 +116,37 @@ let () =
   output_string channel output;
   output_char channel '\n';
   close_out channel
+
+let () =
+  let output =
+    compile
+      "struct Point { x: i32, y: i32, name: u8*, }\n\
+       export proc main(): i32 {\n\
+       \  let point: Point = Point { .name = \"point\", .y = 2, .x = 1, };\n\
+       \  return 0;\n\
+       }\n"
+  in
+  expect_contains "mov dword ptr [rbp -" output;
+  expect_contains "mov qword ptr [rbp -" output;
+  let channel = open_out "test_struct.s" in
+  output_string channel output;
+  output_char channel '\n';
+  close_out channel
+
+let () =
+  let output =
+    compile
+      "struct Point { x: i32, y: i32, }\n\
+       export proc main(): i32 {\n\
+       \  let point: Point = Point { .x = 3, .y = 4, };\n\
+       \  let ptr: Point* = &point;\n\
+       \  point.x += 2;\n\
+       \  ptr.y += point.x;\n\
+       \  return point.x + ptr.y;\n\
+       }\n"
+  in
+  expect_contains "lea rdx, qword ptr [rbp -" output;
+  let channel = open_out "test_member.s" in
+  output_string channel output;
+  output_char channel '\n';
+  close_out channel

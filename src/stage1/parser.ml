@@ -37,6 +37,25 @@ let rec parse_primary_expr p =
   | ({k = String_Literal; _} as s) :: ts ->
      String {node = {loc = s.loc; ty = Type.Undefined}; s}, {p with ts}
 
+  | ({k = Identifier; _} as id) :: {k = L_Curly; _} ::
+    (({k = Dot; _} :: _ | {k = R_Curly; _} :: _) as ts) ->
+     let rec fields acc p =
+       match p.ts with
+       | {k = R_Curly; _} :: ts -> List.rev acc, {p with ts}
+       | _ ->
+          let p = expect' Dot p in
+          let field, p = expect Identifier p in
+          let p = expect' Equals p in
+          let value, p = parse_expr p in
+          match p.ts with
+          | {k = Comma; _} :: ts -> fields ((field, value) :: acc) {p with ts}
+          | _ ->
+             let p = expect' R_Curly p in
+             List.rev ((field, value) :: acc), p
+     in
+     let fields, p = fields [] {p with ts} in
+     Struct {node = {loc = id.loc; ty = Type.Undefined}; id; fields}, p
+
   | ({k = Identifier; _} as id) :: ts ->
      Identifier {node = {loc = id.loc; ty = Type.Undefined}; id; sym = None}, {p with ts}
 
@@ -94,13 +113,24 @@ and parse_call_expr p =
            }
        in
        aux index p
+    | {k = Dot; _} :: ts ->
+       let id, p = expect Identifier {p with ts} in
+       let member =
+         Member
+           { node = {loc = Expr.get_location lhs; ty = Type.Undefined}
+           ; lhs
+           ; id
+           ; field = None
+           }
+       in
+       aux member p
     | _ -> lhs, p
   in
   aux lhs p
 
 and parse_unary_expr p =
   match p.ts with
-  | {k = L_Paren; loc; _} :: {k = Type; _} :: _ ->
+  | {k = L_Paren; loc; _} :: ({k = Type; _} | {k = Identifier; _}) :: _ ->
      let target, p = parse_type (expect' L_Paren p) in
      let p = expect' R_Paren p in
      let rhs, p = parse_unary_expr p in
@@ -174,15 +204,16 @@ and parse_assignment_expr p =
 and parse_expr p = parse_assignment_expr p
 
 and parse_type p =
-  let ty, p = expect Token.Type p in
-  let ty = match ty.lx with
-    | "void" -> Type.Void
-    | "i32" -> Type.I32
-    | "i64" -> Type.I64
-    | "u32" -> Type.U32
-    | "u64" -> Type.U64
-    | "u8" -> Type.U8
-    | _ -> raise (Err.Expect (ty.loc, "primitive type", ty.lx))
+  let ty, p = match p.ts with
+    | {k = Token.Type; _} :: _ -> expect Token.Type p
+    | {k = Identifier; _} :: _ -> expect Identifier p
+    | {loc; k; _} :: _ ->
+       raise @@ Err.Expect (loc, "type", Token.kind_to_string k)
+    | [] -> raise Err.Out_Of_Tokens
+  in
+  let ty = match Type.from ty.lx with
+    | Some ty -> ty
+    | None -> Type.Custom ty.lx
   in
   let rec suffixes ty p =
     match p.ts with
@@ -255,6 +286,26 @@ and parse_stmt_let p =
   let e, p = parse_expr p in
   let p = expect' Semicolon p in
   Stmt.Let {node = {loc}; id; ty; e; sym = None}, p
+
+and parse_stmt_struct p =
+  let struct_token, p = expect (Keyword Struct) p in
+  let id, p = expect Identifier p in
+  let rec fields acc p =
+    match p.ts with
+    | {k = R_Curly; _} :: ts -> List.rev acc, {p with ts}
+    | _ ->
+       let field_id, p = expect Identifier p in
+       let p = expect' Colon p in
+       let ty, p = parse_type p in
+       let field = Stmt.{id = field_id; ty} in
+       match p.ts with
+       | {k = Comma; _} :: ts -> fields (field :: acc) {p with ts}
+       | _ ->
+          let p = expect' R_Curly p in
+          List.rev (field :: acc), p
+  in
+  let fields, p = fields [] (expect' L_Curly p) in
+  Stmt.Struct {node = {loc = struct_token.loc}; id; fields; ty = None}, p
 
 and parse_stmt_return p =
   let loc, p =
@@ -340,6 +391,7 @@ and parse_stmt p =
   | ({k = Keyword Export; _} :: _)
     | ({k = Keyword Extern; _} :: _)
     | ({k = Keyword Proc; _} :: _) -> parse_stmt_proc p
+  | {k = Keyword Struct; _} :: _   -> parse_stmt_struct p
   | {k = Keyword Let; _} :: _      -> parse_stmt_let p
   | {k = Keyword If; _} :: _       -> parse_stmt_if p
   | {k = Keyword While; _} :: _    -> parse_stmt_while p
