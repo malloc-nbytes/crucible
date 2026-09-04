@@ -5,7 +5,8 @@ visitor_create(void                             *context,
                visit_expr_int_sig                visit_expr_int,
                visit_expr_identifier_sig         visit_expr_identifier,
                visit_stmt_expr_sig               visit_stmt_expr,
-               visit_stmt_let_sig                visit_stmt_let)
+               visit_stmt_let_sig                visit_stmt_let,
+               visit_stmt_proc_sig               visit_stmt_proc)
 {
         return visitor {
                 .context               = context,
@@ -13,6 +14,7 @@ visitor_create(void                             *context,
                 .visit_expr_identifier = visit_expr_identifier,
                 .visit_stmt_expr       = visit_stmt_expr,
                 .visit_stmt_let        = visit_stmt_let,
+                .visit_stmt_proc       = visit_stmt_proc,
         };
 }
 
@@ -48,3 +50,10 @@ accept_stmt_let(stmt *s, visitor *v)
         return NULL;
 }
 
+void *
+accept_stmt_proc(stmt *s, visitor *v)
+{
+        if (v->visit_stmt_proc)
+                return v->visit_stmt_proc(v, (stmt_proc *)s);
+        return NULL;
+}

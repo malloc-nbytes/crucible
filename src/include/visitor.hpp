@@ -8,6 +8,7 @@ typedef void *(*visit_expr_identifier_sig)(visitor *, expr_identifier *);
 
 typedef void *(*visit_stmt_expr_sig)(visitor *, stmt_expr *);
 typedef void *(*visit_stmt_let_sig)(visitor *, stmt_let *);
+typedef void *(*visit_stmt_proc_sig)(visitor *, stmt_proc *);
 
 typedef struct visitor {
         void                            *context;
@@ -16,17 +17,20 @@ typedef struct visitor {
 
         visit_stmt_expr_sig     visit_stmt_expr;
         visit_stmt_let_sig      visit_stmt_let;
+        visit_stmt_proc_sig     visit_stmt_proc;
 } visitor;
 
 visitor visitor_create(void                             *context,
                        visit_expr_int_sig                visit_expr_int,
                        visit_expr_identifier_sig         visit_expr_identifier,
                        visit_stmt_expr_sig               visit_stmt_expr,
-                       visit_stmt_let_sig                visit_stmt_let);
+                       visit_stmt_let_sig                visit_stmt_let,
+                       visit_stmt_proc_sig               visit_stmt_proc);
 
 void    *accept_expr_int(expr *e, visitor *v);
 void    *accept_expr_identifier(expr *e, visitor *v);
 void    *accept_stmt_expr(stmt *s, visitor *v);
 void    *accept_stmt_let(stmt *s, visitor *v);
+void    *accept_stmt_proc(stmt *s, visitor *v);
 
 #endif // VISITOR_H_INCLUDED

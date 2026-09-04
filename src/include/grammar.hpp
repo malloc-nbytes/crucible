@@ -6,6 +6,10 @@
 #include "location.hpp"
 #include "type.hpp"
 
+#include <cstdint>
+#include <optional>
+#include <vector>
+
 typedef struct visitor visitor;
 
 typedef enum {
@@ -17,6 +21,7 @@ typedef enum {
 typedef enum {
         STMT_KIND_EXPR = 0,
         STMT_KIND_LET,
+        STMT_KIND_PROC,
 } stmt_kind;
 
 typedef struct expr {
@@ -56,6 +61,27 @@ typedef struct {
         symbol          *sym;
 } stmt_let;
 
+#define LINKAGE_INTERNAL (1 << 0)
+#define LINKAGE_EXPORT   (1 << 1)
+#define LINKAGE_EXTERN   (1 << 2)
+#define VARIADIC         (1 << 3)
+
+typedef struct {
+        typedef struct {
+                token   *id;
+                type    *ty;
+                symbol  *sym;
+        } par;
+
+        stmt                     base;
+        uint32_t                 bits;
+        token                   *id;
+        std::vector<par>         params;
+        type                    *rty;
+        std::optional<stmt *>    body;
+        symbol                  *sym;
+} stmt_proc;
+
 expr_int        *expr_int_alloc(const token *i);
 expr_identifier *expr_identifier_alloc(const token *id);
 stmt_expr       *stmt_expr_alloc(expr *e);
@@ -63,5 +89,12 @@ stmt_let        *stmt_let_alloc(location         loc,
                                 const token     *id,
                                 type            *ty,
                                 expr            *e);
+stmt_proc *
+stmt_proc_alloc(location                         loc,
+                uint32_t                         bits,
+                token                           *id,
+                std::vector<stmt_proc::par>      params,
+                type                            *rty,
+                std::optional<stmt *>            body);
 
 #endif // GRAMMAR_H_INCLUDED

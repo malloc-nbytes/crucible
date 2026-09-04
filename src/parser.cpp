@@ -1,5 +1,7 @@
 #include "parser.hpp"
+#include "keyword.hpp"
 
+#include <cassert>
 #include <iostream>
 #include <exception>
 #include <format>
@@ -7,10 +9,11 @@
 struct parser_error : public std::exception {};
 
 struct expect_error : parser_error {
-        token_kind       exp;
-        token           *got;
+        token_kind              exp;
+        const token *const      got;
 
-        expect_error(token_kind exp, token *got)
+        expect_error(token_kind         exp,
+                     const token *const got)
                 : exp(exp), got(got) {}
 
         const char *
@@ -23,6 +26,23 @@ struct expect_error : parser_error {
         }
 };
 
+struct expect_keyword_error : parser_error {
+        std::string kw;
+        const token *const got;
+
+        expect_keyword_error(std::string        kw,
+                             const token *const got)
+                : kw(kw), got(got) {}
+
+        const char *
+        what(void) const noexcept override
+        {
+                return format("%s: expected keyword `{}' but got `{}'",
+                              location_to_string(got->loc),
+                              kw, token_kind_to_cstring(got->k)).c_str();
+        }
+};
+
 struct out_of_tokens_error : public parser_error {
         out_of_tokens_error() = default;
 
@@ -30,6 +50,21 @@ struct out_of_tokens_error : public parser_error {
         what(void) const noexcept override
         {
                 return "ran out of tokens";
+        }
+};
+
+struct illegal_keyword_placement : public parser_error {
+        const token *const kw;
+
+        illegal_keyword_placement(const token *const kw)
+                : kw(kw) {}
+
+        const char *
+        what(void) const noexcept override
+        {
+                return format("%s: illegal keyword `%s'",
+                              location_to_string(kw->loc),
+                              kw->lx).c_str();
         }
 };
 
@@ -72,14 +107,71 @@ expect(parser *p, token_kind k)
         return hd;
 }
 
+static token *
+expectkw(parser *p, const char *kw)
+{
+        token *hd = expect(p, TOKEN_KIND_KEYWORD);
+        if (hd->lx != kw)
+                throw expect_keyword_error(kw, hd);
+        return hd;
+}
+
+static expr *
+parse_expr(parser *p)
+{
+        assert(0);
+}
+
+static type *
+parse_type(parser *p)
+{
+        assert(0);
+}
+
 static stmt_expr *
 parse_stmt_expr(parser *p)
 {
+        expr *e;
+
+        e = parse_expr(p);
+
+        return stmt_expr_alloc(e);
+}
+
+static stmt_proc *
+parse_stmt_proc(parser *p)
+{
+        assert(0);
+}
+
+static stmt_let *
+parse_stmt_let(parser *p)
+{
+        location         loc;
+        const token     *id;
+        type            *ty;
+        expr            *e;
+
+        loc = expectkw(p, KEYWORD_LET)->loc;
+        id = expect(p, TOKEN_KIND_IDENTIFIER);
+        expect(p, TOKEN_KIND_COLON);
+        ty = parse_type(p);
+        expect(p, TOKEN_KIND_EQUALS);
+        e = parse_expr(p);
+
+        return stmt_let_alloc(loc, id, ty, e);
 }
 
 static stmt *
 parse_stmt_keyword(parser *p)
 {
+        const token *hd = peek(p);
+
+        if (hd->lx == KEYWORD_PROC)
+                return (stmt *)parse_stmt_proc(p);
+        if (hd->lx == KEYWORD_LET)
+                return (stmt *)parse_stmt_let(p);
+        throw illegal_keyword_placement(hd);
 }
 
 static stmt *

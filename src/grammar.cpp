@@ -61,3 +61,26 @@ stmt_let_alloc(location                  loc,
                 .sym = NULL,
         };
 }
+
+stmt_proc *
+stmt_proc_alloc(location                         loc,
+                uint32_t                         bits,
+                token                           *id,
+                std::vector<stmt_proc::par>      params,
+                type                            *rty,
+                std::optional<stmt *>            body)
+{
+        return new stmt_proc {
+                .base = {
+                        .k      = STMT_KIND_PROC,
+                        .loc    = loc,
+                        .accept = accept_stmt_proc,
+                },
+                .bits   = bits,
+                .id     = id,
+                .params = params,
+                .rty    = rty,
+                .body   = body,
+                .sym    = NULL,
+        };
+}
