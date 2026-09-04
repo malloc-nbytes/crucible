@@ -6,6 +6,9 @@
 #include <exception>
 #include <format>
 
+static stmt *
+parse_stmt(parser *p);
+
 struct parser_error : public std::exception {};
 
 struct expect_error : parser_error {
@@ -23,6 +26,20 @@ struct expect_error : parser_error {
                               location_to_string(got->loc),
                               token_kind_to_cstring(exp),
                               token_kind_to_cstring(got->k)).c_str();
+        }
+};
+
+struct zero_param_proc_error : parser_error {
+        location loc;
+
+        zero_param_proc_error(location loc)
+                : loc(loc) {}
+
+        const char *
+        what(void) const noexcept override
+        {
+                return format("procedures with no parameters need to be `void'",
+                              location_to_string(loc)).c_str();
         }
 };
 
@@ -117,15 +134,84 @@ expectkw(parser *p, const char *kw)
 }
 
 static expr *
-parse_expr(parser *p)
+parse_primary_expr(parser *p)
 {
         assert(0);
+        return NULL;
+}
+
+static expr *
+parse_unary_expr(parser *p)
+{
+        assert(0);
+        return NULL;
+}
+
+static expr *
+parse_multiplicative_expr(parser *p)
+{
+        assert(0);
+        return NULL;
+}
+
+static expr *
+parse_additive_expr(parser *p)
+{
+        assert(0);
+        return NULL;
+}
+
+static expr *
+parse_equalitive_expr(parser *p)
+{
+        assert(0);
+        return NULL;
+}
+
+static expr *
+parse_logical_expr(parser *p)
+{
+        assert(0);
+        return NULL;
+}
+
+static expr *
+parse_assignment_expr(parser *p)
+{
+        assert(0);
+        return NULL;
+}
+
+static expr *
+parse_expr(parser *p)
+{
+        assert(p && 0);
+        return NULL;
 }
 
 static type *
 parse_type(parser *p)
 {
-        assert(0);
+        token *hd = expect(p, TOKEN_KIND_TYPE);
+        type *base;
+
+        base = NULL;
+
+        if (hd->lx == TYPE_VOID)
+                base = (type *)type_void_alloc();
+        else if (hd->lx == TYPE_I32)
+                base = (type *)type_i32_alloc();
+        else if (hd->lx == TYPE_U8)
+                base = (type *)type_u8_alloc();
+        else
+                assert(0);
+
+        while (peek(p)->k == TOKEN_KIND_ASTERISK) {
+                discard(p);
+                base = (type *)type_ptr_alloc(base);
+        }
+
+        return base;
 }
 
 static stmt_expr *
@@ -135,13 +221,92 @@ parse_stmt_expr(parser *p)
 
         e = parse_expr(p);
 
+        expect(p, TOKEN_KIND_SEMICOLON);
+
         return stmt_expr_alloc(e);
+}
+
+static std::vector<procp>
+parse_proc_params(parser *p, uint32_t *bits)
+{
+        std::vector<procp>      params;
+        location                loc;
+
+        params = std::vector<procp>();
+        loc    = expect(p, TOKEN_KIND_L_PAREN)->loc;
+
+        if (peek(p)->k == TOKEN_KIND_R_PAREN)
+                throw zero_param_proc_error(loc);
+
+        while (peek(p)->k != TOKEN_KIND_R_PAREN) {
+                token *id = expect(p, TOKEN_KIND_IDENTIFIER);
+                expect(p, TOKEN_KIND_COLON);
+                type *ty = parse_type(p);
+                params.push_back(procp { .id = id, .ty = ty, .sym = NULL });
+
+                if (peek(p)->k == TOKEN_KIND_ELIPSIS) {
+                        discard(p);
+                        *bits |= PROC_VARIADIC;
+                        break;
+                }
+
+                if (peek(p)->k == TOKEN_KIND_COMMA)
+                        discard(p);
+                else
+                        break;
+        }
+
+        expect(p, TOKEN_KIND_R_PAREN);
+
+        return params;
 }
 
 static stmt_proc *
 parse_stmt_proc(parser *p)
 {
-        assert(0);
+        location                         loc;
+        uint32_t                         bits;
+        token                           *id;
+        std::vector<procp>               params;
+        type                            *rty;
+        std::optional<stmt *>            body;
+
+        bits = 0x0000;
+
+        if (peek(p)->lx == KEYWORD_EXPORT) {
+                loc = next(p)->loc;
+                bits |= PROC_LINKAGE_EXPORT;
+        }
+
+        if (peek(p)->lx == KEYWORD_EXTERN) {
+                token *extern_ = next(p);
+                if (!bits)
+                        loc = extern_->loc;
+                bits |= PROC_LINKAGE_EXTERN;
+        }
+
+        location proc_loc = expectkw(p, KEYWORD_PROC)->loc;
+        if (!bits) {
+                loc = proc_loc;
+                if (!bits)
+                        bits |= PROC_LINKAGE_INTERNAL;
+        }
+
+        id     = expect(p, TOKEN_KIND_IDENTIFIER);
+        params = parse_proc_params(p, &bits);
+
+        expect(p, TOKEN_KIND_COLON);
+
+        rty = parse_type(p);
+
+        if (bits & PROC_LINKAGE_EXTERN) {
+                expect(p, TOKEN_KIND_SEMICOLON);
+                body = {};
+        }
+        else
+                body = parse_stmt(p);
+
+        return stmt_proc_alloc(loc, bits, id, params, rty, body);
 }
 
 static stmt_let *
@@ -153,10 +318,14 @@ parse_stmt_let(parser *p)
         expr            *e;
 
         loc = expectkw(p, KEYWORD_LET)->loc;
-        id = expect(p, TOKEN_KIND_IDENTIFIER);
+        id  = expect(p, TOKEN_KIND_IDENTIFIER);
+
         expect(p, TOKEN_KIND_COLON);
+
         ty = parse_type(p);
+
         expect(p, TOKEN_KIND_EQUALS);
+
         e = parse_expr(p);
 
         return stmt_let_alloc(loc, id, ty, e);
@@ -167,10 +336,13 @@ parse_stmt_keyword(parser *p)
 {
         const token *hd = peek(p);
 
-        if (hd->lx == KEYWORD_PROC)
+        if (hd->lx == KEYWORD_PROC
+            || hd->lx == KEYWORD_EXTERN
+            || hd->lx == KEYWORD_EXPORT)
                 return (stmt *)parse_stmt_proc(p);
         if (hd->lx == KEYWORD_LET)
                 return (stmt *)parse_stmt_let(p);
+
         throw illegal_keyword_placement(hd);
 }
 

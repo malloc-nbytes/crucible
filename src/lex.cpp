@@ -1,5 +1,7 @@
 #include "lex.hpp"
 #include "err.hpp"
+#include "keyword.hpp"
+#include "type.hpp"
 
 #include <cassert>
 #include <cstring>
@@ -34,6 +36,7 @@ init_lexer_translation_unit(void)
         g_opmap.emplace(">", TOKEN_KIND_GREATERTHAN);
         g_opmap.emplace("<", TOKEN_KIND_LESSTHAN);
         g_opmap.emplace(".", TOKEN_KIND_PERIOD);
+        g_opmap.emplace("~", TOKEN_KIND_TILDE);
         g_opmap.emplace("+=", TOKEN_KIND_PLUS_EQUALS);
         g_opmap.emplace("-=", TOKEN_KIND_MINUS_EQUALS);
         g_opmap.emplace("*=", TOKEN_KIND_ASTERISK_EQUALS);
@@ -44,6 +47,10 @@ init_lexer_translation_unit(void)
         g_opmap.emplace("==", TOKEN_KIND_DOUBLE_EQUALS);
         g_opmap.emplace("&&", TOKEN_KIND_DOUBLE_AMPERSAND);
         g_opmap.emplace("||", TOKEN_KIND_DOUBLE_PIPE);
+        g_opmap.emplace("^=", TOKEN_KIND_UPTICK_EQUALS);
+        g_opmap.emplace("&=", TOKEN_KIND_AMPERSAND_EQUALS);
+        g_opmap.emplace("|=", TOKEN_KIND_PIPE_EQUALS);
+        g_opmap.emplace("~=", TOKEN_KIND_TILDE_EQUALS);
         g_opmap.emplace("...", TOKEN_KIND_ELIPSIS);
 }
 
@@ -110,7 +117,12 @@ lex_file(const char     *path,
                         size_t len = consume_while(src+i, [](int c) {
                                 return isalnum(c) || c == '_';
                         });
-                        l.ts.push_back(token_alloc(src+i, len, TOKEN_KIND_IDENTIFIER, r, c, path));
+                        token *t = token_alloc(src+i, len, TOKEN_KIND_IDENTIFIER, r, c, path);
+                        if (is_keyword(t->lx))
+                                t->k = TOKEN_KIND_KEYWORD;
+                        else if (is_type(t->lx))
+                                t->k = TOKEN_KIND_TYPE;
+                        l.ts.push_back(t);
                         i += len;
                         c += len;
                 } else if (isdigit(ch)) {

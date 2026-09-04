@@ -16,6 +16,7 @@ typedef enum {
         EXPR_KIND_INT = 0,
         EXPR_KIND_IDENTIFIER,
         EXPR_KIND_BINARY,
+        EXPR_KIND_UNARY,
 } expr_kind;
 
 typedef enum {
@@ -42,6 +43,12 @@ typedef struct {
         symbol          *sym;
 } expr_identifier;
 
+typedef struct {
+        expr             base;
+        const token     *op;
+        expr            *rhs;
+} expr_unary;
+
 typedef struct stmt {
         stmt_kind       k;
         location        loc;
@@ -61,22 +68,22 @@ typedef struct {
         symbol          *sym;
 } stmt_let;
 
-#define LINKAGE_INTERNAL (1 << 0)
-#define LINKAGE_EXPORT   (1 << 1)
-#define LINKAGE_EXTERN   (1 << 2)
-#define VARIADIC         (1 << 3)
+#define PROC_LINKAGE_INTERNAL (1 << 0)
+#define PROC_LINKAGE_EXPORT   (1 << 1)
+#define PROC_LINKAGE_EXTERN   (1 << 2)
+#define PROC_VARIADIC         (1 << 3)
 
 typedef struct {
-        typedef struct {
-                token   *id;
-                type    *ty;
-                symbol  *sym;
-        } par;
+        token   *id;
+        type    *ty;
+        symbol  *sym;
+} procp;
 
+typedef struct {
         stmt                     base;
         uint32_t                 bits;
         token                   *id;
-        std::vector<par>         params;
+        std::vector<procp>       params;
         type                    *rty;
         std::optional<stmt *>    body;
         symbol                  *sym;
@@ -84,6 +91,7 @@ typedef struct {
 
 expr_int        *expr_int_alloc(const token *i);
 expr_identifier *expr_identifier_alloc(const token *id);
+expr_unary      *expr_unary_alloc(const token *op, expr *rhs);
 stmt_expr       *stmt_expr_alloc(expr *e);
 stmt_let        *stmt_let_alloc(location         loc,
                                 const token     *id,
@@ -93,7 +101,7 @@ stmt_proc *
 stmt_proc_alloc(location                         loc,
                 uint32_t                         bits,
                 token                           *id,
-                std::vector<stmt_proc::par>      params,
+                std::vector<procp>               params,
                 type                            *rty,
                 std::optional<stmt *>            body);
 

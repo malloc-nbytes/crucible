@@ -30,6 +30,22 @@ expr_identifier_alloc(const token *const id)
         };
 }
 
+expr_unary *
+expr_unary_alloc(const token    *op,
+                 expr           *rhs)
+{
+        return new expr_unary {
+                .base = {
+                        .k      = EXPR_KIND_UNARY,
+                        .loc    = op->loc,
+                        .ty     = NULL,
+                        .accept = accept_expr_unary,
+                },
+                .op  = op,
+                .rhs = rhs,
+        };
+}
+
 stmt_expr *
 stmt_expr_alloc(expr *e)
 {
@@ -66,7 +82,7 @@ stmt_proc *
 stmt_proc_alloc(location                         loc,
                 uint32_t                         bits,
                 token                           *id,
-                std::vector<stmt_proc::par>      params,
+                std::vector<procp>               params,
                 type                            *rty,
                 std::optional<stmt *>            body)
 {

@@ -1,6 +1,7 @@
 #include "io.hpp"
 #include "lex.hpp"
 #include "parser.hpp"
+#include "type.hpp"
 
 #include <iostream>
 
@@ -14,6 +15,7 @@ main(void)
         src  = load_file(path);
 
         init_lexer_translation_unit();
+        init_type_translation_unit();
 
         lexer l = lex_file(path, src);
 

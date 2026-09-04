@@ -24,7 +24,7 @@ token_kind_to_cstring(token_kind k)
         switch (k) {
         case TOKEN_KIND_EOF:                    return "EOF";
         case TOKEN_KIND_KEYWORD:                return "Keyword";
-        case TOKEN_KIND_PRIMITIVE_TYPE:         return "Type";
+        case TOKEN_KIND_TYPE:                   return "Type";
         case TOKEN_KIND_IDENTIFIER:             return "Identifier";
         case TOKEN_KIND_INTEGER_LITERAL:        return "Integer Literal";
         case TOKEN_KIND_STRING_LITERAL:         return "String Literal";
@@ -50,6 +50,7 @@ token_kind_to_cstring(token_kind k)
         case TOKEN_KIND_GREATERTHAN:            return ">";
         case TOKEN_KIND_LESSTHAN:               return "<";
         case TOKEN_KIND_PERIOD:                 return ".";
+        case TOKEN_KIND_TILDE:                  return "~";
         case TOKEN_KIND_PLUS_EQUALS:            return "+=";
         case TOKEN_KIND_MINUS_EQUALS:           return "-=";
         case TOKEN_KIND_ASTERISK_EQUALS:        return "*=";
@@ -60,6 +61,10 @@ token_kind_to_cstring(token_kind k)
         case TOKEN_KIND_DOUBLE_EQUALS:          return "==";
         case TOKEN_KIND_DOUBLE_AMPERSAND:       return "&&";
         case TOKEN_KIND_DOUBLE_PIPE:            return "||";
+        case TOKEN_KIND_UPTICK_EQUALS:          return "^=";
+        case TOKEN_KIND_AMPERSAND_EQUALS:       return "&=";
+        case TOKEN_KIND_PIPE_EQUALS:            return "|=";
+        case TOKEN_KIND_TILDE_EQUALS:           return "~=";
         case TOKEN_KIND_ELIPSIS:                return "...";
         default:                                return "UNKNOWN";
         }
