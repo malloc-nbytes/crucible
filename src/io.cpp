@@ -1,7 +1,7 @@
-#include "io.h"
-#include "mem.h"
+#include "io.hpp"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <sys/stat.h>
 
@@ -71,7 +71,7 @@ load_file(const char *path)
         size = ftell(f);
         fseek(f, 0, SEEK_SET);
 
-        buf = (char *)alloc(size + 1);
+        buf = (char *)malloc(size + 1);
         size_t _ = fread(buf, 1, size, f); (void)_;
 
         fclose(f);
