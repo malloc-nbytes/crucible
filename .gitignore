@@ -10,8 +10,8 @@ src/program
 *.out
 *.o
 src/run.sh
+build/
 
-Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache
@@ -24,7 +24,6 @@ depcomp
 install-sh
 missing
 src/.deps/
-src/Makefile
 src/Makefile.in
 src/cruc-debug-build
 src/include/config.h

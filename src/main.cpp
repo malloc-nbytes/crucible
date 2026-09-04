@@ -18,6 +18,7 @@ main(void)
         lexer l = lex_file(path, src);
 
         parser p = parse(&l);
+        (void)p;
 
         return 0;
 }

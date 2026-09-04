@@ -3,7 +3,7 @@
 parser
 parse(lexer *l)
 {
-        parser p = (parser) {
+        parser p = parser {
                 .l = l,
         };
 

@@ -7,7 +7,7 @@ location_from(size_t      r,
               size_t      c,
               std::string path)
 {
-        return (location) {
+        return location {
                 .r    = r,
                 .c    = c,
                 .path = path,

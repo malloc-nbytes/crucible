@@ -9,7 +9,7 @@ typedef void *(*visit_expr_identifier_sig)(visitor *, expr_identifier *);
 typedef void *(*visit_stmt_expr_sig)(visitor *, stmt_expr *);
 typedef void *(*visit_stmt_let_sig)(visitor *, stmt_let *);
 
-typedef struct {
+typedef struct visitor {
         void                            *context;
         visit_expr_int_sig               visit_expr_int;
         visit_expr_identifier_sig        visit_expr_identifier;

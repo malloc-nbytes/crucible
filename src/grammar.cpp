@@ -4,33 +4,60 @@
 expr_int *
 expr_int_alloc(const token *const i)
 {
-        expr_int *e;
-
-        e              = new expr_int;
-        e->i           = i;
-        e->base.k      = EXPR_KIND_INT;
-        e->base.loc    = i->loc;
-        e->base.ty     = NULL;
-        e->base.accept = accept_expr_int;
-
-        return e;
+        return new expr_int {
+                .base = {
+                        .k      = EXPR_KIND_INT,
+                        .loc    = i->loc,
+                        .ty     = NULL,
+                        .accept = accept_expr_int,
+                },
+                .i = i,
+        };
 }
 
 expr_identifier *
 expr_identifier_alloc(const token *const id)
 {
+        return new expr_identifier {
+                .base = {
+                        .k      = EXPR_KIND_IDENTIFIER,
+                        .loc    = id->loc,
+                        .ty     = NULL,
+                        .accept = accept_expr_identifier,
+                },
+                .id  = id,
+                .sym = NULL,
+        };
 }
 
 stmt_expr *
 stmt_expr_alloc(expr *e)
 {
+        return new stmt_expr {
+                .base = {
+                        .k      = STMT_KIND_EXPR,
+                        .loc    = e->loc,
+                        .accept = accept_stmt_expr,
+                },
+                .e = e,
+        };
 }
 
 stmt_let *
-stmt_let_alloc(const token *const       id,
-               type                    *ty,
-               expr                    *e)
+stmt_let_alloc(location                  loc,
+               const token *const        id,
+               type                     *ty,
+               expr                     *e)
 {
+        return new stmt_let {
+                .base = {
+                        .k      = STMT_KIND_LET,
+                        .loc    = loc,
+                        .accept = accept_stmt_let,
+                },
+                .id  = id,
+                .ty  = ty,
+                .e   = e,
+                .sym = NULL,
+        };
 }
-
-#undef IGNORE_VISITOR_FORWARD

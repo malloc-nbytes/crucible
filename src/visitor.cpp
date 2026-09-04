@@ -7,7 +7,8 @@ visitor_create(void                             *context,
                visit_stmt_expr_sig               visit_stmt_expr,
                visit_stmt_let_sig                visit_stmt_let)
 {
-        return (visitor) {
+        return visitor {
+                .context               = context,
                 .visit_expr_int        = visit_expr_int,
                 .visit_expr_identifier = visit_expr_identifier,
                 .visit_stmt_expr       = visit_stmt_expr,
