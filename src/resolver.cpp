@@ -33,6 +33,40 @@ struct identifier_not_defined_error : semantic_analysis_error {
         }
 };
 
+struct invalid_assignment_type_error : semantic_analysis_error {
+        location loc;
+
+        invalid_assignment_type_error(location loc)
+                : loc(loc) {}
+
+        const char *
+        what(void) const noexcept override
+        {
+                return format("%s: expression is not assignable",
+                              location_to_string(loc)).c_str();
+        }
+};
+
+struct incompatible_types_error : semantic_analysis_error {
+        location                loc;
+        const type *const       t0;
+        const type *const       t1;
+
+        incompatible_types_error(location               loc,
+                                 const type *const      t0,
+                                 const type *const      t1)
+                : loc(loc), t0(t0), t1(t1) {}
+
+        const char *
+        what(void) const noexcept override
+        {
+                return format("%s: types `%s' and `%s' are not compatible",
+                              location_to_string(loc),
+                              type_to_string(t0),
+                              type_to_string(t1)).c_str();
+        }
+};
+
 static int
 is_assignable(expr *e)
 {
@@ -121,14 +155,26 @@ resolve_expr_unary(visitor *v, expr_unary *e)
 static void *
 resolve_expr_binary(visitor *v, expr_binary *e)
 {
-        assert(0);
+        resolver_context *ctx;
+
+        ctx = (resolver_context *)v->context;
+
+        e->lhs->accept(e->lhs, v);
+        e->rhs->accept(e->lhs, v);
+
+        if (type_is_assignment(e->op->k) && !is_assignable(e->lhs))
+                throw invalid_assignment_type_error(e->lhs->loc);
+
+        if (!type_check(e->lhs->ty, e->rhs->ty))
+                throw incompatible_types_error(e->lhs->loc, e->lhs->ty, e->rhs->ty);
+
         return NULL;
 }
 
 static void *
 resolve_stmt_expr(visitor *v, stmt_expr *s)
 {
-        assert(0);
+        s->e->accept(s->e, v);
         return NULL;
 }
 
@@ -149,7 +195,8 @@ resolve_stmt_proc(visitor *v, stmt_proc *s)
 static void *
 resolve_stmt_block(visitor *v, stmt_block *s)
 {
-        assert(0);
+        for (size_t i = 0; i < s->stmts.size(); ++i)
+                s->stmts.at(i)->accept(s->stmts.at(i), v);
         return NULL;
 }
 

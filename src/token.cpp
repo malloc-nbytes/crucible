@@ -55,6 +55,7 @@ token_kind_to_cstring(token_kind k)
         case TOKEN_KIND_MINUS_EQUALS:           return "-=";
         case TOKEN_KIND_ASTERISK_EQUALS:        return "*=";
         case TOKEN_KIND_FORWARD_SLASH_EQUALS:   return "/=";
+        case TOKEN_KIND_PERCENT_EQUALS:         return "%=";
         case TOKEN_KIND_BANG_EQUALS:            return "!=";
         case TOKEN_KIND_GREATERTHAN_EQUALS:     return ">=";
         case TOKEN_KIND_LESSTHAN_EQUALS:        return "<=";

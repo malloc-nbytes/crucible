@@ -2,9 +2,10 @@
 #include "keyword.hpp"
 
 #include <cassert>
-#include <iostream>
 #include <exception>
 #include <format>
+#include <iostream>
+#include <utility>
 
 static stmt *
 parse_stmt(parser *p);
@@ -267,8 +268,8 @@ parse_assignment_expr(parser *p)
 
         cur = peek(p);
         if (cur->k == TOKEN_KIND_EQUALS) {
-                token *op = next(p);
-                expr *rhs = parse_assignment_expr(p);
+                token   *op  = next(p);
+                expr    *rhs = parse_assignment_expr(p);
                 return (expr *)expr_binary_alloc(lhs, op, rhs);
         }
 
@@ -284,9 +285,10 @@ parse_expr(parser *p)
 static type *
 parse_type(parser *p)
 {
-        token *hd = expect(p, TOKEN_KIND_TYPE);
-        type *base;
+        token   *hd;
+        type    *base;
 
+        hd   = expect(p, TOKEN_KIND_TYPE);
         base = NULL;
 
         if (hd->lx == TYPE_VOID)
@@ -296,7 +298,7 @@ parse_type(parser *p)
         else if (hd->lx == TYPE_U8)
                 base = (type *)type_u8_alloc();
         else
-                assert(0);
+                std::unreachable();
 
         while (peek(p)->k == TOKEN_KIND_ASTERISK) {
                 discard(p);
@@ -318,23 +320,29 @@ parse_stmt_expr(parser *p)
         return stmt_expr_alloc(e);
 }
 
-static std::vector<procp>
+static std::vector<parameter>
 parse_proc_params(parser *p, uint32_t *bits)
 {
-        std::vector<procp>      params;
+        std::vector<parameter>  params;
         location                loc;
 
-        params = std::vector<procp>();
+        params = std::vector<parameter>();
         loc    = expect(p, TOKEN_KIND_L_PAREN)->loc;
 
         if (peek(p)->k == TOKEN_KIND_R_PAREN)
                 throw zero_param_proc_error(loc);
 
         while (peek(p)->k != TOKEN_KIND_R_PAREN) {
-                token *id = expect(p, TOKEN_KIND_IDENTIFIER);
+                token   *id;
+                type    *ty;
+
+                id = expect(p, TOKEN_KIND_IDENTIFIER);
+
                 expect(p, TOKEN_KIND_COLON);
-                type *ty = parse_type(p);
-                params.push_back(procp { .id = id, .ty = ty, .sym = NULL });
+
+                ty = parse_type(p);
+
+                params.push_back(parameter { .id = id, .ty = ty, .sym = NULL });
 
                 if (peek(p)->k == TOKEN_KIND_ELIPSIS) {
                         discard(p);
@@ -359,7 +367,7 @@ parse_stmt_proc(parser *p)
         location                         loc;
         uint32_t                         bits;
         token                           *id;
-        std::vector<procp>               params;
+        std::vector<parameter>           params;
         type                            *rty;
         std::optional<stmt *>            body;
 
@@ -377,11 +385,12 @@ parse_stmt_proc(parser *p)
                 bits |= PROC_LINKAGE_EXTERN;
         }
 
-        location proc_loc = expectkw(p, KEYWORD_PROC)->loc;
-        if (!bits) {
-                loc = proc_loc;
-                if (!bits)
-                        bits |= PROC_LINKAGE_INTERNAL;
+        {location proc_loc = expectkw(p, KEYWORD_PROC)->loc;
+                if (!bits) {
+                        loc = proc_loc;
+                        if (!bits)
+                                bits |= PROC_LINKAGE_INTERNAL;
+                }
         }
 
         id     = expect(p, TOKEN_KIND_IDENTIFIER);
@@ -426,7 +435,9 @@ parse_stmt_let(parser *p)
 static stmt *
 parse_stmt_keyword(parser *p)
 {
-        const token *hd = peek(p);
+        const token *hd;
+
+        hd = peek(p);
 
         if (hd->lx == KEYWORD_PROC
             || hd->lx == KEYWORD_EXTERN

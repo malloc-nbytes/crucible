@@ -1,6 +1,6 @@
 CXX      ?= c++
 CPPFLAGS ?= -Iinclude
-CXXFLAGS ?= -std=gnu++20 -Wall -Wextra -Wno-unused -Wpedantic
+CXXFLAGS ?= -std=c++23 -Wall -Wextra -Wno-unused -Wpedantic
 LDFLAGS  ?=
 LDLIBS   ?=
 

@@ -41,6 +41,7 @@ init_lexer_translation_unit(void)
         g_opmap.emplace("-=", TOKEN_KIND_MINUS_EQUALS);
         g_opmap.emplace("*=", TOKEN_KIND_ASTERISK_EQUALS);
         g_opmap.emplace("/=", TOKEN_KIND_FORWARD_SLASH_EQUALS);
+        g_opmap.emplace("%=", TOKEN_KIND_PERCENT_EQUALS);
         g_opmap.emplace("!=", TOKEN_KIND_BANG_EQUALS);
         g_opmap.emplace(">=", TOKEN_KIND_GREATERTHAN_EQUALS);
         g_opmap.emplace("<=", TOKEN_KIND_LESSTHAN_EQUALS);

@@ -85,13 +85,13 @@ typedef struct {
         token   *id;
         type    *ty;
         symbol  *sym;
-} procp;
+} parameter;
 
 typedef struct {
         stmt                     base;
         uint32_t                 bits;
         token                   *id;
-        std::vector<procp>       params;
+        std::vector<parameter>   params;
         type                    *rty;
         std::optional<stmt *>    body;
         symbol                  *sym;
@@ -115,7 +115,7 @@ stmt_proc *
 stmt_proc_alloc(location                         loc,
                 uint32_t                         bits,
                 token                           *id,
-                std::vector<procp>               params,
+                std::vector<parameter>           params,
                 type                            *rty,
                 std::optional<stmt *>            body);
 

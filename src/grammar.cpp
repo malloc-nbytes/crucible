@@ -100,7 +100,7 @@ stmt_proc *
 stmt_proc_alloc(location                         loc,
                 uint32_t                         bits,
                 token                           *id,
-                std::vector<procp>               params,
+                std::vector<parameter>           params,
                 type                            *rty,
                 std::optional<stmt *>            body)
 {
