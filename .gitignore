@@ -28,3 +28,4 @@ src/Makefile.in
 src/cruc-debug-build
 src/include/config.h
 src/include/stamp-h1
+./tests

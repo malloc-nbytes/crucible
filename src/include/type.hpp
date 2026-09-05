@@ -4,6 +4,7 @@
 #include "token.hpp"
 
 #include <string>
+#include <vector>
 #include <optional>
 
 #define TYPE_I32 "i32"
@@ -21,17 +22,33 @@ typedef enum {
         TYPE_KIND_I32,
         TYPE_KIND_U8,
         TYPE_KIND_PTR,
+        TYPE_KIND_PROC,
 } type_kind;
 
 typedef struct { type_kind k; } type;
 
-typedef struct { type base; } type_void;
-typedef struct { type base; } type_i32;
-typedef struct { type base; } type_u8;
+typedef struct {
+        type base;
+} type_void;
 
 typedef struct {
         type base;
-        type *inner;
+} type_i32;
+
+typedef struct {
+        type base;
+} type_u8;
+
+typedef struct {
+        type                     base;
+        type                    *rty;
+        std::vector<type *>      ptys;
+        int                      variadic;
+} type_proc;
+
+typedef struct {
+        type     base;
+        type    *inner;
 } type_ptr;
 
 void init_type_translation_unit(void);

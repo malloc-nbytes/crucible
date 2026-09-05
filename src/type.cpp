@@ -80,6 +80,22 @@ type_to_string(const type *const t)
         case TYPE_KIND_U8:   return "u8";
         case TYPE_KIND_PTR:
                 return format("Ptr(%s)", type_to_string(((type_ptr *)t)->inner));
+        case TYPE_KIND_PROC: {
+                const type_proc *const p = (type_proc *)t;
+
+                std::string res = "proc(";
+
+                for (size_t i = 0; p->ptys.size(); ++i) {
+                        if (i != 0)
+                                res += ", ";
+                        res += type_to_string(p->ptys.at(i));
+                }
+
+                res += std::format("): %s", type_to_string(p->rty));
+
+                return res;
+        } break;
+
         }
         std::unreachable();
 }
