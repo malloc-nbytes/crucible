@@ -67,6 +67,21 @@ struct incompatible_types_error : semantic_analysis_error {
         }
 };
 
+struct identifier_already_declared_error : semantic_analysis_error {
+        const token *const id;
+
+        identifier_already_declared_error(const token *const id)
+                : id(id) {}
+
+        const char *
+        what(void) const noexcept override
+        {
+                return format("%s: identifier `%s' is already defined",
+                                location_to_string(id->loc),
+                                id->lx).c_str();
+        }
+};
+
 static int
 is_assignable(expr *e)
 {
@@ -100,7 +115,7 @@ is_addressable(expr *e)
 }
 
 static void
-resolve_type(type *ty)
+resolve_type(resolver_context *ctx, type *ty)
 {
         // if (ty == TYPE_CUSTOM) {
         //         assert(0);
@@ -110,7 +125,7 @@ resolve_type(type *ty)
 
 static symbol *
 new_symbol(symbol_kind   kind,
-           token        *id,
+           const token  *id,
            type         *ty,
            visitor      *v)
 {
@@ -148,8 +163,7 @@ resolve_expr_identifier(visitor *v, expr_identifier *e)
 static void *
 resolve_expr_unary(visitor *v, expr_unary *e)
 {
-        assert(0);
-        return NULL;
+      return NULL;
 }
 
 static void *
@@ -181,14 +195,28 @@ resolve_stmt_expr(visitor *v, stmt_expr *s)
 static void *
 resolve_stmt_let(visitor *v, stmt_let *s)
 {
-        assert(0);
+        resolver_context *ctx;
+
+        ctx = (resolver_context *)v->context;
+
+        if (scope_contains<symbol *>(&ctx->scope_, s->id->lx))
+                throw identifier_already_declared_error(s->id);
+
+        resolve_type(ctx, s->ty);
+
+        s->e->accept(s->e, v);
+
+        if (!type_check(s->ty, s->e->ty))
+                throw incompatible_types_error(s->base.loc, s->ty, s->e->ty);
+
+        s->sym = new_symbol(SYMBOL_KIND_LOCAL, s->id, s->ty, v);
+
         return NULL;
 }
 
 static void *
 resolve_stmt_proc(visitor *v, stmt_proc *s)
 {
-        assert(0);
         return NULL;
 }
 
