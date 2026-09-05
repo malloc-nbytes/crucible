@@ -102,7 +102,7 @@ stmt_proc_alloc(location                         loc,
                 token                           *id,
                 std::vector<parameter>           params,
                 type                            *rty,
-                std::optional<stmt *>            body)
+                std::optional<stmt_block *>      body)
 {
         return new stmt_proc {
                 .base = {

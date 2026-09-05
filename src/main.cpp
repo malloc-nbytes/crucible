@@ -1,6 +1,7 @@
 #include "io.hpp"
 #include "lex.hpp"
 #include "parser.hpp"
+#include "resolver.hpp"
 #include "type.hpp"
 
 #include <iostream>
@@ -18,9 +19,10 @@ main(void)
         init_type_translation_unit();
 
         lexer l = lex_file(path, src);
+        //lexer_dump(&l);
 
         parser p = parse(&l);
-        (void)p;
+        resolve_ast(&p);
 
         return 0;
 }

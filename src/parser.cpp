@@ -5,12 +5,27 @@
 #include <exception>
 #include <format>
 #include <iostream>
+#include <string>
 #include <utility>
 
 static stmt *
 parse_stmt(parser *p);
 
-struct parser_error : public std::exception {};
+static stmt_block *
+parse_stmt_block(parser *p);
+
+struct parser_error : public std::exception {
+        std::string message;
+
+        parser_error(std::string message)
+                : message(std::move(message)) {}
+
+        const char *
+        what(void) const noexcept override
+        {
+                return message.c_str();
+        }
+};
 
 struct expect_error : parser_error {
         token_kind              exp;
@@ -18,30 +33,30 @@ struct expect_error : parser_error {
 
         expect_error(token_kind         exp,
                      const token *const got)
-                : exp(exp), got(got) {}
+                : parser_error(std::format("{}: expected `{}' but got `{}'",
+                                            location_to_string(got->loc),
+                                            token_kind_to_cstring(exp),
+                                            token_kind_to_cstring(got->k))),
+                  exp(exp), got(got) {}
+};
 
-        const char *
-        what(void) const noexcept override
-        {
-                return format("{}: expected `{}' but got `{}'",
-                              location_to_string(got->loc),
-                              token_kind_to_cstring(exp),
-                              token_kind_to_cstring(got->k)).c_str();
-        }
+struct expected_expression_error : parser_error {
+        const token *const got;
+
+        expected_expression_error(const token *const got)
+                : parser_error(std::format("{}: expected expression but got `{}'",
+                                            location_to_string(got->loc),
+                                            token_kind_to_cstring(got->k))),
+                  got(got) {}
 };
 
 struct zero_param_proc_error : parser_error {
         location loc;
 
         zero_param_proc_error(location loc)
-                : loc(loc) {}
-
-        const char *
-        what(void) const noexcept override
-        {
-                return format("procedures with no parameters need to be `void'",
-                              location_to_string(loc)).c_str();
-        }
+                : parser_error(std::format("{}: procedures with no parameters need to be `void'",
+                                            location_to_string(loc))),
+                  loc(std::move(loc)) {}
 };
 
 struct expect_keyword_error : parser_error {
@@ -50,40 +65,25 @@ struct expect_keyword_error : parser_error {
 
         expect_keyword_error(std::string        kw,
                              const token *const got)
-                : kw(kw), got(got) {}
-
-        const char *
-        what(void) const noexcept override
-        {
-                return format("%s: expected keyword `{}' but got `{}'",
-                              location_to_string(got->loc),
-                              kw, token_kind_to_cstring(got->k)).c_str();
-        }
+                : parser_error(std::format("{}: expected keyword `{}' but got `{}'",
+                                            location_to_string(got->loc),
+                                            kw, token_kind_to_cstring(got->k))),
+                  kw(std::move(kw)), got(got) {}
 };
 
 struct out_of_tokens_error : public parser_error {
-        out_of_tokens_error() = default;
-
-        const char *
-        what(void) const noexcept override
-        {
-                return "ran out of tokens";
-        }
+        out_of_tokens_error()
+                : parser_error("ran out of tokens") {}
 };
 
 struct illegal_keyword_placement : public parser_error {
         const token *const kw;
 
         illegal_keyword_placement(const token *const kw)
-                : kw(kw) {}
-
-        const char *
-        what(void) const noexcept override
-        {
-                return format("%s: illegal keyword `%s'",
-                              location_to_string(kw->loc),
-                              kw->lx).c_str();
-        }
+                : parser_error(std::format("{}: illegal keyword `{}'",
+                                            location_to_string(kw->loc),
+                                            kw->lx)),
+                  kw(kw) {}
 };
 
 static void
@@ -137,27 +137,18 @@ expectkw(parser *p, const char *kw)
 static expr *
 parse_primary_expr(parser *p)
 {
-        expr *left;
+        const token *hd = peek(p);
 
-        left = NULL;
-
-        while (1) {
-                const token *hd = peek(p);
-
-                switch (hd->k) {
-                case TOKEN_KIND_INTEGER_LITERAL: {
-                        left = (expr *)expr_int_alloc(hd);
-                        discard(p);
-                } break;
-                case TOKEN_KIND_IDENTIFIER: {
-                        left = (expr *)expr_identifier_alloc(hd);
-                        discard(p);
-                } break;
-                default: goto done;
-                }
+        switch (hd->k) {
+        case TOKEN_KIND_INTEGER_LITERAL:
+                discard(p);
+                return (expr *)expr_int_alloc(hd);
+        case TOKEN_KIND_IDENTIFIER:
+                discard(p);
+                return (expr *)expr_identifier_alloc(hd);
+        default:
+                throw expected_expression_error(hd);
         }
-done:
-        return left;
 }
 
 static expr *
@@ -320,6 +311,24 @@ parse_stmt_expr(parser *p)
         return stmt_expr_alloc(e);
 }
 
+static stmt_block *
+parse_stmt_block(parser *p)
+{
+        location                loc;
+        std::vector<stmt *>     stmts;
+
+        loc   = expect(p, TOKEN_KIND_L_CURLY)->loc;
+        stmts = std::vector<stmt *>();
+
+        while (peek(p)->k != TOKEN_KIND_R_CURLY
+               && peek(p)->k != TOKEN_KIND_EOF)
+                stmts.push_back(parse_stmt(p));
+
+        expect(p, TOKEN_KIND_R_CURLY);
+
+        return stmt_block_alloc(loc, stmts);
+}
+
 static std::vector<parameter>
 parse_proc_params(parser *p, uint32_t *bits)
 {
@@ -328,6 +337,12 @@ parse_proc_params(parser *p, uint32_t *bits)
 
         params = std::vector<parameter>();
         loc    = expect(p, TOKEN_KIND_L_PAREN)->loc;
+
+        if (peek(p)->k == TOKEN_KIND_TYPE && peek(p)->lx == TYPE_VOID) {
+                discard(p);
+                expect(p, TOKEN_KIND_R_PAREN);
+                return params;
+        }
 
         if (peek(p)->k == TOKEN_KIND_R_PAREN)
                 throw zero_param_proc_error(loc);
@@ -369,7 +384,7 @@ parse_stmt_proc(parser *p)
         token                           *id;
         std::vector<parameter>           params;
         type                            *rty;
-        std::optional<stmt *>            body;
+        std::optional<stmt_block *>      body;
 
         bits = 0x0000;
 
@@ -405,7 +420,7 @@ parse_stmt_proc(parser *p)
                 body = {};
         }
         else
-                body = parse_stmt(p);
+                body = parse_stmt_block(p);
 
         return stmt_proc_alloc(loc, bits, id, params, rty, body);
 }
@@ -428,6 +443,8 @@ parse_stmt_let(parser *p)
         expect(p, TOKEN_KIND_EQUALS);
 
         e = parse_expr(p);
+
+        expect(p, TOKEN_KIND_SEMICOLON);
 
         return stmt_let_alloc(loc, id, ty, e);
 }
@@ -453,6 +470,8 @@ static stmt *
 parse_stmt(parser *p)
 {
         const token *hd = peek(p);
+        if (hd->k == TOKEN_KIND_L_CURLY)
+                return (stmt *)parse_stmt_block(p);
         if (hd->k == TOKEN_KIND_KEYWORD)
                 return parse_stmt_keyword(p);
         return (stmt *)parse_stmt_expr(p);

@@ -87,17 +87,19 @@ typedef struct {
         symbol  *sym;
 } parameter;
 
+typedef struct stmt_block stmt_block;
+
 typedef struct {
         stmt                     base;
         uint32_t                 bits;
         token                   *id;
         std::vector<parameter>   params;
         type                    *rty;
-        std::optional<stmt *>    body;
+        std::optional<stmt_block *> body;
         symbol                  *sym;
 } stmt_proc;
 
-typedef struct {
+typedef struct stmt_block {
         stmt base;
         std::vector<stmt *> stmts;
 } stmt_block;
@@ -117,7 +119,7 @@ stmt_proc_alloc(location                         loc,
                 token                           *id,
                 std::vector<parameter>           params,
                 type                            *rty,
-                std::optional<stmt *>            body);
+                std::optional<stmt_block *>      body);
 
 stmt_block *stmt_block_alloc(location loc, std::vector<stmt *> stmts);
 

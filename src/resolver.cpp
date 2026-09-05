@@ -8,6 +8,8 @@
 #include <format>
 #include <iostream>
 #include <optional>
+#include <string>
+#include <utility>
 
 typedef struct {
         scope<symbol *>         scope_;
@@ -16,35 +18,36 @@ typedef struct {
         uint32_t                next_symbol_id;
 } resolver_context;
 
-struct semantic_analysis_error : public std::exception {};
+struct semantic_analysis_error : public std::exception {
+        std::string message;
+
+        semantic_analysis_error(std::string message)
+                : message(std::move(message)) {}
+
+        const char *
+        what(void) const noexcept override
+        {
+                return message.c_str();
+        }
+};
 
 struct identifier_not_defined_error : semantic_analysis_error {
         const token *id;
 
         identifier_not_defined_error(const token *id)
-                : id(id) {}
-
-        const char *
-        what(void) const noexcept override
-        {
-                return format("%s: idenifier `%s' has not been defined",
-                              location_to_string(id->loc),
-                              id->lx).c_str();
-        }
+                : semantic_analysis_error(std::format("{}: identifier `{}' has not been defined",
+                                                      location_to_string(id->loc),
+                                                      id->lx)),
+                  id(id) {}
 };
 
 struct invalid_assignment_type_error : semantic_analysis_error {
         location loc;
 
         invalid_assignment_type_error(location loc)
-                : loc(loc) {}
-
-        const char *
-        what(void) const noexcept override
-        {
-                return format("%s: expression is not assignable",
-                              location_to_string(loc)).c_str();
-        }
+                : semantic_analysis_error(std::format("{}: expression is not assignable",
+                                                      location_to_string(loc))),
+                  loc(std::move(loc)) {}
 };
 
 struct incompatible_types_error : semantic_analysis_error {
@@ -55,31 +58,21 @@ struct incompatible_types_error : semantic_analysis_error {
         incompatible_types_error(location               loc,
                                  const type *const      t0,
                                  const type *const      t1)
-                : loc(loc), t0(t0), t1(t1) {}
-
-        const char *
-        what(void) const noexcept override
-        {
-                return format("%s: types `%s' and `%s' are not compatible",
-                              location_to_string(loc),
-                              type_to_string(t0),
-                              type_to_string(t1)).c_str();
-        }
+                : semantic_analysis_error(std::format("{}: types `{}' and `{}' are not compatible",
+                                                      location_to_string(loc),
+                                                      type_to_string(t0),
+                                                      type_to_string(t1))),
+                  loc(std::move(loc)), t0(t0), t1(t1) {}
 };
 
 struct identifier_already_declared_error : semantic_analysis_error {
         const token *const id;
 
         identifier_already_declared_error(const token *const id)
-                : id(id) {}
-
-        const char *
-        what(void) const noexcept override
-        {
-                return format("%s: identifier `%s' is already defined",
-                                location_to_string(id->loc),
-                                id->lx).c_str();
-        }
+                : semantic_analysis_error(std::format("{}: identifier `{}' is already defined",
+                                                      location_to_string(id->loc),
+                                                      id->lx)),
+                  id(id) {}
 };
 
 static int
@@ -174,13 +167,15 @@ resolve_expr_binary(visitor *v, expr_binary *e)
         ctx = (resolver_context *)v->context;
 
         e->lhs->accept(e->lhs, v);
-        e->rhs->accept(e->lhs, v);
+        e->rhs->accept(e->rhs, v);
 
         if (type_is_assignment(e->op->k) && !is_assignable(e->lhs))
                 throw invalid_assignment_type_error(e->lhs->loc);
 
         if (!type_check(e->lhs->ty, e->rhs->ty))
                 throw incompatible_types_error(e->lhs->loc, e->lhs->ty, e->rhs->ty);
+
+        ((expr *)e)->ty = e->lhs->ty;
 
         return NULL;
 }
@@ -247,7 +242,7 @@ resolve_stmt_proc(visitor *v, stmt_proc *s)
         }
 
         if (s->body != std::nullopt)
-                s->body.value()->accept(s->body.value(), v);
+                s->body.value()->base.accept((stmt *)s->body.value(), v);
 
         ctx->return_type = std::nullopt;
         scope_pop<symbol *>(&ctx->scope_);
@@ -272,6 +267,8 @@ resolve_ast(parser *p)
                 .return_type    = {},
                 .next_symbol_id = 0,
         };
+
+        scope_push<symbol *>(&ctx.scope_);
 
         visitor v = visitor_create((void *)&ctx,
                                    resolve_expr_int,

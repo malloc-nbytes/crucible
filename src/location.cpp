@@ -17,5 +17,5 @@ location_from(size_t      r,
 std::string
 location_to_string(location l)
 {
-        return l.path + ":" + std::to_string(l.r) + ":" + std::to_string(l.r);
+        return l.path + ":" + std::to_string(l.r) + ":" + std::to_string(l.c);
 }
