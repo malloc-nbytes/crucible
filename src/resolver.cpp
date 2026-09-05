@@ -211,12 +211,47 @@ resolve_stmt_let(visitor *v, stmt_let *s)
 
         s->sym = new_symbol(SYMBOL_KIND_LOCAL, s->id, s->ty, v);
 
+        scope_insert(&ctx->scope_, s->id->lx, s->sym);
+
         return NULL;
 }
 
 static void *
 resolve_stmt_proc(visitor *v, stmt_proc *s)
 {
+        resolver_context *ctx;
+
+        ctx = (resolver_context *)v->context;
+
+        resolve_type(ctx, s->rty);
+
+        for (size_t i = 0; i < s->params.size(); ++i) {
+                parameter *p = &s->params.at(i);
+                if (scope_contains<symbol *>(&ctx->scope_, p->id->lx))
+                        throw identifier_already_declared_error(p->id);
+                resolve_type(ctx, p->ty);
+        }
+
+        if (scope_contains<symbol *>(&ctx->scope_, s->id->lx))
+                throw identifier_already_declared_error(s->id);
+
+        s->sym = new_symbol(SYMBOL_KIND_PROC, s->id, s->rty, v);
+
+        scope_push<symbol *>(&ctx->scope_);
+        ctx->return_type = s->rty;
+
+        for (size_t i = 0; i < s->params.size(); ++i) {
+                parameter *p = &s->params.at(i);
+                p->sym = new_symbol(SYMBOL_KIND_PARAM, p->id, p->ty, v);
+                scope_insert(&ctx->scope_, p->id->lx, p->sym);
+        }
+
+        if (s->body != std::nullopt)
+                s->body.value()->accept(s->body.value(), v);
+
+        ctx->return_type = std::nullopt;
+        scope_pop<symbol *>(&ctx->scope_);
+
         return NULL;
 }
 
