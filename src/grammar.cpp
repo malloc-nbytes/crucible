@@ -46,6 +46,24 @@ expr_unary_alloc(const token    *op,
         };
 }
 
+expr_binary *
+expr_binary_alloc(expr        *lhs,
+                  const token *op,
+                  expr        *rhs)
+{
+        return new expr_binary {
+                .base = {
+                        .k = EXPR_KIND_BINARY,
+                        .loc    = lhs->loc,
+                        .ty     = NULL,
+                        .accept = accept_expr_binary,
+                },
+                .lhs = lhs,
+                .op  = op,
+                .rhs = rhs,
+        };
+}
+
 stmt_expr *
 stmt_expr_alloc(expr *e)
 {
@@ -98,5 +116,19 @@ stmt_proc_alloc(location                         loc,
                 .rty    = rty,
                 .body   = body,
                 .sym    = NULL,
+        };
+}
+
+stmt_block *
+stmt_block_alloc(location               loc,
+                 std::vector<stmt *>    stmts)
+{
+        return new stmt_block {
+                .base = {
+                        .k      = STMT_KIND_BLOCK,
+                        .loc    = loc,
+                        .accept = accept_stmt_block,
+                },
+                .stmts = stmts,
         };
 }

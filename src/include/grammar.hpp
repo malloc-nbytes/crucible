@@ -23,6 +23,7 @@ typedef enum {
         STMT_KIND_EXPR = 0,
         STMT_KIND_LET,
         STMT_KIND_PROC,
+        STMT_KIND_BLOCK,
 } stmt_kind;
 
 typedef struct expr {
@@ -48,6 +49,13 @@ typedef struct {
         const token     *op;
         expr            *rhs;
 } expr_unary;
+
+typedef struct {
+        expr         base;
+        expr        *lhs;
+        const token *op;
+        expr        *rhs;
+} expr_binary;
 
 typedef struct stmt {
         stmt_kind       k;
@@ -89,9 +97,15 @@ typedef struct {
         symbol                  *sym;
 } stmt_proc;
 
+typedef struct {
+        stmt base;
+        std::vector<stmt *> stmts;
+} stmt_block;
+
 expr_int        *expr_int_alloc(const token *i);
 expr_identifier *expr_identifier_alloc(const token *id);
 expr_unary      *expr_unary_alloc(const token *op, expr *rhs);
+expr_binary      *expr_binary_alloc(expr *lhs, const token *op, expr *rhs);
 stmt_expr       *stmt_expr_alloc(expr *e);
 stmt_let        *stmt_let_alloc(location         loc,
                                 const token     *id,
@@ -104,5 +118,7 @@ stmt_proc_alloc(location                         loc,
                 std::vector<procp>               params,
                 type                            *rty,
                 std::optional<stmt *>            body);
+
+stmt_block *stmt_block_alloc(location loc, std::vector<stmt *> stmts);
 
 #endif // GRAMMAR_H_INCLUDED

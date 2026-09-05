@@ -136,57 +136,149 @@ expectkw(parser *p, const char *kw)
 static expr *
 parse_primary_expr(parser *p)
 {
-        assert(0);
-        return NULL;
+        expr *left;
+
+        left = NULL;
+
+        while (1) {
+                const token *hd = peek(p);
+
+                switch (hd->k) {
+                case TOKEN_KIND_INTEGER_LITERAL: {
+                        left = (expr *)expr_int_alloc(hd);
+                        discard(p);
+                } break;
+                case TOKEN_KIND_IDENTIFIER: {
+                        left = (expr *)expr_identifier_alloc(hd);
+                        discard(p);
+                } break;
+                default: goto done;
+                }
+        }
+done:
+        return left;
 }
 
 static expr *
 parse_unary_expr(parser *p)
 {
-        assert(0);
-        return NULL;
+        return parse_primary_expr(p);
 }
 
 static expr *
 parse_multiplicative_expr(parser *p)
 {
-        assert(0);
-        return NULL;
+        expr        *lhs;
+        const token *cur;
+
+        lhs = parse_unary_expr(p);
+        cur = peek(p);
+
+        while (cur && (cur->k == TOKEN_KIND_ASTERISK
+                        || cur->k == TOKEN_KIND_FORWARD_SLASH)) {
+                token *op        = next(p);
+                expr *rhs        = parse_unary_expr(p);
+                expr_binary *bin = expr_binary_alloc(lhs, op, rhs);
+                bin->base.loc    = lhs->loc;
+                lhs              = (expr *)bin;
+                cur              = peek(p);
+        }
+
+        return lhs;
 }
 
 static expr *
 parse_additive_expr(parser *p)
 {
-        assert(0);
-        return NULL;
+        expr        *lhs;
+        const token *cur;
+
+        lhs = parse_multiplicative_expr(p);
+        cur = peek(p);
+
+        while (cur && (cur->k == TOKEN_KIND_PLUS
+                        || cur->k == TOKEN_KIND_HYPHEN)) {
+                token *op        = next(p);
+                expr *rhs        = parse_multiplicative_expr(p);
+                expr_binary *bin = expr_binary_alloc(lhs, op, rhs);
+                bin->base.loc    = lhs->loc;
+                lhs              = (expr *)bin;
+                cur              = peek(p);
+        }
+
+        return lhs;
 }
 
 static expr *
 parse_equalitive_expr(parser *p)
 {
-        assert(0);
-        return NULL;
+        expr        *lhs;
+        const token *cur;
+
+        lhs = parse_additive_expr(p);
+        cur = peek(p);
+
+        while (cur && (cur->k == TOKEN_KIND_DOUBLE_EQUALS
+                        || cur->k == TOKEN_KIND_BANG_EQUALS
+                        || cur->k == TOKEN_KIND_GREATERTHAN_EQUALS
+                        || cur->k == TOKEN_KIND_LESSTHAN_EQUALS
+                        || cur->k == TOKEN_KIND_LESSTHAN
+                        || cur->k == TOKEN_KIND_GREATERTHAN)) {
+                token *op        = next(p);
+                expr *rhs        = parse_additive_expr(p);
+                expr_binary *bin = expr_binary_alloc(lhs, op, rhs);
+                bin->base.loc    = lhs->loc;
+                lhs              = (expr *)bin;
+                cur              = peek(p);
+        }
+
+        return lhs;
 }
 
 static expr *
 parse_logical_expr(parser *p)
 {
-        assert(0);
-        return NULL;
+        expr        *lhs;
+        const token *cur;
+
+        lhs = parse_equalitive_expr(p);
+        cur = peek(p);
+
+        while (cur && (cur->k == TOKEN_KIND_DOUBLE_PIPE
+                        || cur->k == TOKEN_KIND_DOUBLE_AMPERSAND)) {
+                token *op        = next(p);
+                expr *rhs        = parse_equalitive_expr(p);
+                expr_binary *bin = expr_binary_alloc(lhs, op, rhs);
+                bin->base.loc    = lhs->loc;
+                lhs              = (expr *)bin;
+                cur              = peek(p);
+        }
+
+        return lhs;
 }
 
 static expr *
 parse_assignment_expr(parser *p)
 {
-        assert(0);
-        return NULL;
+        expr *lhs;
+        const token *cur;
+
+        lhs = parse_logical_expr(p);
+
+        cur = peek(p);
+        if (cur->k == TOKEN_KIND_EQUALS) {
+                token *op = next(p);
+                expr *rhs = parse_assignment_expr(p);
+                return (expr *)expr_binary_alloc(lhs, op, rhs);
+        }
+
+        return lhs;
 }
 
 static expr *
 parse_expr(parser *p)
 {
-        assert(p && 0);
-        return NULL;
+        return parse_assignment_expr(p);
 }
 
 static type *
