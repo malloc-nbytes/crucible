@@ -162,6 +162,7 @@ typedef struct {
         std::vector<TAC_proc>   procs;
 } TAC_program;
 
-std::string TAC_program_to_string(const TAC_program *const p);
+std::string             TAC_program_to_string(const TAC_program *const p);
+TAC_binary_operator     token_kind_to_TAC_binary_operator(token_kind k);
 
 #endif // TAC_HPP_INCLUDED

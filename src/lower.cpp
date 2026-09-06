@@ -58,7 +58,7 @@ require_symbol(std::optional<symbol *> sym, std::string what)
         return sym.value();
 }
 
-static inline int
+static inline TEMP
 new_temp(builder *bldr)
 {
         return bldr->next_temp++;
@@ -205,11 +205,62 @@ lower_expr(builder *bldr, expr *e)
         case EXPR_KIND_INT:
                 return (TAC_operand *)new TAC_operand_i32 {
                         .base = { .k = TAC_OPERAND_KIND_I32, },
-                        .i = std::stoi(((expr_int *)e)->i->lx),
+                        .i    = std::stoi(((expr_int *)e)->i->lx),
                 };
-        case EXPR_KIND_IDENTIFIER: return lower_identifier(bldr, (expr_identifier *)e);
+        case EXPR_KIND_IDENTIFIER:
+                return lower_identifier(bldr, (expr_identifier *)e);
         case EXPR_KIND_BINARY: {
-                return NULL;
+                expr_binary     *bin = (expr_binary *)e;
+                type            *ty  = require_resolved_type(e);
+                if (type_is_assignment(bin->op->k)) {
+                        // TODO: index, unary, and member
+                        TAC_operand                     *dst = lower_assignmnet_target(bldr, e);
+                        std::optional<TAC_operand *>     lhs = std::nullopt;
+
+                        if (type_compound_assignment(bin->op->k) != std::nullopt)
+                                lhs = lower_expr(bldr, bin->lhs);
+
+                        TAC_operand *rhs = lower_expr(bldr, bin->rhs);
+                        TAC_operand *value = NULL;
+
+                        if (lhs == std::nullopt && type_compound_assignment(bin->op->k) == std::nullopt)
+                                value = rhs;
+                        else {
+                                assert(lhs != std::nullopt);
+                                token_kind op = type_compound_assignment(bin->op->k).value();
+                                TEMP temp = new_temp(bldr);
+                                emit(bldr, (TAC_instruction *)new TAC_instruction_binop {
+                                                .base      = { .k = TAC_INSTRUCTION_KIND_BINOP, },
+                                                .dst       = temp,
+                                                .ty        = ty,
+                                                .result_ty = ty,
+                                                .op        = token_kind_to_TAC_binary_operator(op),
+                                                .lhs       = lhs.value(),
+                                                .rhs       = rhs,
+                                        });
+                                return (TAC_operand *)new TAC_operand_temp {
+                                        .base = { .k = TAC_OPERAND_KIND_TEMP, },
+                                        .temp = temp,
+                                };
+                        }
+                }
+                type            *operand_type = require_resolved_type(bin->lhs);
+                TAC_operand     *lhs          = lower_expr(bldr, bin->lhs);
+                TAC_operand     *rhs          = lower_expr(bldr, bin->rhs);
+                TEMP             dst          = new_temp(bldr);
+                emit(bldr, (TAC_instruction *)new TAC_instruction_binop {
+                                .base      = { .k = TAC_INSTRUCTION_KIND_BINOP },
+                                .dst       = dst,
+                                .ty        = operand_type,
+                                .result_ty = ty,
+                                .op        = token_kind_to_TAC_binary_operator(bin->op->k),
+                                .lhs       = lhs,
+                                .rhs       = rhs,
+                        });
+                return (TAC_operand *)new TAC_operand_temp {
+                        .base = { .k = TAC_OPERAND_KIND_TEMP },
+                        .temp = dst,
+                };
         } break;
         case EXPR_KIND_UNARY:
                 assert(0 && "todo");
@@ -217,3 +268,4 @@ lower_expr(builder *bldr, expr *e)
         }
         std::unreachable();
 }
+

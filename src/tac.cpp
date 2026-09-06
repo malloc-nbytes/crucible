@@ -48,7 +48,7 @@ TAC_binary_operator_to_string(TAC_binary_operator op)
         std::unreachable();
 }
 
-static TAC_binary_operator
+TAC_binary_operator
 token_kind_to_TAC_binary_operator(token_kind k)
 {
         switch (k) {
