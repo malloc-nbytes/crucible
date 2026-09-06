@@ -18,7 +18,8 @@
 }
 
 typedef enum {
-        TYPE_KIND_VOID = 0,
+        TYPE_KIND_UNDEFINED = 0,
+        TYPE_KIND_VOID,
         TYPE_KIND_I32,
         TYPE_KIND_U8,
         TYPE_KIND_PTR,
@@ -26,6 +27,10 @@ typedef enum {
 } type_kind;
 
 typedef struct { type_kind k; } type;
+
+typedef struct {
+        type base;
+} type_undefined;
 
 typedef struct {
         type base;
@@ -55,6 +60,7 @@ void init_type_translation_unit(void);
 
 int is_type(std::string &s);
 
+type_undefined *type_undefined_alloc(void);
 type_void *type_void_alloc(void);
 type_i32 *type_i32_alloc(void);
 type_u8 *type_u8_alloc(void);

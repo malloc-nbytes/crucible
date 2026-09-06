@@ -139,6 +139,8 @@ TAC_terminator_to_string(const TAC_terminator *const t)
                                    b->if_false);
         } break;
         }
+
+        std::unreachable();
 }
 
 static std::string
@@ -168,6 +170,7 @@ TAC_linkage_to_string(TAC_linkage l)
         case TAC_LINKAGE_EXTERN:        return "extern ";
         case TAC_LINKAGE_EXTERN_EXPORT: return "export extern ";
         }
+        std::unreachable();
 }
 
 static inline

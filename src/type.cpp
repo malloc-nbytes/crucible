@@ -3,13 +3,20 @@
 #include <format>
 #include <utility>
 
-type_void       *g_type_void = NULL;
-type_i32        *g_type_i32  = NULL;
-type_u8         *g_type_u8   = NULL;
+type_undefined  *g_type_undefined = NULL;
+type_void       *g_type_void      = NULL;
+type_i32        *g_type_i32       = NULL;
+type_u8         *g_type_u8        = NULL;
 
 void
 init_type_translation_unit(void)
 {
+        g_type_undefined = new type_undefined {
+                .base = {
+                        .k = TYPE_KIND_UNDEFINED,
+                },
+        };
+
         g_type_void = new type_void {
                 .base = {
                         .k = TYPE_KIND_VOID,
@@ -40,6 +47,12 @@ is_type(std::string &s)
         }
 
         return 0;
+}
+
+type_undefined *
+type_undefined_alloc(void)
+{
+        return g_type_undefined;
 }
 
 type_void *
@@ -75,6 +88,7 @@ std::string
 type_to_string(const type *const t)
 {
         switch (t->k) {
+        case TYPE_KIND_UNDEFINED: return "undefined";
         case TYPE_KIND_VOID: return "void";
         case TYPE_KIND_I32:  return "i32";
         case TYPE_KIND_U8:   return "u8";
