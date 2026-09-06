@@ -196,3 +196,24 @@ lower_assignmnet_target(builder *bldr, expr *e)
 
         return lookup_symbol(bldr, ((expr_identifier *)e)->sym);
 }
+
+
+static TAC_operand *
+lower_expr(builder *bldr, expr *e)
+{
+        switch (e->k) {
+        case EXPR_KIND_INT:
+                return (TAC_operand *)new TAC_operand_i32 {
+                        .base = { .k = TAC_OPERAND_KIND_I32, },
+                        .i = std::stoi(((expr_int *)e)->i->lx),
+                };
+        case EXPR_KIND_IDENTIFIER: return lower_identifier(bldr, (expr_identifier *)e);
+        case EXPR_KIND_BINARY: {
+                return NULL;
+        } break;
+        case EXPR_KIND_UNARY:
+                assert(0 && "todo");
+                return NULL;
+        }
+        std::unreachable();
+}
