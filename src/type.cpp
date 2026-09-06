@@ -91,6 +91,9 @@ type_to_string(const type *const t)
                         res += type_to_string(p->ptys.at(i));
                 }
 
+                if (p->ptys.size() == 0)
+                        res += "void";
+
                 res += std::format("): %s", type_to_string(p->rty));
 
                 return res;
