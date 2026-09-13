@@ -44,6 +44,11 @@ struct double_terminated_TAC_block_error : lowering_error {
                 : lowering_error("cannot terminate already terminated TAC block") {}
 };
 
+struct unsupported_TAC_lowering_statement_error : lowering_error {
+        unsupported_TAC_lowering_statement_error()
+                : lowering_error("invalid statement during TAC lowering") {};
+};
+
 static inline void
 fail_unresolved(std::string &what)
 {
@@ -269,3 +274,26 @@ lower_expr(builder *bldr, expr *e)
         std::unreachable();
 }
 
+static void
+lower_stmt_let(builder *bldr, stmt_let *s)
+{
+        symbol *sym = require_symbol(s->sym, "let declaration");
+        TAC_operand_local *dst = new TAC_operand_local {
+                .base = { TAC_OPERAND_KIND_LOCAL },
+                .sym = sym,
+        };
+        assert(0);
+}
+
+static void
+lower_stmt(builder *bldr, stmt *s)
+{
+        switch (s->k) {
+        case STMT_KIND_LET:
+                lower_stmt_let(bldr, (stmt_let *)s);
+                break;
+        default: {
+                throw unsupported_TAC_lowering_statement_error();
+        } break;
+        }
+}
